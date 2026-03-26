@@ -14,7 +14,7 @@ import {
 import type { QuizVideo } from "@/lib/videos";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Section = "dashboard" | "library" | "preview" | "analytics";
+type Section = "dashboard" | "library" | "preview";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const BG    = "#0b0b12";
@@ -641,7 +641,8 @@ function PreviewView() {
   );
 }
 
-// ── Analytics dashboard ───────────────────────────────────────────────────────
+// ── Analytics dashboard (kept for future use, not linked in nav) ─────────────
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AnalyticsView() {
   // 24-hour hourly engagement sample data
   const hourly = [8, 12, 18, 28, 42, 55, 48, 38, 30, 42, 58, 72, 65, 52, 44, 38, 50, 62, 70, 60, 48, 38, 28, 18];
@@ -870,12 +871,11 @@ const NAV: { id: Section; label: string; Icon: () => React.ReactElement }[] = [
   { id: "dashboard", label: "Dashboard", Icon: Ico.Dashboard },
   { id: "library",   label: "Library",   Icon: Ico.Library   },
   { id: "preview",   label: "Preview",   Icon: Ico.Preview   },
-  { id: "analytics", label: "Analytics", Icon: Ico.Analytics },
 ];
 
 // ── Root page ─────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [section, setSection] = useState<Section>("analytics");
+  const [section, setSection] = useState<Section>("library");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const sidebarContent = (
@@ -1042,7 +1042,6 @@ export default function Home() {
           {section === "dashboard" && <DashboardView />}
           {section === "library"   && <LibraryView />}
           {section === "preview"   && <PreviewView />}
-          {section === "analytics" && <AnalyticsView />}
         </main>
       </div>
     </div>
