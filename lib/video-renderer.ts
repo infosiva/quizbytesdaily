@@ -171,7 +171,7 @@ function renderCard(
   const titleBlockH = titleLines.length * (titleSize + 6);
   const hasBody = card.body && card.body.trim().length > 0;
   const totalTextH = titleBlockH + (hasBody ? bodySize + 8 : 0);
-  let textStartY = cardY + Math.floor((cardH - totalTextH) / 2);
+  const textStartY = cardY + Math.floor((cardH - totalTextH) / 2);
 
   titleLines.forEach((l, i) => {
     parts.push(dt(dir, l, { font: FONT_BOLD, x: String(titleX), y: textStartY + i * (titleSize + 4), size: titleSize, color: "0xFFFFFF" }));

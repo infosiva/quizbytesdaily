@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
 
 function LoginForm() {
   const router       = useRouter();
@@ -113,9 +114,9 @@ function LoginForm() {
 
         {/* Back to public site */}
         <p style={{ textAlign: "center", marginTop: "1.5rem", fontSize: "0.78rem", color: "#374151" }}>
-          <a href="/" style={{ color: "#a855f7", textDecoration: "none" }}>
+          <Link href="/" style={{ color: "#a855f7", textDecoration: "none" }}>
             ← Back to public site
-          </a>
+          </Link>
         </p>
       </div>
     </div>
