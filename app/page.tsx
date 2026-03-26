@@ -383,14 +383,14 @@ function DashboardView() {
             ))}
           </div>
           <div className="mt-5 flex gap-3">
-            <a href="/admin" className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-80"
+            <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-80"
               style={{ background: "#a855f7" }}>
               ✨ Open Admin Panel
-            </a>
-            <a href="/slides" className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold border transition-colors hover:border-slate-500"
+            </Link>
+            <Link href="/slides" className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold border transition-colors hover:border-slate-500"
               style={{ borderColor: BORD, color: "#94a3b8" }}>
               ▶ Slide Preview
-            </a>
+            </Link>
           </div>
         </div>
       ) : (
@@ -560,7 +560,7 @@ function PreviewView() {
         <p className="text-white font-semibold mb-1">No videos yet</p>
         <p className="text-sm text-slate-500">
           Generate a quiz in the{" "}
-          <a href="/admin" className="text-purple-400 hover:underline">Admin panel</a>,
+          <Link href="/admin" className="text-purple-400 hover:underline">Admin panel</Link>,
           record it, and upload to YouTube. It will appear here once added to{" "}
           <code className="text-slate-400">lib/videos.ts</code>.
         </p>
