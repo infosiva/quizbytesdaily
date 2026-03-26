@@ -1,10 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ALL_SERIES, COLORS } from "@/lib/slides";
 import type { QuizSlide, SlideCard, CardColor } from "@/lib/slides";
 import { channelConfig } from "@/lib/config";
+
+// ── DB series metadata ────────────────────────────────────────────────────────
+interface DbSeriesMeta {
+  id: number; slug: string; title: string; category: string; difficulty: string; slide_count?: number;
+}
+
+// ── Unified series — both static and AI-generated use QuizSlide[] ─────────────
+interface UnifiedSeries {
+  id: string; label: string; isDb: boolean; dbId?: number;
+  slides: QuizSlide[];
+}
+
+// ── Convert raw API slide row to QuizSlide ────────────────────────────────────
+function rawToQuizSlide(
+  raw: { template: string; data: Record<string, unknown>; position?: number },
+  slug: string,
+  idx: number,
+  total: number
+): QuizSlide {
+  const d = raw.data;
+  const newTemplates = ["definition-steps", "pipeline", "cta"] as const;
+  const template = newTemplates.includes(raw.template as typeof newTemplates[number])
+    ? (raw.template as QuizSlide["template"])
+    : "definition-steps";
+
+  return {
+    id: `${slug}-${idx}`,
+    handle: "@QuizBytesDaily",
+    template,
+    heading: (d.heading as string) ?? raw.template,
+    subtitle: d.subtitle as string | undefined,
+    slideNum: (d.slideNum as number) ?? idx + 1,
+    totalSlides: (d.totalSlides as number) ?? total,
+    definition: d.definition as QuizSlide["definition"] | undefined,
+    cards: (d.cards as SlideCard[]) ?? [],
+  };
+}
 
 // ── Slide canvas ──────────────────────────────────────────────────────────────
 const W = 360;
@@ -331,17 +368,63 @@ export default function SlidesPage() {
   const [seriesIdx, setSeriesIdx] = useState(0);
   const [slideIdx, setSlideIdx]   = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [dbSeriesList, setDbSeriesList] = useState<DbSeriesMeta[]>([]);
+  const [dbSlidesCache, setDbSlidesCache] = useState<Record<number, QuizSlide[]>>({});
 
-  const series = ALL_SERIES[seriesIdx];
-  const slide  = series.slides[slideIdx];
-  const total  = series.slides.length;
+  // Static series
+  const staticUnified: UnifiedSeries[] = ALL_SERIES.map((s) => ({
+    id: s.id, label: s.label, isDb: false, slides: s.slides,
+  }));
 
-  function changeSeries(idx: number) { setSeriesIdx(idx); setSlideIdx(0); setIsPlaying(false); }
+  // DB series — AI-generated, converted to QuizSlide[] for uniform rendering
+  const dbUnified: UnifiedSeries[] = dbSeriesList.map((s) => ({
+    id: `db-${s.id}`, label: s.title, isDb: true, dbId: s.id,
+    slides: dbSlidesCache[s.id] ?? [],
+  }));
+
+  const allSeries: UnifiedSeries[] = [...staticUnified, ...dbUnified];
+  const series  = allSeries[seriesIdx] ?? allSeries[0];
+  const total   = series.slides.length;
+  const isLast  = slideIdx === total - 1;
+
+  // Fetch DB series list on mount
+  useEffect(() => {
+    fetch("/api/admin/series")
+      .then((r) => r.json())
+      .then((j) => setDbSeriesList(j.series ?? []))
+      .catch(() => {/* silently ignore if DB not available */});
+  }, []);
+
+  // Fetch + convert DB slides when a DB series is selected
+  const fetchDbSlides = useCallback(async (dbId: number, slug: string) => {
+    if (dbSlidesCache[dbId]) return;
+    try {
+      const res  = await fetch(`/api/admin/series/${dbId}`);
+      const json = await res.json();
+      const rawSlides: Array<{ template: string; data: Record<string, unknown>; position: number }> =
+        json.slides ?? [];
+      const converted = rawSlides.map((s, i) =>
+        rawToQuizSlide(s, slug, i, rawSlides.length)
+      );
+      setDbSlidesCache((c) => ({ ...c, [dbId]: converted }));
+    } catch { /* ignore */ }
+  }, [dbSlidesCache]);
+
+  function changeSeries(idx: number) {
+    setSeriesIdx(idx);
+    setSlideIdx(0);
+    setIsPlaying(false);
+    const s = allSeries[idx];
+    if (s?.isDb && s.dbId) {
+      const meta = dbSeriesList.find((m) => m.id === s.dbId);
+      fetchDbSlides(s.dbId, meta?.slug ?? `db-${s.dbId}`);
+    }
+  }
+
   function prev() { setSlideIdx((i) => Math.max(0, i - 1)); }
   function next() { setSlideIdx((i) => Math.min(total - 1, i + 1)); }
   function togglePlay() { setIsPlaying((p) => !p); }
 
-  /* auto-advance: restarts countdown whenever slide changes or play toggles */
   useEffect(() => {
     if (!isPlaying) return;
     const id = setInterval(() => {
@@ -353,17 +436,18 @@ export default function SlidesPage() {
     return () => clearInterval(id);
   }, [isPlaying, slideIdx, total]);
 
-  /* keyboard navigation — space = play/pause */
   function onKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowLeft")  prev();
     if (e.key === "ArrowRight") next();
     if (e.key === " ") { e.preventDefault(); togglePlay(); }
   }
 
-  const isQuiz   = slide.heading.includes("Quiz");
-  const isAnswer = slide.heading.includes("Answer");
-  const isCta    = slide.template === "cta";
-  const isLast   = slideIdx === total - 1;
+  // All series now use the unified QuizSlide[]
+  const currentSlide = series.slides[slideIdx] ?? null;
+
+  const isQuiz   = currentSlide?.heading.includes("Quiz") ?? false;
+  const isAnswer = currentSlide?.heading.includes("Answer") ?? false;
+  const isCta    = currentSlide?.template === "cta";
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#08080f", color: "#e2e8f0" }}
@@ -389,16 +473,23 @@ export default function SlidesPage() {
         <div className="lg:w-52 shrink-0 space-y-4">
           {/* Series tabs */}
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600 mb-2">Series</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600 mb-2">
+              Series <span className="text-purple-600 normal-case font-normal">({allSeries.length})</span>
+            </p>
             <div className="flex flex-col gap-1">
-              {ALL_SERIES.map((s, i) => (
+              {allSeries.map((s, i) => (
                 <button key={s.id} onClick={() => changeSeries(i)}
                   className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all border"
                   style={seriesIdx === i
                     ? { background: "#a855f718", borderColor: "#a855f755", color: "#c084fc" }
                     : { background: "transparent", borderColor: "#1e1e2e", color: "#64748b" }}>
                   {s.label}
-                  <span className="ml-2 text-[10px] font-mono opacity-60">{s.slides.length} slides</span>
+                  <span className="ml-1.5 text-[9px] font-mono opacity-60">
+                    {s.slides.length || (s.isDb ? "…" : "0")} slides
+                  </span>
+                  {s.isDb && (
+                    <span className="ml-1 text-[8px] font-bold px-1 rounded" style={{ background: "#22d3ee18", color: "#22d3ee" }}>AI</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -408,19 +499,25 @@ export default function SlidesPage() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600 mb-2">Slides</p>
             <div className="flex flex-col gap-1">
+              {series.slides.length === 0 && series.isDb && (
+                <p className="text-[10px] text-slate-600 px-3 py-2">Loading…</p>
+              )}
               {series.slides.map((s, i) => {
                 const isQ = s.heading.includes("Quiz");
                 const isA = s.heading.includes("Answer");
+                const icon = s.template === "cta" ? "🎉 "
+                           : isQ ? "🎯 "
+                           : isA ? "✅ "
+                           : s.template === "pipeline" ? "⬇ "
+                           : "📋 ";
                 return (
                   <button key={s.id} onClick={() => setSlideIdx(i)}
                     className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all border"
                     style={slideIdx === i
                       ? { background: "#a855f718", borderColor: "#a855f755", color: "#e2e8f0" }
                       : { background: "transparent", borderColor: "#1e1e2e", color: "#475569" }}>
-                    <span className="font-mono mr-1.5" style={{ color: slideIdx === i ? "#a855f7" : "#374151" }}>
-                      {i + 1}.
-                    </span>
-                    {isQ ? "🎯 " : isA ? "✅ " : ""}{s.heading}
+                    <span className="font-mono mr-1.5" style={{ color: slideIdx === i ? "#a855f7" : "#374151" }}>{i + 1}.</span>
+                    {icon}{s.template === "cta" ? "Subscribe CTA" : s.heading}
                   </button>
                 );
               })}
@@ -453,7 +550,7 @@ export default function SlidesPage() {
             {!isQuiz && !isAnswer && !isCta && (
               <span className="px-3 py-1 rounded-full text-xs font-bold border"
                 style={{ background: "#a855f715", borderColor: "#a855f740", color: "#c084fc" }}>
-                {slide.template === "pipeline" ? "⬇ Pipeline" : "📋 Concept"}
+                {currentSlide?.template === "pipeline" ? "⬇ Pipeline" : "📋 Concept"}
               </span>
             )}
           </div>
@@ -469,7 +566,12 @@ export default function SlidesPage() {
               ? "0 0 50px rgba(34,211,238,0.2), 0 0 0 1px #1e1e2e"
               : "0 0 50px rgba(168,85,247,0.15), 0 0 0 1px #1e1e2e",
           }}>
-            <SlideRenderer slide={slide} />
+            {currentSlide
+              ? <SlideRenderer slide={currentSlide} />
+              : <div style={{ width: W, height: H, display: "flex", alignItems: "center", justifyContent: "center", background: "#0d0d20", color: "#374151", fontSize: 13 }}>
+                  {series.isDb ? "Loading…" : "No slides"}
+                </div>
+            }
           </div>
 
           {/* Progress bar — only visible while playing */}
@@ -503,23 +605,16 @@ export default function SlidesPage() {
               {isPlaying ? "⏸" : "▶"}
             </button>
 
-            <div className="flex gap-1.5 items-center">
-              {series.slides.map((s, i) => {
-                const q = s.heading.includes("Quiz");
-                const a = s.heading.includes("Answer");
-                const c = s.template === "cta";
-                return (
-                  <button key={i} onClick={() => setSlideIdx(i)}
-                    className="rounded-full transition-all"
-                    style={{
-                      width: i === slideIdx ? 18 : 7,
-                      height: 7,
-                      background: i === slideIdx
-                        ? q ? "#fbbf24" : a ? "#4ade80" : c ? "#22d3ee" : "#a855f7"
-                        : "#1e1e2e",
-                    }} />
-                );
-              })}
+            <div className="flex gap-1.5 items-center flex-wrap justify-center" style={{ maxWidth: 200 }}>
+              {Array.from({ length: total }).map((_, i) => (
+                <button key={i} onClick={() => setSlideIdx(i)}
+                  className="rounded-full transition-all"
+                  style={{
+                    width: i === slideIdx ? 18 : 7,
+                    height: 7,
+                    background: i === slideIdx ? "#a855f7" : "#1e1e2e",
+                  }} />
+              ))}
             </div>
 
             <button onClick={next} disabled={isLast}
@@ -536,29 +631,43 @@ export default function SlidesPage() {
         <div className="lg:w-52 shrink-0 space-y-4">
           <div className="rounded-xl border p-4 space-y-2" style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
             <p className="text-xs font-bold text-white">Current slide</p>
-            <p className="text-[11px] text-slate-400 leading-relaxed">{slide.heading}</p>
+            {currentSlide && (
+              <>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  {currentSlide.template === "cta" ? "Subscribe CTA" : currentSlide.heading}
+                </p>
+                <p className="text-[10px] font-mono text-slate-600">
+                  Template: <span className={series.isDb ? "text-cyan-400" : "text-purple-400"}>
+                    {currentSlide.template}
+                  </span>
+                  {series.isDb && <span className="ml-1.5" style={{ color: "#22d3ee" }}>AI</span>}
+                </p>
+              </>
+            )}
             <p className="text-[10px] font-mono text-slate-600">
-              Template: <span className="text-purple-400">{slide.template}</span>
-            </p>
-            <p className="text-[10px] font-mono text-slate-600">
-              Cards: <span className="text-cyan-400">{slide.cards.length}</span>
+              Slide: <span className="text-amber-400">{slideIdx + 1} / {total || "…"}</span>
             </p>
           </div>
 
           <div className="rounded-xl border p-4" style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-            <p className="text-xs font-bold text-white mb-2">4 series ready</p>
-            {ALL_SERIES.map((s) => (
-              <div key={s.id} className="flex items-center justify-between py-1">
-                <span className="text-[11px] text-slate-500">{s.label}</span>
-                <span className="font-mono text-[10px] text-slate-600">{s.slides.length} slides</span>
+            <p className="text-xs font-bold text-white mb-2">{allSeries.length} series ready</p>
+            {allSeries.map((s, i) => (
+              <div key={s.id} className="flex items-center justify-between py-0.5">
+                <span className="text-[11px] text-slate-500 truncate max-w-[110px]">{s.label}</span>
+                <div className="flex items-center gap-1.5">
+                  {s.isDb && <span className="text-[8px] font-bold px-1 rounded" style={{ background: "#22d3ee15", color: "#22d3ee" }}>AI</span>}
+                  <span className="font-mono text-[10px] text-slate-600" onClick={() => changeSeries(i)} style={{ cursor: "pointer" }}>
+                    {s.slides.length || (s.isDb ? "…" : "0")} slides
+                  </span>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="rounded-xl border p-4" style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-            <p className="text-xs font-bold text-white mb-2">Add a series</p>
+          <div className="rounded-xl border p-4 space-y-2" style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
+            <p className="text-xs font-bold text-white">Generate more</p>
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Edit <code className="text-purple-400">lib/slides.ts</code>, create a <code className="text-cyan-400">QuizSlide[]</code> and add it to <code className="text-amber-400">ALL_SERIES</code>.
+              Go to <Link href="/admin" className="text-purple-400 hover:underline">Admin → Generate</Link> to create AI quiz series. They appear here automatically with an <span style={{ color: "#22d3ee" }}>AI</span> badge.
             </p>
           </div>
         </div>

@@ -1,423 +1,633 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ALL_SERIES } from "@/lib/slides";
-import { channelConfig } from "@/lib/config";
+import { channelConfig, categories, difficulties } from "@/lib/config";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface SeriesMeta {
+
+interface SlideData {
+  template: string;
+  data: Record<string, unknown>;
+}
+
+interface SeriesRecord {
+  id: number;
+  slug: string;
   title: string;
-  description: string;
-  tags: string;
-  privacyStatus: "public" | "private" | "unlisted";
+  topic: string;
+  category: string;
+  difficulty: string;
+  status: string;
+  youtube_id: string | null;
+  youtube_url: string | null;
+  created_at: string;
+  slide_count?: number;
 }
 
-// ── Default metadata per series ───────────────────────────────────────────────
-const TAG_MAP: Record<string, string[]> = {
-  rag:    ["RAG", "RetrievalAugmentedGeneration", "LLM", "VectorDatabase", "ChatGPT", "AI", "MachineLearning"],
-  async:  ["Python", "AsyncPython", "Asyncio", "PythonTips", "Coding", "Programming"],
-  tfm:    ["Transformers", "BERT", "GPT", "DeepLearning", "NLP", "AI", "MachineLearning"],
-  docker: ["Docker", "DevOps", "Containers", "CloudComputing", "SoftwareEngineering"],
-};
-const COMMON_TAGS = ["QuizBytesDaily", "TechQuiz", "CodingQuiz", "LearnToCode", "Shorts", "ProgrammingQuiz"];
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function defaultMeta(id: string, label: string): SeriesMeta {
-  const specific = TAG_MAP[id] ?? [];
-  return {
-    title: `${label} Quiz — Can You Answer? #Shorts`,
-    description: [
-      `🧠 Daily Tech Quiz: ${label}`,
-      "",
-      "Think you know the answer? Watch till the end to find out! 👇",
-      "",
-      "✅ Subscribe for daily bite-sized tech quizzes",
-      "📌 New quiz every day — Python, AI, Docker, Algorithms & more",
-      "",
-      `👉 Browse all quizzes: ${channelConfig.websiteUrl}`,
-      "",
-      `#QuizBytesDaily #TechQuiz #${specific[0] ?? "Coding"} #Shorts`,
-    ].join("\n"),
-    tags: [...specific, ...COMMON_TAGS].join(", "),
-    privacyStatus: "private",
-  };
-}
+const difficultyColor = (d: string) =>
+  d === "Beginner" ? "#4ade80" : d === "Intermediate" ? "#fbbf24" : "#f87171";
 
-// ── Thumbnail generator (client-side canvas, 1280×720) ────────────────────────
-function generateThumbnail(label: string, title: string): Promise<Blob> {
-  return new Promise((resolve) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1280;
-    canvas.height = 720;
-    const ctx = canvas.getContext("2d")!;
+const statusColor = (s: string) =>
+  s === "published" ? "#4ade80" : "#94a3b8";
 
-    // Background
-    ctx.fillStyle = "#0a0a0f";
-    ctx.fillRect(0, 0, 1280, 720);
+// ── Slide mini-preview ────────────────────────────────────────────────────────
 
-    // Gradient overlay
-    const g = ctx.createLinearGradient(0, 0, 1280, 720);
-    g.addColorStop(0, "rgba(168,85,247,0.18)");
-    g.addColorStop(1, "rgba(34,211,238,0.10)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 1280, 720);
+function SlidePreview({ slide }: { slide: SlideData }) {
+  const { template, data } = slide;
 
-    // Faint "?" watermark
-    ctx.save();
-    ctx.font = "bold 520px Arial";
-    ctx.fillStyle = "rgba(168,85,247,0.07)";
-    ctx.textAlign = "right";
-    ctx.fillText("?", 1255, 650);
-    ctx.restore();
+  if (template === "title") {
+    return (
+      <div style={{ background: "linear-gradient(135deg,#1e1b4b,#111118)", border: "1px solid #312e81", borderRadius: 8, padding: "0.75rem", textAlign: "center" }}>
+        <div style={{ fontSize: "0.6rem", color: "#a78bfa", marginBottom: 4, textTransform: "uppercase", letterSpacing: 2 }}>
+          {String(data.topic ?? "")}
+        </div>
+        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#e2e8f0" }}>
+          {String(data.title ?? "")}
+        </div>
+        <div style={{ fontSize: "0.6rem", color: "#94a3b8", marginTop: 4 }}>
+          {String(data.subtitle ?? "")}
+        </div>
+      </div>
+    );
+  }
 
-    // Series label badge
-    ctx.font = "bold 30px Arial";
-    const lw = ctx.measureText(label).width;
-    ctx.fillStyle = "rgba(168,85,247,0.22)";
-    roundRect(ctx, 70, 128, lw + 52, 52, 26);
-    ctx.fill();
-    ctx.fillStyle = "#c084fc";
-    ctx.textAlign = "left";
-    ctx.fillText(label, 96, 165);
+  if (template === "quiz") {
+    const options = (data.options as Array<{ label: string; text: string; correct: boolean }>) ?? [];
+    return (
+      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.75rem", fontSize: "0.7rem" }}>
+        <div style={{ color: "#94a3b8", marginBottom: 6 }}>Q{String(data.questionNumber ?? "")}: {String(data.question ?? "")}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {options.map((opt) => (
+            <div key={opt.label} style={{ padding: "2px 6px", borderRadius: 4, background: opt.correct ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${opt.correct ? "#4ade80" : "#1e1e2e"}`, color: opt.correct ? "#4ade80" : "#94a3b8" }}>
+              {opt.label}. {opt.text}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-    // Title (word-wrapped)
-    const clean = title.replace(/\s*#shorts$/i, "");
-    ctx.font = "bold 66px Arial";
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "left";
-    const words = clean.split(" ");
-    let line = "";
-    let y = 278;
-    for (const w of words) {
-      const test = line ? `${line} ${w}` : w;
-      if (ctx.measureText(test).width > 1120 && line) {
-        ctx.fillText(line, 70, y);
-        line = w;
-        y += 85;
-      } else { line = test; }
-    }
-    if (line) ctx.fillText(line, 70, y);
-
-    // Accent bar
-    ctx.fillStyle = "#a855f7";
-    ctx.fillRect(70, y + 28, 90, 4);
-
-    // Channel branding
-    ctx.font = "bold 34px Arial";
-    ctx.fillStyle = "#22d3ee";
-    ctx.textAlign = "left";
-    ctx.fillText(channelConfig.handle, 70, 678);
-
-    canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.92);
-  });
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y, x + w, y + r, r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x, y + h, x, y + h - r, r);
-  ctx.lineTo(x, y + r);
-  ctx.arcTo(x, y, x + r, y, r);
-  ctx.closePath();
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-export default function AdminPage() {
-  const [selIdx, setSelIdx] = useState(0);
-  const [meta, setMeta]     = useState<Record<string, SeriesMeta>>(() =>
-    Object.fromEntries(ALL_SERIES.map((s) => [s.id, defaultMeta(s.id, s.label)]))
+  return (
+    <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.75rem", fontSize: "0.7rem", color: "#4a4a5a" }}>
+      [{template}]
+    </div>
   );
+}
+
+// ── Canvas thumbnail ──────────────────────────────────────────────────────────
+
+function drawThumbnailToCanvas(canvas: HTMLCanvasElement, title: string, category: string, difficulty: string) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  canvas.width = 1280;
+  canvas.height = 720;
+
+  const bg = ctx.createLinearGradient(0, 0, 1280, 720);
+  bg.addColorStop(0, "#0a0a1f");
+  bg.addColorStop(1, "#1a0a2e");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 1280, 720);
+
+  ctx.strokeStyle = "rgba(168,85,247,0.05)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 1280; x += 80) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 720); ctx.stroke(); }
+  for (let y = 0; y < 720; y += 80) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1280, y); ctx.stroke(); }
+
+  ctx.font = "bold 480px Arial";
+  ctx.fillStyle = "rgba(168,85,247,0.07)";
+  ctx.textAlign = "center";
+  ctx.fillText("?", 900, 580);
+
+  // Category badge
+  ctx.font = "bold 24px Arial";
+  ctx.fillStyle = "#a855f7";
+  ctx.textAlign = "left";
+  const badgeW = ctx.measureText(category).width + 32;
+  ctx.beginPath();
+  ctx.roundRect(80, 80, badgeW, 44, 8);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.fillText(category.toUpperCase(), 96, 108);
+
+  // Difficulty
+  const dcolor = difficultyColor(difficulty);
+  ctx.font = "bold 22px Arial";
+  ctx.fillStyle = dcolor;
+  ctx.fillText(difficulty, 80 + badgeW + 16, 108);
+
+  // Title
+  ctx.font = "bold 72px Arial";
+  ctx.fillStyle = "#ffffff";
+  const words = title.split(" ");
+  let line = "";
+  let y2 = 320;
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > 900) { ctx.fillText(line, 80, y2); line = word; y2 += 88; }
+    else { line = test; }
+  }
+  if (line) ctx.fillText(line, 80, y2);
+
+  ctx.font = "30px Arial";
+  ctx.fillStyle = "#a855f7";
+  ctx.fillText(channelConfig.handle, 80, 660);
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+export default function AdminPage() {
+  const [tab, setTab] = useState<"generate" | "library" | "upload">("generate");
+
+  // Generate
+  const [topic, setTopic] = useState("");
+  const [genCategory, setGenCategory] = useState("Python");
+  const [genDifficulty, setGenDifficulty] = useState("Intermediate");
+  const [catSuggestOpen, setCatSuggestOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [preview, setPreview] = useState<SlideData[] | null>(null);
+  const [previewSeries, setPreviewSeries] = useState<SeriesRecord | null>(null);
+
+  // Library
+  const [library, setLibrary] = useState<SeriesRecord[]>([]);
+  const [loadingLib, setLoadingLib] = useState(false);
+
+  // Upload
+  const [uploadSeries, setUploadSeries] = useState<SeriesRecord | null>(null);
+  const [uploadSlides, setUploadSlides] = useState<SlideData[] | null>(null);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadDesc, setUploadDesc] = useState("");
+  const [uploadTags, setUploadTags] = useState("QuizBytesDaily,tech,coding,quiz");
+  const [uploadPrivacy, setUploadPrivacy] = useState<"private" | "unlisted" | "public">("private");
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [thumbUrl, setThumbUrl]   = useState<string | null>(null);
-  const [thumbBlob, setThumbBlob] = useState<Blob | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult]       = useState<{ url?: string; error?: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ url: string } | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const fileRef  = useRef<HTMLInputElement>(null);
-  const metaRef  = useRef(meta);
-  metaRef.current = meta;
+  // Render
+  const [rendering, setRendering] = useState(false);
+  const [renderFile, setRenderFile] = useState<string | null>(null);
+  const [renderError, setRenderError] = useState("");
+  const [renderStatus, setRenderStatus] = useState("");
 
-  const series = ALL_SERIES[selIdx];
-  const cur    = meta[series.id];
-
-  // Restore saved metadata from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("qbd_meta");
-    if (saved) {
-      try { setMeta(JSON.parse(saved)); } catch { /* ignore */ }
+  // Load library
+  const loadLibrary = useCallback(async () => {
+    setLoadingLib(true);
+    try {
+      const res = await fetch("/api/admin/series");
+      const json = await res.json();
+      setLibrary(json.series ?? []);
+    } finally {
+      setLoadingLib(false);
     }
   }, []);
 
-  // Regenerate thumbnail when series changes
   useEffect(() => {
-    setThumbUrl(null);
-    const s = ALL_SERIES[selIdx];
-    const m = metaRef.current[s.id];
-    generateThumbnail(s.label, m.title).then((blob) => {
-      setThumbBlob(blob);
-      setThumbUrl(URL.createObjectURL(blob));
-    });
-  }, [selIdx]);
+    if (tab === "library") loadLibrary();
+  }, [tab, loadLibrary]);
 
-  function update(field: keyof SeriesMeta, value: string) {
-    const updated = { ...meta, [series.id]: { ...cur, [field]: value } };
-    setMeta(updated);
-    localStorage.setItem("qbd_meta", JSON.stringify(updated));
+  // Draw thumbnail when upload tab loads
+  useEffect(() => {
+    if (tab === "upload" && uploadSeries && canvasRef.current) {
+      drawThumbnailToCanvas(canvasRef.current, uploadSeries.title, uploadSeries.category, uploadSeries.difficulty);
+    }
+  }, [tab, uploadSeries]);
+
+  // Generate quiz
+  async function handleGenerate() {
+    if (!topic.trim()) { setGenError("Topic is required"); return; }
+    setGenerating(true);
+    setGenError("");
+    setPreview(null);
+    setPreviewSeries(null);
+    try {
+      const res = await fetch("/api/admin/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: topic.trim(), category: genCategory, difficulty: genDifficulty }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setGenError(json.error ?? "Generation failed"); return; }
+      setPreview(json.slides);
+      setPreviewSeries(json.series);
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setGenerating(false);
+    }
   }
 
-  function refreshThumb() {
-    setThumbUrl(null);
-    generateThumbnail(series.label, cur.title).then((blob) => {
-      setThumbBlob(blob);
-      setThumbUrl(URL.createObjectURL(blob));
-    });
+  // Go to upload with a series
+  async function goToUpload(s: SeriesRecord) {
+    setUploadSeries(s);
+    setUploadTitle(s.title);
+    setUploadDesc(
+      `🧠 ${s.title}\n\n` +
+      `Category: ${s.category} | Difficulty: ${s.difficulty}\n\n` +
+      `Test your ${s.category} knowledge with this daily tech quiz!\n\n` +
+      `📌 Subscribe → ${channelConfig.youtubeSubscribeUrl}\n` +
+      `🌐 More quizzes → ${channelConfig.websiteUrl}\n\n` +
+      `#QuizBytesDaily #${s.category.replace(/[^a-zA-Z0-9]/g, "")} #coding #quiz #${s.difficulty.toLowerCase()}`
+    );
+    setUploadTags(`QuizBytesDaily,${s.category},${s.difficulty},coding,quiz,tech`);
+    setVideoFile(null);
+    setUploadResult(null);
+    setUploadError("");
+    // Load slides
+    const res = await fetch(`/api/admin/series/${s.id}`);
+    const json = await res.json();
+    setUploadSlides(json.slides ?? []);
+    setTab("upload");
   }
 
+  // Upload to YouTube
   async function handleUpload() {
-    if (!videoFile) return;
+    if (!videoFile) { setUploadError("Please select a video file"); return; }
     setUploading(true);
-    setResult(null);
-
-    const form = new FormData();
-    form.append("video",         videoFile);
-    form.append("title",         cur.title);
-    form.append("description",   cur.description);
-    form.append("tags",          cur.tags);
-    form.append("privacyStatus", cur.privacyStatus);
-    if (thumbBlob) form.append("thumbnail", thumbBlob, "thumbnail.jpg");
-
-    const res  = await fetch("/api/youtube/upload", { method: "POST", body: form });
-    const data = await res.json();
-    setResult(data.url ? { url: data.url } : { error: data.error ?? "Upload failed" });
-    setUploading(false);
+    setUploadError("");
+    setUploadResult(null);
+    try {
+      let thumbBlob: Blob | null = null;
+      if (canvasRef.current) {
+        thumbBlob = await new Promise<Blob | null>((resolve) =>
+          canvasRef.current!.toBlob(resolve, "image/jpeg", 0.9)
+        );
+      }
+      const form = new FormData();
+      form.append("video", videoFile);
+      form.append("title", uploadTitle);
+      form.append("description", uploadDesc);
+      form.append("tags", uploadTags);
+      form.append("privacy", uploadPrivacy);
+      if (thumbBlob) form.append("thumbnail", thumbBlob, "thumbnail.jpg");
+      const res = await fetch("/api/youtube/upload", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok) { setUploadError(json.error ?? "Upload failed"); return; }
+      setUploadResult({ url: json.url });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setUploading(false);
+    }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#08080f", color: "#e2e8f0" }}>
+  // Render video via server-side FFmpeg
+  async function handleRender() {
+    if (!uploadSeries) return;
+    setRendering(true);
+    setRenderError("");
+    setRenderFile(null);
+    setRenderStatus("Starting render…");
+    try {
+      const res = await fetch("/api/admin/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seriesId: uploadSeries.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setRenderError(json.error ?? "Render failed"); return; }
+      setRenderFile(json.filename);
+      setRenderStatus("Downloading rendered video…");
+      // Auto-load as the video file for upload
+      const vidRes = await fetch(`/api/admin/render/${encodeURIComponent(json.filename)}`);
+      const blob = await vidRes.blob();
+      const file = new File([blob], json.filename, { type: "video/mp4" });
+      setVideoFile(file);
+      setRenderStatus(`✓ Ready (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
+    } catch (e) {
+      setRenderError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setRendering(false);
+    }
+  }
 
+  // ── Styles ────────────────────────────────────────────────────────────────
+
+  const tabBtn = (active: boolean): React.CSSProperties => ({
+    padding: "0.5rem 1.25rem", borderRadius: 8, border: "1px solid",
+    borderColor: active ? "#a855f7" : "#1e1e2e",
+    background: active ? "rgba(168,85,247,0.15)" : "transparent",
+    color: active ? "#a855f7" : "#94a3b8", cursor: "pointer",
+    fontWeight: active ? 700 : 400, fontSize: "0.875rem",
+  });
+
+  const inp: React.CSSProperties = {
+    width: "100%", padding: "0.6rem 0.75rem", background: "#111118",
+    border: "1px solid #1e1e2e", borderRadius: 8, color: "#e2e8f0",
+    fontSize: "0.9rem", outline: "none",
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#e2e8f0", fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* Header */}
-      <header className="flex items-center gap-3 px-5 py-3 border-b shrink-0"
-        style={{ borderColor: "#1e1e2e", background: "#09090f" }}>
-        <Link href="/" className="text-sm text-slate-500 hover:text-white transition-colors">← Dashboard</Link>
-        <span style={{ color: "#1e1e2e" }}>|</span>
-        <span className="text-sm font-bold text-white">Upload to YouTube</span>
-        <span className="ml-auto text-[11px] text-slate-600">
-          Preview first at{" "}
-          <Link href="/slides" className="text-purple-400 hover:underline underline-offset-2">Slide Preview →</Link>
-        </span>
+      <header style={{ borderBottom: "1px solid #1e1e2e", padding: "1rem 2rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+        <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#a855f7" }}>⚡ QuizBytesDaily</span>
+        <span style={{ color: "#4a4a5a" }}>/</span>
+        <span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>Admin</span>
+        <span style={{ marginLeft: "auto" }} />
+        <Link href="/" style={{ fontSize: "0.8rem", color: "#6366f1", textDecoration: "none" }}>← Public Site</Link>
+        <Link href="/slides" style={{ fontSize: "0.8rem", color: "#6366f1", textDecoration: "none" }}>Slides</Link>
+        <a
+          href="/api/admin/auth?action=logout"
+          style={{
+            fontSize: "0.8rem", padding: "0.3rem 0.75rem",
+            background: "#f8717118", border: "1px solid #f8717140",
+            borderRadius: 6, color: "#f87171", textDecoration: "none",
+            fontWeight: 600,
+          }}
+        >
+          Logout
+        </a>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem" }}>
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
+          <button style={tabBtn(tab === "generate")} onClick={() => setTab("generate")}>✨ Generate</button>
+          <button style={tabBtn(tab === "library")} onClick={() => setTab("library")}>📚 Library</button>
+          <button style={tabBtn(tab === "upload")} onClick={() => setTab("upload")}>🚀 Upload</button>
+        </div>
 
-        {/* ── Left sidebar ── */}
-        <aside className="w-56 shrink-0 border-r flex flex-col p-4 gap-1"
-          style={{ borderColor: "#1e1e2e", background: "#090910" }}>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600 mb-2">Series</p>
-          {ALL_SERIES.map((s, i) => (
-            <button key={s.id}
-              onClick={() => { setSelIdx(i); setVideoFile(null); setResult(null); }}
-              className="w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all border"
-              style={selIdx === i
-                ? { background: "#a855f718", borderColor: "#a855f755", color: "#c084fc" }
-                : { background: "transparent", borderColor: "#1e1e2e", color: "#64748b" }}>
-              {s.label}
-              <span className="block text-[10px] font-mono mt-0.5 opacity-50">
-                {s.slides.length} slides
-              </span>
-            </button>
-          ))}
+        {/* ═══════════════════════ GENERATE ═══════════════════════════════ */}
+        {tab === "generate" && (
+          <div>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.5rem" }}>Generate Quiz with AI</h2>
 
-          <div className="mt-auto pt-4 border-t space-y-2" style={{ borderColor: "#1e1e2e" }}>
-            <p className="text-[10px] text-slate-600 leading-relaxed">
-              Metadata saved locally in your browser.
-            </p>
-            <p className="text-[10px] text-slate-600 leading-relaxed">
-              Add YouTube credentials to <code className="text-purple-400">.env.local</code> to enable upload.
-            </p>
-          </div>
-        </aside>
-
-        {/* ── Right content ── */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-2xl mx-auto space-y-5">
-
-            {/* ── Metadata ── */}
-            <section className="rounded-xl border p-5 space-y-4"
-              style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-              <h2 className="text-sm font-bold text-white">Video Metadata</h2>
-
-              {/* Title */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Title</label>
-                <input value={cur.title} onChange={(e) => update("title", e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                  style={{ background: "#111118", border: "1px solid #1e1e2e", color: "#e2e8f0" }} />
-                <p className="text-[10px] text-slate-600">{cur.title.length}/100 chars</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Topic *</label>
+                <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g. Python decorators" onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  style={inp} />
               </div>
-
-              {/* Description */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Description</label>
-                <textarea value={cur.description} onChange={(e) => update("description", e.target.value)}
-                  rows={8} className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
-                  style={{ background: "#111118", border: "1px solid #1e1e2e", color: "#e2e8f0", lineHeight: 1.6 }} />
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Tags (comma-separated)</label>
-                <input value={cur.tags} onChange={(e) => update("tags", e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                  style={{ background: "#111118", border: "1px solid #1e1e2e", color: "#e2e8f0" }} />
-                <p className="text-[10px] text-slate-600">
-                  {cur.tags.split(",").filter(Boolean).length} tags · YouTube allows up to 500 chars total
-                </p>
-              </div>
-
-              {/* Privacy */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Privacy</label>
-                <div className="flex gap-2">
-                  {(["private", "unlisted", "public"] as const).map((p) => (
-                    <button key={p} onClick={() => update("privacyStatus", p)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
-                      style={cur.privacyStatus === p
-                        ? { background: "#a855f722", borderColor: "#a855f755", color: "#c084fc" }
-                        : { background: "transparent", borderColor: "#1e1e2e", color: "#475569" }}>
-                      {p === "private" ? "🔒 Private" : p === "unlisted" ? "🔗 Unlisted" : "🌐 Public"}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-slate-600">
-                  Tip: upload as Private first, review on YouTube, then publish.
-                </p>
-              </div>
-            </section>
-
-            {/* ── Thumbnail ── */}
-            <section className="rounded-xl border p-5 space-y-3"
-              style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-white">Thumbnail</h2>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-slate-500">1280 × 720 · auto-generated</span>
-                  <button onClick={refreshThumb}
-                    className="text-[11px] text-purple-400 hover:text-purple-300 transition-colors">
-                    ↺ Refresh
-                  </button>
-                </div>
-              </div>
-              {thumbUrl ? (
-                <img src={thumbUrl} alt="thumbnail preview"
-                  className="w-full rounded-lg border" style={{ borderColor: "#1e1e2e" }} />
-              ) : (
-                <div className="w-full rounded-lg flex items-center justify-center text-slate-600 text-sm"
-                  style={{ height: 180, background: "#111118" }}>Generating…</div>
-              )}
-              <p className="text-[10px] text-slate-600">Thumbnail is auto-uploaded alongside the video.</p>
-            </section>
-
-            {/* ── Video file ── */}
-            <section className="rounded-xl border p-5 space-y-3"
-              style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-              <h2 className="text-sm font-bold text-white">Video File</h2>
-
-              <div className="rounded-lg border border-dashed p-6 text-center cursor-pointer transition-colors"
-                style={{ borderColor: videoFile ? "#a855f755" : "#1e1e2e", background: videoFile ? "#a855f708" : "transparent" }}
-                onClick={() => fileRef.current?.click()}>
-                {videoFile ? (
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-purple-400">📹 {videoFile.name}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {(videoFile.size / 1024 / 1024).toFixed(1)} MB · {videoFile.type || "video"}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-3xl">📹</p>
-                    <p className="text-sm text-slate-400">Click to select your recorded video</p>
-                    <p className="text-[11px] text-slate-600">MP4, MOV or WEBM</p>
+              <div style={{ position: "relative" }}>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Category</label>
+                <input
+                  type="text"
+                  value={genCategory}
+                  onChange={(e) => { setGenCategory(e.target.value); setCatSuggestOpen(true); }}
+                  onFocus={() => setCatSuggestOpen(true)}
+                  onBlur={() => setTimeout(() => setCatSuggestOpen(false), 150)}
+                  placeholder="Python, AI/ML, or custom…"
+                  style={inp}
+                  autoComplete="off"
+                />
+                {catSuggestOpen && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20,
+                    background: "#111118", border: "1px solid #2a2a3e", borderRadius: 8,
+                    marginTop: 4, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.7)",
+                  }}>
+                    {categories
+                      .filter((c) => c !== "All" && c.toLowerCase().includes(genCategory.toLowerCase()))
+                      .map((c) => (
+                        <button key={c}
+                          onMouseDown={() => { setGenCategory(c); setCatSuggestOpen(false); }}
+                          style={{
+                            display: "block", width: "100%", padding: "0.5rem 0.85rem",
+                            textAlign: "left", background: "transparent", border: "none",
+                            borderBottom: "1px solid #1a1a28", color: "#e2e8f0", cursor: "pointer",
+                            fontSize: "0.875rem",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(168,85,247,0.12)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    {genCategory.trim() && !categories.filter((c) => c !== "All").some((c) => c.toLowerCase() === genCategory.toLowerCase().trim()) && (
+                      <div style={{ padding: "0.45rem 0.85rem", color: "#64748b", fontSize: "0.75rem", fontStyle: "italic" }}>
+                        Custom: &ldquo;{genCategory}&rdquo; ✓
+                      </div>
+                    )}
                   </div>
                 )}
-                <input ref={fileRef} type="file" accept="video/*" className="hidden"
-                  onChange={(e) => { setVideoFile(e.target.files?.[0] ?? null); setResult(null); }} />
               </div>
-
-              <div className="rounded-lg border p-3" style={{ background: "#111118", borderColor: "#1e1e2e" }}>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  <span className="text-amber-400 font-semibold">💡 How to record:</span>{" "}
-                  Open{" "}
-                  <Link href="/slides" className="text-purple-400 hover:underline underline-offset-2">Slide Preview</Link>,
-                  press ▶ to auto-play, then screen-record while it plays.{" "}
-                  Mac: <code className="text-slate-400">⌘ Shift 5</code> · Win: <code className="text-slate-400">Win + G</code>.
-                  Save as MP4 and upload here.
-                </p>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Difficulty</label>
+                <select value={genDifficulty} onChange={(e) => setGenDifficulty(e.target.value)} style={inp}>
+                  {difficulties.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
-            </section>
+            </div>
 
-            {/* ── Upload ── */}
-            <section className="rounded-xl border p-5 space-y-3"
-              style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-              <button onClick={handleUpload} disabled={!videoFile || uploading}
-                className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40"
-                style={!videoFile || uploading
-                  ? { background: "#1e1e2e", color: "#475569" }
-                  : { background: "#a855f7", color: "#fff", boxShadow: "0 0 24px rgba(168,85,247,0.4)" }}>
-                {uploading
-                  ? "Uploading to YouTube…"
-                  : videoFile
-                  ? `Upload to YouTube · ${cur.privacyStatus}`
-                  : "Select a video file first"}
-              </button>
+            <button onClick={handleGenerate} disabled={generating} style={{ padding: "0.65rem 1.5rem", background: generating ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: generating ? "not-allowed" : "pointer", fontSize: "0.9rem" }}>
+              {generating ? "⏳ Generating with Claude…" : "✨ Generate Quiz"}
+            </button>
 
-              {result?.url && (
-                <div className="rounded-lg border p-3 text-center"
-                  style={{ background: "#4ade8010", borderColor: "#4ade8040" }}>
-                  <p className="text-xs font-semibold text-green-400 mb-1">✅ Uploaded successfully!</p>
-                  <a href={result.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-cyan-400 hover:underline underline-offset-2 break-all">
-                    {result.url}
-                  </a>
+            {genError && (
+              <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 8, color: "#f87171", fontSize: "0.875rem" }}>{genError}</div>
+            )}
+
+            {preview && previewSeries && (
+              <div style={{ marginTop: "2rem" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{previewSeries.title}</div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>{previewSeries.category}</span>
+                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 4, color: difficultyColor(previewSeries.difficulty), background: "rgba(255,255,255,0.05)" }}>{previewSeries.difficulty}</span>
+                      <span style={{ fontSize: "0.72rem", color: "#4ade80" }}>✓ Saved to library</span>
+                    </div>
+                  </div>
+                  <button onClick={() => goToUpload(previewSeries)} style={{ padding: "0.5rem 1.25rem", background: "#22d3ee", border: "none", borderRadius: 8, color: "#0a0a0f", fontWeight: 700, cursor: "pointer", fontSize: "0.875rem" }}>
+                    🚀 Upload →
+                  </button>
                 </div>
-              )}
-
-              {result?.error && (
-                <div className="rounded-lg border p-3" style={{ background: "#f8717110", borderColor: "#f8717140" }}>
-                  <p className="text-xs font-semibold text-red-400 mb-1">Upload failed</p>
-                  <p className="text-[11px] text-red-300">{result.error}</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem" }}>
+                  {preview.map((slide, i) => (
+                    <div key={i}>
+                      <div style={{ fontSize: "0.65rem", color: "#6366f1", marginBottom: 4 }}>Slide {i + 1} · {slide.template}</div>
+                      <SlidePreview slide={slide} />
+                    </div>
+                  ))}
                 </div>
-              )}
-            </section>
-
-            {/* ── YouTube API setup guide ── */}
-            <section className="rounded-xl border p-5 space-y-3"
-              style={{ background: "#0f0f1a", borderColor: "#1e1e2e" }}>
-              <h2 className="text-sm font-bold text-white">YouTube API Setup</h2>
-              <div className="rounded-lg p-3 font-mono text-[11px] space-y-0.5 leading-relaxed"
-                style={{ background: "#111118", color: "#94a3b8" }}>
-                <p><span className="text-slate-600"># .env.local</span></p>
-                <p><span className="text-cyan-400">YOUTUBE_CLIENT_ID</span>=your-client-id</p>
-                <p><span className="text-cyan-400">YOUTUBE_CLIENT_SECRET</span>=your-client-secret</p>
-                <p><span className="text-cyan-400">YOUTUBE_REFRESH_TOKEN</span>=your-refresh-token</p>
               </div>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Go to{" "}
-                <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer"
-                  className="text-purple-400 hover:underline underline-offset-2">
-                  Google Cloud Console
-                </a>{" "}
-                → APIs & Services → Credentials → OAuth 2.0 Client ID. Enable the YouTube Data API v3, then generate a refresh token using the OAuth Playground.
-              </p>
-            </section>
-
+            )}
           </div>
-        </main>
+        )}
+
+        {/* ═══════════════════════ LIBRARY ════════════════════════════════ */}
+        {tab === "library" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Series Library</h2>
+              <button onClick={loadLibrary} style={{ padding: "0.4rem 1rem", background: "transparent", border: "1px solid #1e1e2e", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: "0.8rem" }}>↺ Refresh</button>
+            </div>
+
+            {loadingLib && <p style={{ color: "#94a3b8" }}>Loading…</p>}
+
+            {!loadingLib && library.length === 0 && (
+              <div style={{ textAlign: "center", padding: "3rem", color: "#4a4a5a" }}>
+                <div style={{ fontSize: "3rem" }}>📭</div>
+                <p style={{ marginTop: "0.75rem" }}>No series yet. Go to Generate to create one!</p>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {library.map((s) => (
+                <div key={s.id} style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.title}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                      <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>{s.category}</span>
+                      <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: difficultyColor(s.difficulty), background: "rgba(255,255,255,0.05)" }}>{s.difficulty}</span>
+                      <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: statusColor(s.status), background: "rgba(255,255,255,0.05)" }}>{s.status}</span>
+                      <span style={{ fontSize: "0.7rem", color: "#4a4a5a" }}>{s.slide_count ?? 0} slides · {new Date(s.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {s.youtube_url && (
+                      <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" style={{ padding: "0.4rem 0.75rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 6, color: "#4ade80", textDecoration: "none", fontSize: "0.75rem" }}>▶ YouTube</a>
+                    )}
+                    <button onClick={() => goToUpload(s)} style={{ padding: "0.4rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 6, color: "#22d3ee", cursor: "pointer", fontSize: "0.75rem" }}>🚀 Upload</button>
+                    <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════ UPLOAD ══════════════════════════════════ */}
+        {tab === "upload" && (
+          <div>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.5rem" }}>Upload to YouTube</h2>
+
+            {!uploadSeries ? (
+              <div style={{ padding: "2rem", background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, color: "#94a3b8", textAlign: "center" }}>
+                No series selected. Go to <strong style={{ color: "#22d3ee", cursor: "pointer" }} onClick={() => setTab("library")}>Library</strong> and click Upload on a series.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1.5rem" }}>
+                {/* Form */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={{ padding: "0.75rem 1rem", background: "rgba(168,85,247,0.08)", border: "1px solid #312e81", borderRadius: 8, fontSize: "0.875rem" }}>
+                    Series: <strong>{uploadSeries.title}</strong> · {uploadSlides?.length ?? 0} slides
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Title</label>
+                    <input type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} style={inp} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Description</label>
+                    <textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} rows={8}
+                      style={{ ...inp, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6 }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Tags (comma separated)</label>
+                    <input type="text" value={uploadTags} onChange={(e) => setUploadTags(e.target.value)} style={inp} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Privacy</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {(["private", "unlisted", "public"] as const).map((p) => (
+                        <button key={p} onClick={() => setUploadPrivacy(p)} style={{ padding: "0.4rem 1rem", borderRadius: 8, border: "1px solid", borderColor: uploadPrivacy === p ? "#a855f7" : "#1e1e2e", background: uploadPrivacy === p ? "rgba(168,85,247,0.15)" : "transparent", color: uploadPrivacy === p ? "#a855f7" : "#94a3b8", cursor: "pointer", textTransform: "capitalize", fontSize: "0.875rem" }}>
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Render Video */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 8 }}>Video</label>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                      <button onClick={handleRender} disabled={rendering}
+                        style={{ flex: 1, padding: "0.65rem 1rem", background: rendering ? "#1e1e2e" : "rgba(168,85,247,0.15)", border: "1px solid", borderColor: rendering ? "#374151" : "#a855f7", borderRadius: 8, color: rendering ? "#475569" : "#c084fc", fontWeight: 700, cursor: rendering ? "not-allowed" : "pointer", fontSize: "0.875rem" }}>
+                        {rendering ? "⏳ Rendering…" : "🎬 Render Video"}
+                      </button>
+                      {renderFile && !rendering && (
+                        <a href={`/api/admin/render/${encodeURIComponent(renderFile)}`} download
+                          style={{ padding: "0.65rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 8, color: "#22d3ee", textDecoration: "none", fontSize: "0.8rem" }}>
+                          ⬇ Save
+                        </a>
+                      )}
+                    </div>
+                    {renderStatus && !rendering && (
+                      <p style={{ fontSize: "0.75rem", color: "#4ade80", marginBottom: 6 }}>{renderStatus}</p>
+                    )}
+                    {rendering && (
+                      <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: 6, fontFamily: "monospace" }}>
+                        {renderStatus || "Running FFmpeg…"}
+                      </p>
+                    )}
+                    {renderError && (
+                      <div style={{ padding: "0.5rem 0.75rem", background: "rgba(248,113,113,0.08)", border: "1px solid #f8717150", borderRadius: 6, color: "#f87171", fontSize: "0.75rem", marginBottom: 6, whiteSpace: "pre-wrap", maxHeight: 100, overflow: "auto" }}>
+                        {renderError}
+                      </div>
+                    )}
+
+                    {/* Manual file pick fallback */}
+                    <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "0.875rem", border: "1px dashed", borderColor: videoFile && !rendering ? "#a855f7" : "#1e1e2e", borderRadius: 8, cursor: "pointer", color: videoFile ? "#c084fc" : "#4a4a5a", background: videoFile ? "rgba(168,85,247,0.05)" : "transparent", fontSize: "0.8rem" }}>
+                      <input type="file" accept="video/*" style={{ display: "none" }} onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)} />
+                      {videoFile ? `✓ ${videoFile.name}` : "📁 Or select existing .mp4"}
+                    </label>
+                  </div>
+
+                  {uploadError && <div style={{ padding: "0.75rem 1rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 8, color: "#f87171", fontSize: "0.875rem" }}>{uploadError}</div>}
+                  {uploadResult && (
+                    <div style={{ padding: "0.75rem 1rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 8, fontSize: "0.875rem" }}>
+                      <span style={{ color: "#4ade80" }}>✓ Uploaded!</span>{" "}
+                      <a href={uploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: "#22d3ee" }}>View on YouTube →</a>
+                    </div>
+                  )}
+
+                  <button onClick={handleUpload} disabled={uploading || !videoFile} style={{ padding: "0.75rem 1.5rem", background: uploading ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: uploading || !videoFile ? "not-allowed" : "pointer", fontSize: "0.95rem" }}>
+                    {uploading ? "⏳ Uploading…" : "🚀 Upload to YouTube"}
+                  </button>
+
+                  {/* YouTube API setup */}
+                  <div style={{ padding: "1rem", background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, fontSize: "0.78rem", color: "#4a4a5a" }}>
+                    <div style={{ color: "#94a3b8", fontWeight: 600, marginBottom: 8 }}>YouTube API Setup</div>
+                    <div style={{ fontFamily: "monospace", lineHeight: 1.8 }}>
+                      <span style={{ color: "#4a4a5a" }}># .env.local</span><br />
+                      <span style={{ color: "#22d3ee" }}>YOUTUBE_CLIENT_ID</span>=your-client-id<br />
+                      <span style={{ color: "#22d3ee" }}>YOUTUBE_CLIENT_SECRET</span>=your-client-secret<br />
+                      <span style={{ color: "#22d3ee" }}>YOUTUBE_REFRESH_TOKEN</span>=your-refresh-token<br />
+                      <span style={{ color: "#22d3ee" }}>ANTHROPIC_API_KEY</span>=your-api-key<br />
+                      <span style={{ color: "#22d3ee" }}>ADMIN_PASSWORD</span>=your-password
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thumbnail + slides */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 8 }}>Thumbnail (1280×720)</label>
+                  <canvas ref={canvasRef} style={{ width: "100%", borderRadius: 8, border: "1px solid #1e1e2e" }} />
+                  <button onClick={() => uploadSeries && drawThumbnailToCanvas(canvasRef.current!, uploadSeries.title, uploadSeries.category, uploadSeries.difficulty)}
+                    style={{ marginTop: 8, width: "100%", padding: "0.4rem", background: "transparent", border: "1px solid #1e1e2e", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: "0.78rem" }}>
+                    ↺ Refresh Thumbnail
+                  </button>
+
+                  {uploadSlides && uploadSlides.length > 0 && (
+                    <div style={{ marginTop: "1.5rem" }}>
+                      <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 8 }}>Slides ({uploadSlides.length})</label>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {uploadSlides.map((slide, i) => (
+                          <div key={i}>
+                            <div style={{ fontSize: "0.62rem", color: "#6366f1", marginBottom: 3 }}>{i + 1}. {slide.template}</div>
+                            <SlidePreview slide={slide} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
