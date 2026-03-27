@@ -11,13 +11,13 @@ import {
 import type { QuizVideo } from "@/lib/videos";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Section = "dashboard" | "library" | "preview";
+type Section = "dashboard" | "library";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const BG    = "#0b0b12";
-const SIDE  = "#08080f";
-const CARD  = "#111119";
-const BORD  = "#1c1c2e";
+const BG    = "#0d0d16";
+const SIDE  = "#0a0a14";
+const CARD  = "#141420";
+const BORD  = "#22223a";
 
 // ── Dynamic category colors (extendable — unknown cats get a hash-picked color) ─
 const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
@@ -358,12 +358,12 @@ function DashboardView() {
           { label: "Access",        value: "Free",                   sub: "always open",               color: "#fbbf24" },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl p-4 relative overflow-hidden"
-            style={{ background: `linear-gradient(135deg, ${CARD} 0%, ${s.color}0a 100%)`, border: `1px solid ${s.color}28` }}>
-            <div className="absolute top-0 left-0 right-0 h-px"
-              style={{ background: `linear-gradient(90deg, transparent, ${s.color}60, transparent)` }} />
+            style={{ background: `linear-gradient(135deg, #1a1a2e 0%, ${s.color}12 100%)`, border: `1px solid ${s.color}35` }}>
+            <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+              style={{ background: `linear-gradient(90deg, transparent, ${s.color}80, transparent)` }} />
             <p className="font-mono text-3xl font-black tracking-tight" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-sm font-bold text-white mt-1">{s.label}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">{s.sub}</p>
+            <p className="text-sm font-bold text-slate-100 mt-1">{s.label}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
@@ -563,102 +563,6 @@ function LibraryView() {
   );
 }
 
-// ── Preview section ───────────────────────────────────────────────────────────
-function PreviewView() {
-  const featured = allVideos.find((v) => v.featured) ?? allVideos[0];
-
-  if (!featured) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
-          style={{ background: "#a855f710", border: "1px solid #a855f730" }}>
-          🎬
-        </div>
-        <p className="text-white font-semibold mb-2">Coming soon</p>
-        <p className="text-sm text-slate-500 max-w-xs">
-          Our first daily quiz Short is on its way. Subscribe on YouTube to be the first to know!
-        </p>
-        <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-85"
-          style={{ background: "linear-gradient(135deg, #9333ea, #7c3aed)" }}>
-          Subscribe on YouTube
-        </a>
-      </div>
-    );
-  }
-
-  const rest = allVideos.filter((v) => v.id !== featured.id).slice(0, 4);
-  const col = getCatColor(featured.category);
-  const url = videoUrl(featured);
-  const isLive = Boolean(featured.youtubeId);
-
-  return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold text-white mb-1">Latest Quiz</h1>
-      <p className="text-sm text-slate-500 mb-5">The most recent daily quiz Short.</p>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        {/* Big featured card */}
-        <div className="lg:col-span-3">
-          <a href={url} target="_blank" rel="noopener noreferrer"
-            className="group block rounded-xl overflow-hidden border"
-            style={{ background: CARD, borderColor: BORD }}>
-            <div className="relative aspect-video bg-[#0e0e16]">
-              <Thumb video={featured} sizes="(max-width: 1024px) 100vw, 60vw" priority />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/35 transition-colors">
-                {isLive && (
-                  <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
-                    <svg className="w-7 h-7 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              <div className="absolute top-3 left-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded"
-                  style={{ background: `${col.badge}cc`, color: col.text }}>
-                  {featured.category}
-                </span>
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold">
-                  ★ FEATURED
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                  style={{ background: `${col.badge}20`, color: col.text }}>
-                  {DIFF[featured.difficulty]}
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-white mb-2">{featured.title}</h2>
-              {featured.description && (
-                <p className="text-sm text-slate-400 mb-4">{featured.description}</p>
-              )}
-              <div className="flex items-center gap-3">
-                <a href={url} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition-colors">
-                  <Ico.YT /> Watch on YouTube
-                </a>
-                <span className="font-mono text-xs text-slate-500">
-                  {new Date(featured.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                </span>
-              </div>
-            </div>
-          </a>
-        </div>
-
-        {/* Recent quizzes sidebar */}
-        <div className="lg:col-span-2">
-          <p className="text-sm font-bold text-white mb-3">Up Next</p>
-          <div className="space-y-2">
-            {rest.map((v, i) => <VideoListRow key={v.id} video={v} rank={i + 2} />)}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Analytics dashboard (kept for future use, not linked in nav) ─────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -889,7 +793,6 @@ function AnalyticsView() {
 const NAV: { id: Section; label: string; Icon: () => React.ReactElement }[] = [
   { id: "dashboard", label: "Dashboard", Icon: Ico.Dashboard },
   { id: "library",   label: "Library",   Icon: Ico.Library   },
-  { id: "preview",   label: "Preview",   Icon: Ico.Preview   },
 ];
 
 // ── Root page ─────────────────────────────────────────────────────────────────
@@ -901,9 +804,8 @@ export default function Home() {
     <>
       {/* Logo */}
       <div className="px-4 pt-5 pb-4 border-b shrink-0"
-        style={{ borderColor: BORD, background: "linear-gradient(180deg, #0e0e1c 0%, transparent 100%)" }}>
-        <Image src="/logo.svg" alt="QuizBytesDaily" width={140} height={32} priority />
-        <p className="text-[10px] text-slate-600 mt-1 ml-1">Daily Tech Quiz Shorts</p>
+        style={{ borderColor: BORD }}>
+        <Image src="/logo.svg" alt="QuizBytesDaily" width={140} height={36} priority />
       </div>
 
       {/* Nav */}
@@ -955,25 +857,12 @@ export default function Home() {
         </a>
       </div>
 
-      {/* Bottom: channel branding */}
-      <div className="border-t px-2 py-3 shrink-0" style={{ borderColor: BORD }}>
-        <a
-          href={channelConfig.youtubeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/5 transition-all"
-        >
-          <div className="w-7 h-7 rounded-full bg-purple-700 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-            QB
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-white truncate">QuizBytesDaily</p>
-            <p className="text-[10px] text-slate-600">YouTube Channel</p>
-          </div>
-          <svg className="w-3 h-3 ml-auto shrink-0 text-slate-600" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
-          </svg>
-        </a>
+      {/* Bottom: tagline */}
+      <div className="border-t px-4 py-3 shrink-0" style={{ borderColor: BORD }}>
+        <p className="text-[10px] text-slate-600 leading-relaxed">
+          One focused quiz every day.<br />
+          Short, sharp, and stackable.
+        </p>
       </div>
     </>
   );
@@ -984,7 +873,7 @@ export default function Home() {
       {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
       <aside
         className="hidden md:flex w-56 shrink-0 flex-col h-full border-r"
-        style={{ background: `linear-gradient(180deg, #0d0d1a 0%, ${SIDE} 100%)`, borderColor: BORD }}
+        style={{ background: "linear-gradient(180deg, #0f0f1e 0%, #0a0a14 60%, #0c0a18 100%)", borderColor: BORD }}
       >
         {sidebarContent}
       </aside>
@@ -998,7 +887,7 @@ export default function Home() {
           />
           <aside
             className="fixed left-0 top-0 h-full z-50 flex flex-col w-56 border-r md:hidden"
-            style={{ background: `linear-gradient(180deg, #0d0d1a 0%, ${SIDE} 100%)`, borderColor: BORD }}
+            style={{ background: "linear-gradient(180deg, #0f0f1e 0%, #0a0a14 60%, #0c0a18 100%)", borderColor: BORD }}
           >
             {sidebarContent}
           </aside>
@@ -1010,53 +899,57 @@ export default function Home() {
 
         {/* Top bar */}
         <header
-          className="h-12 shrink-0 flex items-center gap-3 px-4 border-b"
-          style={{ borderColor: BORD, background: `${SIDE}cc` }}
+          className="h-14 shrink-0 flex items-center gap-3 px-4 border-b"
+          style={{ borderColor: BORD, background: `${SIDE}e0` }}
         >
           {/* Hamburger (mobile) */}
           <button
-            className="md:hidden text-slate-500 hover:text-white transition-colors"
+            className="md:hidden text-slate-500 hover:text-white transition-colors shrink-0"
             onClick={() => setSidebarOpen(true)}
           >
             <Ico.Menu />
           </button>
 
-          {/* Search */}
-          <div className="flex-1 max-w-xs">
+          {/* Search — centered, prominent */}
+          <div className="flex-1 flex justify-center">
             <div
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 border"
-              style={{ background: CARD, borderColor: BORD }}
+              className="flex items-center gap-3 rounded-xl px-4 py-2.5 border w-full max-w-xl transition-colors"
+              style={{ background: "#0f0f1c", borderColor: "#2a2a3e" }}
+              onFocus={() => {}}
             >
-              <span className="text-slate-600"><Ico.Search /></span>
+              <span className="text-slate-500 shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                </svg>
+              </span>
               <input
                 type="text"
-                placeholder="Search quiz library..."
-                className="bg-transparent text-sm text-white placeholder-slate-600 outline-none flex-1 min-w-0"
+                placeholder="Search quizzes by topic, category…"
+                className="bg-transparent text-[15px] text-white placeholder-slate-500 outline-none flex-1 min-w-0"
               />
+              <kbd className="hidden sm:inline-block text-[10px] font-mono text-slate-600 bg-white/5 rounded px-1.5 py-0.5 shrink-0">⌘K</kbd>
             </div>
           </div>
 
-          {/* Right icons */}
-          <div className="flex items-center gap-1 ml-auto">
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors">
-              <Ico.Bell />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors">
-              <Ico.Help />
-            </button>
-            <div className="h-5 w-px mx-1" style={{ background: BORD }} />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400 hidden lg:block">{channelConfig.handle}</span>
-              <div className="w-7 h-7 rounded-full bg-purple-700 flex items-center justify-center text-[11px] font-bold text-white">QB</div>
-            </div>
-          </div>
+          {/* Right — subscribe CTA only */}
+          <a
+            href={channelConfig.youtubeSubscribeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-85"
+            style={{ background: "#dc2626" }}
+          >
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
+            </svg>
+            Subscribe
+          </a>
         </header>
 
         {/* Section content */}
         <main className="flex-1 overflow-y-auto">
           {section === "dashboard" && <DashboardView />}
           {section === "library"   && <LibraryView />}
-          {section === "preview"   && <PreviewView />}
         </main>
       </div>
     </div>

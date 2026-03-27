@@ -112,19 +112,21 @@ body {
    Filter tab active state
 ────────────────────────────────────────── */
 .filter-tab {
-  border: 1px solid var(--border);
+  border: 1px solid #2a2a40;
   border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.75rem;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, color 0.18s;
-  color: var(--muted);
-  background: transparent;
+  color: #6b7280;
+  background: #13131f;
 }
 
 .filter-tab:hover {
-  border-color: var(--primary);
-  color: var(--text);
+  border-color: #a855f760;
+  color: #c4b5fd;
+  background: #1a1a2e;
 }
 
 .filter-tab.active {
