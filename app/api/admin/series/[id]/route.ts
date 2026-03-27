@@ -9,11 +9,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const series = getSeriesById(Number(id));
+    const series = await getSeriesById(Number(id));
     if (!series) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const slides = getSlides(series.id);
+    const slides = await getSlides(series.id);
     const parsedSlides = slides.map((s) => ({
       ...s,
       data: JSON.parse(s.data),
@@ -31,11 +31,11 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const series = getSeriesById(Number(id));
+    const series = await getSeriesById(Number(id));
     if (!series) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    deleteSeries(Number(id));
+    await deleteSeries(Number(id));
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[series delete]", err);

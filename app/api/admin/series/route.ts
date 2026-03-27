@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const series = listSeries();
+    const series = await listSeries();
     return NextResponse.json({ series });
   } catch (err) {
     console.error("[series list]", err);

@@ -52,10 +52,9 @@ const DEF_STEPS_DUR = 9;  // definition-steps slides
 const PIPELINE_DUR  = 9;  // pipeline slides
 const CTA_DUR       = 7;  // CTA slide
 
-// Use /tmp on Vercel (read-only filesystem); local data/renders otherwise
-const RENDERS_DIR = process.env.VERCEL
-  ? path.join(os.tmpdir(), "qbd-renders")
-  : path.join(process.cwd(), "data", "renders");
+// Always use /tmp — works on Vercel (read-only cwd) and locally.
+// The render route streams bytes back directly so we never need persistent storage.
+const RENDERS_DIR = path.join(os.tmpdir(), "qbd-renders");
 
 // ── Card / definition color map ───────────────────────────────────────────────
 

@@ -26,12 +26,12 @@ export async function POST(req: NextRequest) {
 
     // Ensure unique slug
     let slug = generated.slug;
-    if (getSeriesBySlug(slug)) {
+    if (await getSeriesBySlug(slug)) {
       slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
     }
 
     // Save to DB
-    const series = createSeries({
+    const series = await createSeries({
       slug,
       title: generated.title,
       topic: generated.topic,
@@ -39,9 +39,14 @@ export async function POST(req: NextRequest) {
       difficulty: generated.difficulty,
     });
 
-    insertSlides(
+    // The LLM returns flat slide objects: { template, heading, cards, ... }
+    // We store template separately; everything else goes into the data column.
+    await insertSlides(
       series.id,
-      generated.slides.map((s) => ({ template: s.template, data: s.data }))
+      generated.slides.map((s) => {
+        const { template, ...rest } = s as unknown as Record<string, unknown>;
+        return { template: String(template ?? "unknown"), data: rest };
+      })
     );
 
     return NextResponse.json({ success: true, series, slides: generated.slides });

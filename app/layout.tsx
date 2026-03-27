@@ -16,6 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://quizbytes.dev"),
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   title: "QuizBytesDaily — Daily Tech Quiz Shorts",
   description:
     "Bite-sized tech quiz Shorts posted daily. Test your knowledge on Python, Algorithms, AI, System Design, and JavaScript. Subscribe on YouTube.",

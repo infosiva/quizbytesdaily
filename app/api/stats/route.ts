@@ -3,7 +3,7 @@ import { listSeries } from "@/lib/db";
 
 export async function GET() {
   try {
-    const series = listSeries();
+    const series = await listSeries();
     const catMap: Record<string, number> = {};
     for (const s of series) {
       catMap[s.category] = (catMap[s.category] ?? 0) + 1;

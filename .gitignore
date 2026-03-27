@@ -20,3 +20,5 @@ Thumbs.db
 
 # SQLite database
 data/
+.vercel
+.env*.local
