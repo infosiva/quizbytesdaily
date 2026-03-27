@@ -14,10 +14,10 @@ import type { QuizVideo } from "@/lib/videos";
 type Section = "dashboard" | "library";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const BG    = "#0d0d16";
-const SIDE  = "#0a0a14";
-const CARD  = "#141420";
-const BORD  = "#22223a";
+const BG    = "#0e0e18";
+const SIDE  = "#09090f";
+const CARD  = "#13131f";
+const BORD  = "#1e1e32";
 
 // ── Dynamic category colors (extendable — unknown cats get a hash-picked color) ─
 const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
@@ -330,6 +330,8 @@ function EmptyState({ message }: { message: string }) {
 // ── Dashboard section ─────────────────────────────────────────────────────────
 type ApiStats = { total: number; published: number; categories: { name: string; count: number }[] };
 
+const TOPIC_PILLS = ["Python", "Algorithms", "AI/ML", "System Design", "TypeScript", "Docker", "React", "DevOps"];
+
 function DashboardView() {
   const [apiStats, setApiStats] = useState<ApiStats | null>(null);
 
@@ -338,91 +340,128 @@ function DashboardView() {
   }, []);
 
   const recent = allVideos.slice(0, 5);
-  const total      = apiStats?.total     ?? allVideos.length;
-  const published  = apiStats?.published ?? allVideos.filter((v) => v.youtubeId).length;
-  const apiCats    = apiStats?.categories ?? [];
-  const catCount   = apiCats.length || Object.keys(
+  const total     = apiStats?.total     ?? allVideos.length;
+  const published = apiStats?.published ?? allVideos.filter((v) => v.youtubeId).length;
+  const apiCats   = apiStats?.categories ?? [];
+  const catCount  = apiCats.length || Object.keys(
     allVideos.reduce((m, v) => ({ ...m, [v.category]: true }), {} as Record<string, boolean>)
   ).length;
-  const maxCat     = Math.max(...apiCats.map((c) => c.count), 1);
+  const maxCat    = Math.max(...apiCats.map((c) => c.count), 1);
+  const hasContent = total > 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-0">
 
-      {/* ── Top stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* ── Hero banner ── */}
+      <div className="relative overflow-hidden px-8 py-12"
+        style={{ background: "linear-gradient(135deg, #0f0f1e 0%, #130d24 50%, #0c1220 100%)" }}>
+
+        {/* Decorative glow orbs */}
+        <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-20 pointer-events-none"
+          style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }} />
+        <div className="absolute -bottom-12 right-24 w-48 h-48 rounded-full opacity-15 pointer-events-none"
+          style={{ background: "radial-gradient(circle, #22d3ee 0%, transparent 70%)" }} />
+        <div className="absolute top-8 right-8 w-32 h-32 rounded-full opacity-10 pointer-events-none"
+          style={{ background: "radial-gradient(circle, #fbbf24 0%, transparent 70%)" }} />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-5 border"
+            style={{ background: "#a855f715", borderColor: "#a855f730", color: "#c084fc" }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            Daily quiz channel — coming soon
+          </div>
+
+          <h1 className="text-4xl font-black text-white leading-tight mb-3">
+            One quiz.<br />
+            <span style={{ background: "linear-gradient(90deg, #a855f7, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Every day.
+            </span>
+          </h1>
+
+          <p className="text-slate-400 text-base leading-relaxed mb-6 max-w-md">
+            Bite-sized tech quiz Shorts. Python, Algorithms, AI, System Design — one focused question, every single day.
+          </p>
+
+          {/* Topic pills */}
+          <div className="flex flex-wrap gap-2 mb-7">
+            {TOPIC_PILLS.map((t) => {
+              const col = getCatColor(t);
+              return (
+                <span key={t} className="text-[11px] font-bold px-2.5 py-1 rounded-full"
+                  style={{ background: `${col.badge}25`, color: col.text, border: `1px solid ${col.badge}40` }}>
+                  {t}
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg, #a855f7, #7c3aed)", boxShadow: "0 0 20px rgba(168,85,247,0.4)" }}>
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
+              </svg>
+              Watch on YouTube
+            </a>
+            <span className="text-xs text-slate-600 font-mono">Free forever · No signup needed</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Stat strip ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 border-b" style={{ borderColor: BORD }}>
         {[
-          { label: "Total Quizzes", value: String(total) || "0",    sub: `${published} on YouTube`, color: "#a855f7" },
-          { label: "Categories",    value: String(catCount) || "0", sub: "topics covered",           color: "#22d3ee" },
-          { label: "Cadence",       value: "Daily",                  sub: "new quiz every day",       color: "#4ade80" },
-          { label: "Access",        value: "Free",                   sub: "always open",               color: "#fbbf24" },
+          { label: "Quizzes Published", value: String(published), icon: "▶", color: "#a855f7" },
+          { label: "Topics Covered",    value: String(catCount),  icon: "#", color: "#22d3ee" },
+          { label: "Upload Cadence",    value: "Daily",           icon: "◈", color: "#4ade80" },
+          { label: "Cost to Watch",     value: "Free",            icon: "✦", color: "#fbbf24" },
         ].map((s) => (
-          <div key={s.label} className="rounded-2xl p-4 relative overflow-hidden"
-            style={{ background: `linear-gradient(135deg, #1a1a2e 0%, ${s.color}12 100%)`, border: `1px solid ${s.color}35` }}>
-            <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-              style={{ background: `linear-gradient(90deg, transparent, ${s.color}80, transparent)` }} />
-            <p className="font-mono text-3xl font-black tracking-tight" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-sm font-bold text-slate-100 mt-1">{s.label}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">{s.sub}</p>
+          <div key={s.label}
+            className="px-6 py-4 flex items-center gap-4 border-r last:border-r-0"
+            style={{ borderColor: BORD, borderTop: `1px solid ${BORD}` }}>
+            <span className="text-xl font-black shrink-0 w-8 text-center" style={{ color: s.color }}>{s.icon}</span>
+            <div>
+              <p className="font-mono text-xl font-black" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{s.label}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* ── Category breakdown ── */}
-      {apiCats.length > 0 ? (
-        <div>
-          <p className="text-sm font-bold text-white mb-3">Quizzes by Category</p>
+      {/* ── Category breakdown (once content exists) ── */}
+      {apiCats.length > 0 && (
+        <div className="p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Quizzes by Category</p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {apiCats.map(({ name, count }) => {
               const col = getCatColor(name);
               const pct = Math.round((count / maxCat) * 100);
               return (
-                <div key={name} className="rounded-2xl p-4 relative overflow-hidden"
-                  style={{ background: `linear-gradient(135deg, ${CARD} 0%, ${col.badge}18 100%)`, border: `1px solid ${col.badge}40` }}>
-                  <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
-                    style={{ background: col.text }} />
-                  <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-2"
-                    style={{ background: `${col.badge}30`, color: col.text }}>
-                    {name}
-                  </span>
-                  <p className="text-2xl font-black text-white">{count}</p>
-                  <p className="text-[10px] text-slate-500 mb-2">quiz{count !== 1 ? "zes" : ""}</p>
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: `${col.badge}30` }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: col.text }} />
+                <div key={name} className="rounded-xl p-4 relative overflow-hidden group cursor-default transition-all hover:-translate-y-0.5"
+                  style={{ background: CARD, border: `1px solid ${BORD}`, borderLeft: `3px solid ${col.text}` }}>
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${col.badge}25`, color: col.text }}>{name}</span>
+                    <span className="text-2xl font-black" style={{ color: col.text }}>{count}</span>
                   </div>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: `${col.badge}20` }}>
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: col.text }} />
+                  </div>
+                  <p className="text-[10px] text-slate-600 mt-1.5">quiz{count !== 1 ? "zes" : ""}</p>
                 </div>
               );
             })}
           </div>
         </div>
-      ) : (
-        /* ── Coming soon (no content yet — no admin links) ── */
-        <div className="rounded-2xl border p-8 text-center" style={{ background: CARD, borderColor: BORD }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4"
-            style={{ background: "#a855f715", border: "1px solid #a855f730" }}>
-            ⚡
-          </div>
-          <p className="text-lg font-bold text-white mb-1">Channel launching soon!</p>
-          <p className="text-sm text-slate-500 max-w-sm mx-auto">
-            Daily bite-sized tech quiz Shorts on Python, Algorithms, AI, System Design, and more.
-            Subscribe to get notified when we drop our first quiz.
-          </p>
-          <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-85"
-            style={{ background: "linear-gradient(135deg, #9333ea, #7c3aed)" }}>
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
-            </svg>
-            Subscribe on YouTube
-          </a>
-        </div>
       )}
 
       {/* ── Recent quizzes (when videos exist) ── */}
-      {recent.length > 0 && (
-        <div className="rounded-2xl border p-4" style={{ background: CARD, borderColor: BORD }}>
-          <p className="text-sm font-bold text-white mb-3">Recent Quizzes</p>
-          <div className="space-y-0">
+      {hasContent && recent.length > 0 && (
+        <div className="p-6 pt-0">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Recent Quizzes</p>
+          <div className="rounded-xl border overflow-hidden divide-y" style={{ background: CARD, borderColor: BORD }}>
             {recent.map((v, i) => <VideoListRow key={v.id} video={v} rank={i + 1} />)}
           </div>
         </div>
@@ -840,22 +879,6 @@ export default function Home() {
           );
         })}
       </nav>
-
-      {/* Subscribe CTA */}
-      <div className="px-3 pb-3 shrink-0">
-        <a
-          href={channelConfig.youtubeSubscribeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full rounded-xl py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #9333ea, #7c3aed)", boxShadow: "0 4px 16px rgba(147,51,234,0.35)" }}
-        >
-          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
-          </svg>
-          Subscribe
-        </a>
-      </div>
 
       {/* Bottom: tagline */}
       <div className="border-t px-4 py-3 shrink-0" style={{ borderColor: BORD }}>
