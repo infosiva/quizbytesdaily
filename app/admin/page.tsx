@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { channelConfig, categories, difficulties } from "@/lib/config";
+import { LAYOUTS, TRENDING_TOPICS, type LayoutId } from "@/lib/quiz-generator";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -145,6 +146,7 @@ export default function AdminPage() {
   const [topic, setTopic] = useState("");
   const [genCategory, setGenCategory] = useState("Python");
   const [genDifficulty, setGenDifficulty] = useState("Intermediate");
+  const [genLayout, setGenLayout] = useState<LayoutId>("quiz-reveal");
   const [catSuggestOpen, setCatSuggestOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -219,7 +221,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: topic.trim(), category: genCategory, difficulty: genDifficulty }),
+        body: JSON.stringify({ topic: topic.trim(), category: genCategory, difficulty: genDifficulty, layout: genLayout }),
       });
       const json = await res.json();
       if (!res.ok) { setGenError(json.error ?? "Generation failed"); return; }
@@ -368,8 +370,74 @@ export default function AdminPage() {
         {/* ═══════════════════════ GENERATE ═══════════════════════════════ */}
         {tab === "generate" && (
           <div>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.5rem" }}>Generate Quiz with AI</h2>
+            <div style={{ marginBottom: "1.75rem" }}>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.25rem" }}>Generate with AI</h2>
+              <p style={{ fontSize: "0.82rem", color: "#64748b" }}>Pick a layout, choose a topic, and let the AI do the rest.</p>
+            </div>
 
+            {/* ── Layout picker ── */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 }}>
+                Content Layout
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem" }}>
+                {LAYOUTS.map((l) => {
+                  const active = genLayout === l.id;
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => setGenLayout(l.id as LayoutId)}
+                      style={{
+                        padding: "0.9rem 0.75rem",
+                        borderRadius: 12,
+                        border: `2px solid ${active ? l.color : "#1e1e2e"}`,
+                        background: active ? `${l.color}15` : "#111118",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.15s",
+                        outline: "none",
+                      }}
+                    >
+                      <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>{l.icon}</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: active ? l.color : "#e2e8f0", marginBottom: 3 }}>{l.name}</div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b", lineHeight: 1.4 }}>{l.desc}</div>
+                      <div style={{ fontSize: "0.65rem", color: active ? l.color : "#374151", marginTop: 6, fontWeight: 600 }}>{l.slides} slides</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Trending topics for selected category ── */}
+            {TRENDING_TOPICS[genCategory] && (
+              <div style={{ marginBottom: "1.25rem" }}>
+                <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
+                  Trending in {genCategory} — click to fill
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                  {TRENDING_TOPICS[genCategory].map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTopic(t)}
+                      style={{
+                        padding: "3px 10px", borderRadius: 999,
+                        border: "1px solid #2a2a3e",
+                        background: topic === t ? "#a855f720" : "#111118",
+                        color: topic === t ? "#c084fc" : "#94a3b8",
+                        fontSize: "0.75rem", cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#a855f760"; e.currentTarget.style.color = "#c084fc"; }}
+                      onMouseLeave={(e) => { if (topic !== t) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Topic / Category / Difficulty ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Topic *</label>
@@ -432,9 +500,15 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <button onClick={handleGenerate} disabled={generating} style={{ padding: "0.65rem 1.5rem", background: generating ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: generating ? "not-allowed" : "pointer", fontSize: "0.9rem" }}>
-              {generating ? "⏳ Generating with Claude…" : "✨ Generate Quiz"}
-            </button>
+            {/* ── Generate button ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <button onClick={handleGenerate} disabled={generating} style={{ padding: "0.65rem 1.5rem", background: generating ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: generating ? "not-allowed" : "pointer", fontSize: "0.9rem" }}>
+                {generating ? "⏳ Generating…" : `✨ Generate ${LAYOUTS.find(l => l.id === genLayout)?.name ?? "Quiz"}`}
+              </button>
+              <span style={{ fontSize: "0.75rem", color: "#374151" }}>
+                {LAYOUTS.find(l => l.id === genLayout)?.slides} slides · {genCategory} · {genDifficulty}
+              </span>
+            </div>
 
             {genError && (
               <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 8, color: "#f87171", fontSize: "0.875rem" }}>{genError}</div>

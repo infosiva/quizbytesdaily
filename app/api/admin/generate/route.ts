@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateQuizSeries } from "@/lib/quiz-generator";
+import { generateQuizSeries, type LayoutId } from "@/lib/quiz-generator";
 import { createSeries, insertSlides, getSeriesBySlug } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -8,10 +8,11 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { topic, category, difficulty } = body as {
+    const { topic, category, difficulty, layout } = body as {
       topic: string;
       category: string;
       difficulty: string;
+      layout?: LayoutId;
     };
 
     if (!topic || !category || !difficulty) {
@@ -21,8 +22,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate with Claude
-    const generated = await generateQuizSeries(topic, category, difficulty);
+    const generated = await generateQuizSeries(topic, category, difficulty, layout ?? "quiz-reveal");
 
     // Ensure unique slug
     let slug = generated.slug;
