@@ -146,6 +146,7 @@ export default function AdminPage() {
   const [genCategory, setGenCategory] = useState("Python");
   const [genDifficulty, setGenDifficulty] = useState("Intermediate");
   const [catSuggestOpen, setCatSuggestOpen] = useState(false);
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState("");
   const [preview, setPreview] = useState<SlideData[] | null>(null);
@@ -189,6 +190,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (tab === "library") loadLibrary();
   }, [tab, loadLibrary]);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((d) => {
+        const cats: string[] = (d.categories ?? []).map((c: { name: string }) => c.name);
+        setDbCategories(cats);
+      })
+      .catch(() => {});
+  }, []);
 
   // Draw thumbnail when upload tab loads
   useEffect(() => {
@@ -383,9 +394,13 @@ export default function AdminPage() {
                     position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20,
                     background: "#111118", border: "1px solid #2a2a3e", borderRadius: 8,
                     marginTop: 4, overflow: "hidden", boxShadow: "0 8px 28px rgba(0,0,0,0.7)",
+                    maxHeight: 220, overflowY: "auto",
                   }}>
-                    {categories
-                      .filter((c) => c !== "All" && c.toLowerCase().includes(genCategory.toLowerCase()))
+                    {[...new Set([
+                      ...categories.filter((c) => c !== "All"),
+                      ...dbCategories,
+                    ])]
+                      .filter((c) => c.toLowerCase().includes(genCategory.toLowerCase()))
                       .map((c) => (
                         <button key={c}
                           onMouseDown={() => { setGenCategory(c); setCatSuggestOpen(false); }}
@@ -401,7 +416,7 @@ export default function AdminPage() {
                           {c}
                         </button>
                       ))}
-                    {genCategory.trim() && !categories.filter((c) => c !== "All").some((c) => c.toLowerCase() === genCategory.toLowerCase().trim()) && (
+                    {genCategory.trim() && ![...new Set([...categories.filter((c) => c !== "All"), ...dbCategories])].some((c) => c.toLowerCase() === genCategory.toLowerCase().trim()) && (
                       <div style={{ padding: "0.45rem 0.85rem", color: "#64748b", fontSize: "0.75rem", fontStyle: "italic" }}>
                         Custom: &ldquo;{genCategory}&rdquo; ✓
                       </div>

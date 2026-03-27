@@ -1,11 +1,11 @@
-import type { Category, Difficulty } from "./config";
+import type { Difficulty } from "./config";
 
 export interface QuizVideo {
   id: string;
   title: string;
   /** YouTube Short video ID — leave "" until published */
   youtubeId: string;
-  category: Category;
+  category: string;
   difficulty: Difficulty;
   /** ISO date string e.g. "2026-03-25" */
   date: string;
@@ -45,7 +45,7 @@ export function getFeaturedVideo(): QuizVideo | undefined {
   return videos.find((v) => v.featured) ?? videos[0];
 }
 
-export function getVideosByCategory(category: Category): QuizVideo[] {
+export function getVideosByCategory(category: string): QuizVideo[] {
   if (category === "All") return videos;
   return videos.filter((v) => v.category === category);
 }

@@ -1,13 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { channelConfig, categories } from "@/lib/config";
-import type { Category } from "@/lib/config";
+import { channelConfig } from "@/lib/config";
 import {
   videos as allVideos,
-  getVideosByCategory,
   videoUrl,
   thumbnailUrl,
 } from "@/lib/videos";
@@ -22,14 +19,34 @@ const SIDE  = "#08080f";
 const CARD  = "#111119";
 const BORD  = "#1c1c2e";
 
-const CAT: Record<string, { text: string; badge: string }> = {
-  Python:          { text: "#60a5fa", badge: "#1d4ed8" },
-  Algorithms:      { text: "#c084fc", badge: "#7c3aed" },
-  JavaScript:      { text: "#fbbf24", badge: "#b45309" },
-  "AI/ML":         { text: "#22d3ee", badge: "#0891b2" },
-  "System Design": { text: "#4ade80", badge: "#15803d" },
-  All:             { text: "#c084fc", badge: "#7c3aed" },
+// ── Dynamic category colors (extendable — unknown cats get a hash-picked color) ─
+const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
+  "Python":          { text: "#60a5fa", badge: "#1d4ed8" },
+  "Algorithms":      { text: "#c084fc", badge: "#6d28d9" },
+  "JavaScript":      { text: "#fbbf24", badge: "#b45309" },
+  "TypeScript":      { text: "#38bdf8", badge: "#0369a1" },
+  "AI/ML":           { text: "#22d3ee", badge: "#0e7490" },
+  "System Design":   { text: "#4ade80", badge: "#166534" },
+  "React":           { text: "#22d3ee", badge: "#164e63" },
+  "Docker":          { text: "#60a5fa", badge: "#1e3a8a" },
+  "Database":        { text: "#fb923c", badge: "#9a3412" },
+  "Machine Learning":{ text: "#a78bfa", badge: "#4c1d95" },
+  "DevOps":          { text: "#34d399", badge: "#064e3b" },
+  "All":             { text: "#a78bfa", badge: "#4c1d95" },
 };
+const _FALLBACK_COLORS = [
+  { text: "#f472b6", badge: "#831843" },
+  { text: "#fb923c", badge: "#7c2d12" },
+  { text: "#a78bfa", badge: "#4c1d95" },
+  { text: "#34d399", badge: "#064e3b" },
+  { text: "#38bdf8", badge: "#0c4a6e" },
+  { text: "#fde047", badge: "#713f12" },
+];
+function getCatColor(name: string) {
+  if (name in KNOWN_CAT) return KNOWN_CAT[name];
+  const h = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return _FALLBACK_COLORS[h % _FALLBACK_COLORS.length];
+}
 
 const DIFF: Record<QuizVideo["difficulty"], string> = {
   Beginner:     "EASY",
@@ -123,7 +140,7 @@ function Thumb({
   video: QuizVideo; sizes: string; priority?: boolean;
 }) {
   const src = thumbnailUrl(video);
-  const col = CAT[video.category];
+  const col = getCatColor(video.category);
   if (src) {
     return (
       <Image src={src} alt={video.title} fill className="object-cover" sizes={sizes} priority={priority} />
@@ -149,7 +166,7 @@ function Thumb({
 // ── Video card (grid mode) ────────────────────────────────────────────────────
 function VideoCard({ video }: { video: QuizVideo }) {
   const url = videoUrl(video);
-  const col = CAT[video.category];
+  const col = getCatColor(video.category);
   const isLive = Boolean(video.youtubeId);
 
   return (
@@ -234,7 +251,7 @@ function VideoCard({ video }: { video: QuizVideo }) {
 // ── Video list row ────────────────────────────────────────────────────────────
 function VideoListRow({ video, rank }: { video: QuizVideo; rank: number }) {
   const url = videoUrl(video);
-  const col = CAT[video.category];
+  const col = getCatColor(video.category);
   const isLive = Boolean(video.youtubeId);
 
   return (
@@ -306,123 +323,107 @@ function EmptyState({ message }: { message: string }) {
       </div>
       <p className="text-base font-bold text-white mb-1">No videos yet</p>
       <p className="text-sm text-slate-500 max-w-xs">{message}</p>
-      <p className="mt-4 text-xs text-slate-600 font-mono">
-        Add entries to <span className="text-purple-500">lib/videos.ts</span> once your Shorts are published.
-      </p>
     </div>
   );
 }
 
 // ── Dashboard section ─────────────────────────────────────────────────────────
+type ApiStats = { total: number; published: number; categories: { name: string; count: number }[] };
+
 function DashboardView() {
-  const [dbStats, setDbStats] = useState<{ total: number; published: number } | null>(null);
+  const [apiStats, setApiStats] = useState<ApiStats | null>(null);
 
   useEffect(() => {
-    fetch("/api/stats").then((r) => r.json()).then(setDbStats).catch(() => {});
+    fetch("/api/stats").then((r) => r.json()).then(setApiStats).catch(() => {});
   }, []);
 
-  const catCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const v of allVideos) {
-      map[v.category] = (map[v.category] ?? 0) + 1;
-    }
-    return map;
-  }, []);
-  const max = Math.max(...Object.values(catCounts), 1);
   const recent = allVideos.slice(0, 5);
-  const isEmpty = allVideos.length === 0;
-
-  const totalUploaded = dbStats?.total ?? allVideos.length;
-  const totalPublished = dbStats?.published ?? allVideos.filter((v) => v.youtubeId).length;
+  const total      = apiStats?.total     ?? allVideos.length;
+  const published  = apiStats?.published ?? allVideos.filter((v) => v.youtubeId).length;
+  const apiCats    = apiStats?.categories ?? [];
+  const catCount   = apiCats.length || Object.keys(
+    allVideos.reduce((m, v) => ({ ...m, [v.category]: true }), {} as Record<string, boolean>)
+  ).length;
+  const maxCat     = Math.max(...apiCats.map((c) => c.count), 1);
 
   return (
     <div className="p-6 space-y-6">
-      {/* Stats */}
+
+      {/* ── Top stat cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Total Quizzes",  value: String(totalUploaded) || "0",                    sub: `${totalPublished} published`,  color: "#a855f7" },
-          { label: "Categories",     value: String(Object.keys(catCounts).length) || "0",   sub: "topics covered",               color: "#22d3ee" },
-          { label: "Cadence",        value: "Daily",                                          sub: "new quiz / day",               color: "#4ade80" },
-          { label: "Access",         value: "Free",                                           sub: "always open",                  color: "#fbbf24" },
+          { label: "Total Quizzes", value: String(total) || "0",    sub: `${published} on YouTube`, color: "#a855f7" },
+          { label: "Categories",    value: String(catCount) || "0", sub: "topics covered",           color: "#22d3ee" },
+          { label: "Cadence",       value: "Daily",                  sub: "new quiz every day",       color: "#4ade80" },
+          { label: "Access",        value: "Free",                   sub: "always open",               color: "#fbbf24" },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl p-4 relative overflow-hidden"
-            style={{
-              background: `linear-gradient(135deg, ${CARD} 0%, ${s.color}08 100%)`,
-              border: `1px solid ${s.color}28`,
-            }}>
-            {/* Top accent line */}
+          <div key={s.label} className="rounded-2xl p-4 relative overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${CARD} 0%, ${s.color}0a 100%)`, border: `1px solid ${s.color}28` }}>
             <div className="absolute top-0 left-0 right-0 h-px"
-              style={{ background: `linear-gradient(90deg, transparent, ${s.color}70, transparent)` }} />
-            <p className="font-mono text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-xs font-semibold text-white mt-0.5">{s.label}</p>
-            <p className="text-[11px] text-slate-500">{s.sub}</p>
+              style={{ background: `linear-gradient(90deg, transparent, ${s.color}60, transparent)` }} />
+            <p className="font-mono text-3xl font-black tracking-tight" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-sm font-bold text-white mt-1">{s.label}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {isEmpty ? (
-        <div className="rounded-xl border p-6" style={{ background: CARD, borderColor: BORD }}>
-          <p className="text-sm font-bold text-white mb-4">🚀 How to publish your first quiz</p>
-          <div className="space-y-3">
-            {[
-              { step: "1", color: "#a855f7", title: "Generate slides", desc: "Go to Admin → Generate tab. Enter a topic and click Generate Quiz. Claude builds 5 questions automatically." },
-              { step: "2", color: "#22d3ee", title: "Screen-record the slides", desc: "Open Slide Preview (bottom-left). Press ▶ to auto-play. Record with ⌘⇧5 on Mac or Win+G on Windows. Save as MP4." },
-              { step: "3", color: "#fbbf24", title: "Upload to YouTube", desc: "Go to Admin → Upload tab. Fill title/description, pick your MP4, set privacy to Private first, then click Upload." },
-              { step: "4", color: "#4ade80", title: "Add to this library", desc: 'Copy the YouTube video ID from the URL (e.g. abc123xyz). Add an entry to lib/videos.ts. It will appear here instantly.' },
-            ].map(({ step, color, title, desc }) => (
-              <div key={step} className="flex gap-3 items-start">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5"
-                  style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}>
-                  {step}
+      {/* ── Category breakdown ── */}
+      {apiCats.length > 0 ? (
+        <div>
+          <p className="text-sm font-bold text-white mb-3">Quizzes by Category</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {apiCats.map(({ name, count }) => {
+              const col = getCatColor(name);
+              const pct = Math.round((count / maxCat) * 100);
+              return (
+                <div key={name} className="rounded-2xl p-4 relative overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, ${CARD} 0%, ${col.badge}18 100%)`, border: `1px solid ${col.badge}40` }}>
+                  <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
+                    style={{ background: col.text }} />
+                  <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-2"
+                    style={{ background: `${col.badge}30`, color: col.text }}>
+                    {name}
+                  </span>
+                  <p className="text-2xl font-black text-white">{count}</p>
+                  <p className="text-[10px] text-slate-500 mb-2">quiz{count !== 1 ? "zes" : ""}</p>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: `${col.badge}30` }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: col.text }} />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">{title}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 flex gap-3">
-            <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-80"
-              style={{ background: "#a855f7" }}>
-              ✨ Open Admin Panel
-            </Link>
-            <Link href="/slides" className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold border transition-colors hover:border-slate-500"
-              style={{ borderColor: BORD, color: "#94a3b8" }}>
-              ▶ Slide Preview
-            </Link>
+              );
+            })}
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Category bars */}
-          <div className="rounded-xl border p-4" style={{ background: CARD, borderColor: BORD }}>
-            <p className="text-sm font-bold text-white mb-4">By Category</p>
-            <div className="space-y-2.5">
-              {Object.entries(catCounts).map(([cat, count]) => {
-                const col = CAT[cat];
-                const pct = Math.round((count / max) * 100);
-                return (
-                  <div key={cat}>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-xs text-slate-400">{cat}</span>
-                      <span className="font-mono text-xs text-slate-500">{count}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: BORD }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: col.badge }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        /* ── Coming soon (no content yet — no admin links) ── */
+        <div className="rounded-2xl border p-8 text-center" style={{ background: CARD, borderColor: BORD }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4"
+            style={{ background: "#a855f715", border: "1px solid #a855f730" }}>
+            ⚡
           </div>
+          <p className="text-lg font-bold text-white mb-1">Channel launching soon!</p>
+          <p className="text-sm text-slate-500 max-w-sm mx-auto">
+            Daily bite-sized tech quiz Shorts on Python, Algorithms, AI, System Design, and more.
+            Subscribe to get notified when we drop our first quiz.
+          </p>
+          <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-85"
+            style={{ background: "linear-gradient(135deg, #9333ea, #7c3aed)" }}>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
+            </svg>
+            Subscribe on YouTube
+          </a>
+        </div>
+      )}
 
-          {/* Recent quizzes */}
-          <div className="rounded-xl border p-4" style={{ background: CARD, borderColor: BORD }}>
-            <p className="text-sm font-bold text-white mb-3">Recent Quizzes</p>
-            <div className="space-y-0">
-              {recent.map((v, i) => <VideoListRow key={v.id} video={v} rank={i + 1} />)}
-            </div>
+      {/* ── Recent quizzes (when videos exist) ── */}
+      {recent.length > 0 && (
+        <div className="rounded-2xl border p-4" style={{ background: CARD, borderColor: BORD }}>
+          <p className="text-sm font-bold text-white mb-3">Recent Quizzes</p>
+          <div className="space-y-0">
+            {recent.map((v, i) => <VideoListRow key={v.id} video={v} rank={i + 1} />)}
           </div>
         </div>
       )}
@@ -434,15 +435,25 @@ function DashboardView() {
 const PAGE_SIZE = 8;
 
 function LibraryView() {
-  const [activeCategory, setActiveCategory] = useState<Category>("All");
+  const [apiStats, setApiStats] = useState<ApiStats | null>(null);
+  const [activeCategory, setActiveCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
 
-  const filtered = getVideosByCategory(activeCategory);
+  useEffect(() => {
+    fetch("/api/stats").then((r) => r.json()).then(setApiStats).catch(() => {});
+  }, []);
+
+  const dynCategories = useMemo(
+    () => ["All", ...(apiStats?.categories.map((c) => c.name) ?? [])],
+    [apiStats]
+  );
+
+  const filtered = activeCategory === "All" ? allVideos : allVideos.filter((v) => v.category === activeCategory);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  function handleCat(cat: Category) {
+  function handleCat(cat: string) {
     setActiveCategory(cat);
     setPage(1);
   }
@@ -479,20 +490,23 @@ function LibraryView() {
 
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2 mb-5">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => handleCat(cat)}
-            className="filter-tab transition-all"
-            style={
-              activeCategory === cat
-                ? { background: "#a855f7", borderColor: "#a855f7", color: "#fff" }
-                : {}
-            }
-          >
-            {cat === "All" ? "All Videos" : cat}
-          </button>
-        ))}
+        {dynCategories.map((cat) => {
+          const col = getCatColor(cat);
+          return (
+            <button
+              key={cat}
+              onClick={() => handleCat(cat)}
+              className="filter-tab transition-all"
+              style={
+                activeCategory === cat
+                  ? { background: col.badge, borderColor: col.badge, color: col.text }
+                  : {}
+              }
+            >
+              {cat === "All" ? "All Videos" : cat}
+            </button>
+          );
+        })}
       </div>
 
       {/* Grid or list */}
@@ -556,20 +570,25 @@ function PreviewView() {
   if (!featured) {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 text-center">
-        <div className="text-4xl mb-4">🎬</div>
-        <p className="text-white font-semibold mb-1">No videos yet</p>
-        <p className="text-sm text-slate-500">
-          Generate a quiz in the{" "}
-          <Link href="/admin" className="text-purple-400 hover:underline">Admin panel</Link>,
-          record it, and upload to YouTube. It will appear here once added to{" "}
-          <code className="text-slate-400">lib/videos.ts</code>.
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
+          style={{ background: "#a855f710", border: "1px solid #a855f730" }}>
+          🎬
+        </div>
+        <p className="text-white font-semibold mb-2">Coming soon</p>
+        <p className="text-sm text-slate-500 max-w-xs">
+          Our first daily quiz Short is on its way. Subscribe on YouTube to be the first to know!
         </p>
+        <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-85"
+          style={{ background: "linear-gradient(135deg, #9333ea, #7c3aed)" }}>
+          Subscribe on YouTube
+        </a>
       </div>
     );
   }
 
   const rest = allVideos.filter((v) => v.id !== featured.id).slice(0, 4);
-  const col = CAT[featured.category] ?? CAT["All"];
+  const col = getCatColor(featured.category);
   const url = videoUrl(featured);
   const isLive = Boolean(featured.youtubeId);
 
@@ -936,29 +955,25 @@ export default function Home() {
         </a>
       </div>
 
-      {/* Bottom: settings + channel */}
-      <div className="border-t px-2 py-3 space-y-0.5 shrink-0" style={{ borderColor: BORD }}>
-        <Link href="/slides"
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all">
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <path d="M8 21h8M12 17v4" strokeLinecap="round" />
-          </svg>
-          Slide Preview
-        </Link>
-        <Link href="/admin"
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:text-slate-300 hover:bg-white/5 transition-all">
-          <Ico.Settings /> Admin
-        </Link>
-        <div className="flex items-center gap-2.5 px-3 py-2">
+      {/* Bottom: channel branding */}
+      <div className="border-t px-2 py-3 shrink-0" style={{ borderColor: BORD }}>
+        <a
+          href={channelConfig.youtubeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/5 transition-all"
+        >
           <div className="w-7 h-7 rounded-full bg-purple-700 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
             QB
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-white truncate">QuizBytesDaily</p>
-            <p className="text-[10px] text-slate-600">Channel</p>
+            <p className="text-[10px] text-slate-600">YouTube Channel</p>
           </div>
-        </div>
+          <svg className="w-3 h-3 ml-auto shrink-0 text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z" />
+          </svg>
+        </a>
       </div>
     </>
   );
