@@ -139,8 +139,17 @@ function drawThumbnailToCanvas(canvas: HTMLCanvasElement, title: string, categor
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
+// ── Analytics types ───────────────────────────────────────────────────────────
+interface AnalyticsData {
+  dailyActivity:       { date: string; count: number }[];
+  categoryBreakdown:   { category: string; total: number; published: number }[];
+  difficultyBreakdown: { difficulty: string; count: number }[];
+  statusSummary:       { status: string; count: number }[];
+  totalSlides:         number;
+}
+
 export default function AdminPage() {
-  const [tab, setTab] = useState<"generate" | "library" | "upload">("generate");
+  const [tab, setTab] = useState<"generate" | "library" | "upload" | "analytics">("generate");
 
   // Generate
   const [topic, setTopic] = useState("");
@@ -171,6 +180,10 @@ export default function AdminPage() {
   const [uploadError, setUploadError] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Analytics
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
   // Render
   const [rendering, setRendering] = useState(false);
   const [renderFile, setRenderFile] = useState<string | null>(null);
@@ -191,6 +204,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (tab === "library") loadLibrary();
+    if (tab === "analytics") {
+      setLoadingAnalytics(true);
+      fetch("/api/admin/analytics")
+        .then((r) => r.json())
+        .then(setAnalytics)
+        .catch(() => {})
+        .finally(() => setLoadingAnalytics(false));
+    }
   }, [tab, loadLibrary]);
 
   useEffect(() => {
@@ -236,17 +257,27 @@ export default function AdminPage() {
 
   // Go to upload with a series
   async function goToUpload(s: SeriesRecord) {
+    const CATEGORY_EMOJI: Record<string, string> = {
+      "Python": "🐍", "AI/ML": "🤖", "Algorithms": "🔢",
+      "System Design": "🏗️", "JavaScript": "⚡", "DevOps": "🔧",
+      "Data Science": "📊", "Java": "☕", "Rust": "🦀", "Go": "🐹",
+    };
+    const catEmoji  = CATEGORY_EMOJI[s.category] ?? "💡";
+    const diffEmoji = s.difficulty === "Beginner" ? "🟢" : s.difficulty === "Intermediate" ? "🟡" : "🔴";
+    const catTag    = s.category.replace(/[^a-zA-Z0-9]/g, "");
+
     setUploadSeries(s);
     setUploadTitle(s.title);
     setUploadDesc(
-      `🧠 ${s.title}\n\n` +
-      `Category: ${s.category} | Difficulty: ${s.difficulty}\n\n` +
-      `Test your ${s.category} knowledge with this daily tech quiz!\n\n` +
-      `📌 Subscribe → ${channelConfig.youtubeSubscribeUrl}\n` +
+      `${catEmoji} ${s.title}\n\n` +
+      `${diffEmoji} ${s.difficulty} · ${s.category}\n\n` +
+      `Drop your answer in the comments! 👇\n` +
+      `New quiz every day — can you keep the streak? 🔥\n\n` +
+      `🔔 Subscribe → ${channelConfig.youtubeSubscribeUrl}\n` +
       `🌐 More quizzes → ${channelConfig.websiteUrl}\n\n` +
-      `#QuizBytesDaily #${s.category.replace(/[^a-zA-Z0-9]/g, "")} #coding #quiz #${s.difficulty.toLowerCase()}`
+      `#QuizBytesDaily #${catTag} #TechQuiz #CodingQuiz #${s.difficulty} #LearnToCode #Shorts`
     );
-    setUploadTags(`QuizBytesDaily,${s.category},${s.difficulty},coding,quiz,tech`);
+    setUploadTags(`QuizBytesDaily,${s.category},${s.difficulty},TechQuiz,CodingQuiz,LearnToCode,Shorts`);
     setVideoFile(null);
     setUploadResult(null);
     setUploadError("");
@@ -275,7 +306,7 @@ export default function AdminPage() {
       form.append("title", uploadTitle);
       form.append("description", uploadDesc);
       form.append("tags", uploadTags);
-      form.append("privacy", uploadPrivacy);
+      form.append("privacyStatus", uploadPrivacy);
       if (thumbBlob) form.append("thumbnail", thumbBlob, "thumbnail.jpg");
       const res = await fetch("/api/youtube/upload", { method: "POST", body: form });
       const json = await res.json();
@@ -301,15 +332,17 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ seriesId: uploadSeries.id }),
       });
-      const json = await res.json();
-      if (!res.ok) { setRenderError(json.error ?? "Render failed"); return; }
-      setRenderFile(json.filename);
-      setRenderStatus("Downloading rendered video…");
-      // Auto-load as the video file for upload
-      const vidRes = await fetch(`/api/admin/render/${encodeURIComponent(json.filename)}`);
-      const blob = await vidRes.blob();
-      const file = new File([blob], json.filename, { type: "video/mp4" });
+      if (!res.ok) {
+        const json = await res.json();
+        setRenderError(json.error ?? "Render failed");
+        return;
+      }
+      // Video bytes returned directly — no second round-trip needed
+      const blob = await res.blob();
+      const filename = res.headers.get("X-Filename") ?? `${uploadSeries.slug}.mp4`;
+      const file = new File([blob], filename, { type: "video/mp4" });
       setVideoFile(file);
+      setRenderFile(filename);
       setRenderStatus(`✓ Ready (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
     } catch (e) {
       setRenderError(e instanceof Error ? e.message : "Network error");
@@ -365,6 +398,7 @@ export default function AdminPage() {
           <button style={tabBtn(tab === "generate")} onClick={() => setTab("generate")}>✨ Generate</button>
           <button style={tabBtn(tab === "library")} onClick={() => setTab("library")}>📚 Library</button>
           <button style={tabBtn(tab === "upload")} onClick={() => setTab("upload")}>🚀 Upload</button>
+          <button style={tabBtn(tab === "analytics")} onClick={() => setTab("analytics")}>📊 Analytics</button>
         </div>
 
         {/* ═══════════════════════ GENERATE ═══════════════════════════════ */}
@@ -636,8 +670,8 @@ export default function AdminPage() {
                         style={{ flex: 1, padding: "0.65rem 1rem", background: rendering ? "#1e1e2e" : "rgba(168,85,247,0.15)", border: "1px solid", borderColor: rendering ? "#374151" : "#a855f7", borderRadius: 8, color: rendering ? "#475569" : "#c084fc", fontWeight: 700, cursor: rendering ? "not-allowed" : "pointer", fontSize: "0.875rem" }}>
                         {rendering ? "⏳ Rendering…" : "🎬 Render Video"}
                       </button>
-                      {renderFile && !rendering && (
-                        <a href={`/api/admin/render/${encodeURIComponent(renderFile)}`} download
+                      {renderFile && videoFile && !rendering && (
+                        <a href={URL.createObjectURL(videoFile)} download={renderFile}
                           style={{ padding: "0.65rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 8, color: "#22d3ee", textDecoration: "none", fontSize: "0.8rem" }}>
                           ⬇ Save
                         </a>
@@ -664,7 +698,22 @@ export default function AdminPage() {
                     </label>
                   </div>
 
-                  {uploadError && <div style={{ padding: "0.75rem 1rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 8, color: "#f87171", fontSize: "0.875rem" }}>{uploadError}</div>}
+                  {uploadError && (
+                    <div style={{ padding: "0.75rem 1rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 8, color: "#f87171", fontSize: "0.875rem" }}>
+                      {uploadError}
+                      {/expired|revoked|invalid_grant/i.test(uploadError) && (
+                        <div style={{ marginTop: "0.5rem" }}>
+                          <a href="/api/youtube/auth" target="_blank" rel="noopener noreferrer"
+                            style={{ display: "inline-block", padding: "0.35rem 0.85rem", background: "#a855f7", borderRadius: 6, color: "#fff", fontSize: "0.8rem", fontWeight: 700, textDecoration: "none" }}>
+                            🔑 Re-authorize YouTube
+                          </a>
+                          <span style={{ marginLeft: "0.5rem", color: "#94a3b8", fontSize: "0.75rem" }}>
+                            Opens in new tab — copy the refresh token and update .env.local
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {uploadResult && (
                     <div style={{ padding: "0.75rem 1rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 8, fontSize: "0.875rem" }}>
                       <span style={{ color: "#4ade80" }}>✓ Uploaded!</span>{" "}
@@ -693,11 +742,15 @@ export default function AdminPage() {
                 {/* Thumbnail + slides */}
                 <div>
                   <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 8 }}>Thumbnail (1280×720)</label>
-                  <canvas ref={canvasRef} style={{ width: "100%", borderRadius: 8, border: "1px solid #1e1e2e" }} />
-                  <button onClick={() => uploadSeries && drawThumbnailToCanvas(canvasRef.current!, uploadSeries.title, uploadSeries.category, uploadSeries.difficulty)}
-                    style={{ marginTop: 8, width: "100%", padding: "0.4rem", background: "transparent", border: "1px solid #1e1e2e", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: "0.78rem" }}>
-                    ↺ Refresh Thumbnail
-                  </button>
+                  {/* Show the server-generated SVG thumbnail */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/thumbnail/${uploadSeries.slug}`}
+                    alt="Thumbnail preview"
+                    style={{ width: "100%", borderRadius: 8, border: "1px solid #1e1e2e", display: "block" }}
+                  />
+                  {/* Hidden canvas kept for download fallback */}
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
 
                   {uploadSlides && uploadSlides.length > 0 && (
                     <div style={{ marginTop: "1.5rem" }}>
@@ -717,6 +770,169 @@ export default function AdminPage() {
             )}
           </div>
         )}
+        {/* ═══════════════════════ ANALYTICS ══════════════════════════════ */}
+        {tab === "analytics" && (
+          <div>
+            <div style={{ marginBottom: "1.75rem" }}>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.25rem" }}>Content Analytics</h2>
+              <p style={{ fontSize: "0.82rem", color: "#64748b" }}>Quiz generation activity, category breakdown, and content status.</p>
+            </div>
+
+            {loadingAnalytics && <p style={{ color: "#94a3b8" }}>Loading analytics…</p>}
+
+            {!loadingAnalytics && analytics && (() => {
+              const totalGenerated = analytics.statusSummary.reduce((a, s) => a + s.count, 0);
+              const totalPublished = analytics.statusSummary.find((s) => s.status === "published")?.count ?? 0;
+              const maxCat = Math.max(...analytics.categoryBreakdown.map((c) => c.total), 1);
+
+              // Build last 30 days including zeros
+              const today = new Date();
+              const last30 = Array.from({ length: 30 }, (_, i) => {
+                const d = new Date(today);
+                d.setDate(d.getDate() - (29 - i));
+                return d.toISOString().split("T")[0];
+              });
+              const activityMap = Object.fromEntries(analytics.dailyActivity.map((a) => [a.date, a.count]));
+              const chartData = last30.map((date) => ({ date, count: activityMap[date] ?? 0 }));
+              const chartMax = Math.max(...chartData.map((d) => d.count), 1);
+
+              return (
+                <>
+                  {/* ── Summary cards ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
+                    {[
+                      { label: "Total Generated", value: totalGenerated,          icon: "✨", color: "#a855f7" },
+                      { label: "Published",        value: totalPublished,           icon: "✅", color: "#4ade80" },
+                      { label: "Total Slides",     value: analytics.totalSlides,   icon: "🃏", color: "#22d3ee" },
+                      { label: "Categories",       value: analytics.categoryBreakdown.length, icon: "#", color: "#fbbf24" },
+                    ].map((s) => (
+                      <div key={s.label} style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.25rem" }}>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 1 }}>{s.icon} {s.label}</div>
+                        <div style={{ fontSize: "2rem", fontWeight: 900, fontFamily: "monospace", color: s.color }}>{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Activity chart (last 30 days) ── */}
+                  <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.5rem", marginBottom: "1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>Daily Generation Activity</div>
+                        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Quizzes generated per day — last 30 days</div>
+                      </div>
+                      <span style={{ fontSize: "0.7rem", padding: "2px 10px", borderRadius: 20, background: "rgba(168,85,247,0.15)", color: "#a855f7", border: "1px solid rgba(168,85,247,0.3)" }}>30d</span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 120 }}>
+                      {chartData.map(({ date, count }) => {
+                        const pct = count / chartMax;
+                        const isToday = date === today.toISOString().split("T")[0];
+                        return (
+                          <div key={date} title={`${date}: ${count} quiz${count !== 1 ? "zes" : ""}`}
+                            style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "flex-end", height: "100%", cursor: "default" }}>
+                            <div style={{
+                              width: "100%",
+                              height: count === 0 ? 3 : `${Math.max(pct * 100, 8)}%`,
+                              background: count === 0 ? "#1e1e2e" : isToday ? "#a855f7" : "rgba(168,85,247,0.5)",
+                              borderRadius: "3px 3px 0 0",
+                              transition: "height 0.3s ease",
+                            }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                      <span style={{ fontSize: "0.62rem", color: "#475569" }}>{last30[0]}</span>
+                      <span style={{ fontSize: "0.62rem", color: "#475569" }}>Today</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
+
+                    {/* ── Category breakdown ── */}
+                    <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.5rem" }}>
+                      <div style={{ fontWeight: 700, marginBottom: "1rem" }}>Category Breakdown</div>
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: "0.875rem" }}>
+                        {analytics.categoryBreakdown.map(({ category, total, published }) => {
+                          const pct = Math.round((total / maxCat) * 100);
+                          const pubPct = total > 0 ? Math.round((published / total) * 100) : 0;
+                          return (
+                            <div key={category}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                                <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{category}</span>
+                                <span style={{ fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
+                                  {published}/{total} published
+                                </span>
+                              </div>
+                              <div style={{ height: 8, background: "#1e1e2e", borderRadius: 4, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#a855f7,#6366f1)", borderRadius: 4 }} />
+                              </div>
+                              <div style={{ fontSize: "0.62rem", color: "#475569", marginTop: 3 }}>
+                                {pubPct}% published
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {analytics.categoryBreakdown.length === 0 && (
+                          <p style={{ fontSize: "0.82rem", color: "#4a4a5a" }}>No data yet.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ── Right column: status + difficulty ── */}
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: "1.5rem" }}>
+
+                      {/* Status */}
+                      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.25rem" }}>
+                        <div style={{ fontWeight: 700, marginBottom: "0.875rem" }}>Status Distribution</div>
+                        <div style={{ display: "flex", flexDirection: "column" as const, gap: "0.6rem" }}>
+                          {analytics.statusSummary.map(({ status, count }) => {
+                            const color = status === "published" ? "#4ade80" : "#94a3b8";
+                            const pct = totalGenerated > 0 ? Math.round((count / totalGenerated) * 100) : 0;
+                            return (
+                              <div key={status} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                                <span style={{ flex: 1, fontSize: "0.82rem", textTransform: "capitalize" as const }}>{status}</span>
+                                <span style={{ fontSize: "0.82rem", fontFamily: "monospace", color }}>{count}</span>
+                                <div style={{ width: 80, height: 6, background: "#1e1e2e", borderRadius: 3, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3 }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {analytics.statusSummary.length === 0 && (
+                            <p style={{ fontSize: "0.82rem", color: "#4a4a5a" }}>No data yet.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Difficulty */}
+                      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.25rem" }}>
+                        <div style={{ fontWeight: 700, marginBottom: "0.875rem" }}>Difficulty Split</div>
+                        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" as const }}>
+                          {analytics.difficultyBreakdown.map(({ difficulty, count }) => {
+                            const color = difficultyColor(difficulty);
+                            return (
+                              <div key={difficulty} style={{ flex: 1, minWidth: 80, textAlign: "center" as const, background: `${color}12`, border: `1px solid ${color}40`, borderRadius: 8, padding: "0.75rem 0.5rem" }}>
+                                <div style={{ fontSize: "1.5rem", fontWeight: 900, fontFamily: "monospace", color }}>{count}</div>
+                                <div style={{ fontSize: "0.68rem", color, marginTop: 3, textTransform: "uppercase" as const, letterSpacing: 1 }}>{difficulty}</div>
+                              </div>
+                            );
+                          })}
+                          {analytics.difficultyBreakdown.length === 0 && (
+                            <p style={{ fontSize: "0.82rem", color: "#4a4a5a" }}>No data yet.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
       </div>
     </div>
   );

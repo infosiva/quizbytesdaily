@@ -3,15 +3,39 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { getSlides, getSeriesById } from "./db";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ffmpegInstaller: { path: string } = require("@ffmpeg-installer/ffmpeg");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FONT_REG  = "/System/Library/Fonts/Supplemental/Arial.ttf";
-const FONT_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf";
+function findFont(candidates: string[]): string {
+  for (const f of candidates) {
+    if (fs.existsSync(f)) return f;
+  }
+  return candidates[0]; // best-guess fallback
+}
+
+const BUNDLED_DIR = path.join(process.cwd(), "fonts");
+
+const FONT_REG = findFont([
+  path.join(BUNDLED_DIR, "DejaVuSans.ttf"),                          // bundled (works on Vercel)
+  "/System/Library/Fonts/Supplemental/Arial.ttf",                    // macOS
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",                 // Debian/Ubuntu
+  "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",               // RHEL/Amazon Linux
+]);
+
+const FONT_BOLD = findFont([
+  path.join(BUNDLED_DIR, "DejaVuSans-Bold.ttf"),                     // bundled (works on Vercel)
+  "/System/Library/Fonts/Supplemental/Arial Bold.ttf",               // macOS
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",            // Debian/Ubuntu
+  "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",          // RHEL/Amazon Linux
+]);
 
 // ffmpeg-full includes drawtext (libfreetype). Use it if available.
 const FFMPEG_FULL = "/usr/local/opt/ffmpeg-full/bin/ffmpeg";
-const FFMPEG = fs.existsSync(FFMPEG_FULL) ? FFMPEG_FULL : "ffmpeg";
+const FFMPEG = fs.existsSync(FFMPEG_FULL)
+  ? FFMPEG_FULL
+  : (ffmpegInstaller.path ?? "ffmpeg");
 
 const W   = 1080;
 const H   = 1920;
@@ -22,7 +46,10 @@ const DEF_STEPS_DUR = 9;  // definition-steps slides
 const PIPELINE_DUR  = 9;  // pipeline slides
 const CTA_DUR       = 7;  // CTA slide
 
-const RENDERS_DIR = path.join(process.cwd(), "data", "renders");
+// Use /tmp on Vercel (read-only filesystem); local data/renders otherwise
+const RENDERS_DIR = process.env.VERCEL
+  ? path.join(os.tmpdir(), "qbd-renders")
+  : path.join(process.cwd(), "data", "renders");
 
 // ── Card / definition color map ───────────────────────────────────────────────
 
@@ -83,6 +110,8 @@ interface DefinitionStepsData {
 interface PipelineData {
   heading: string;
   subtitle?: string;
+  slideNum?: number;
+  totalSlides?: number;
   cards?: CardData[];
 }
 
@@ -141,10 +170,9 @@ function dt(
 
 function db(
   x: number, y: number, w: number, h: number,
-  color: string, opacity = 1, enable?: string
+  color: string, opacity = 1
 ): string {
-  const en = enable ? `:enable='${enable}'` : "";
-  return `drawbox=x=${x}:y=${y}:w=${w}:h=${h}:color=${color}@${opacity}:t=fill${en}`;
+  return `drawbox=x=${x}:y=${y}:w=${w}:h=${h}:color=${color}@${opacity}:t=fill`;
 }
 
 // Render a card row: background + left stripe + icon box + title + body
@@ -192,63 +220,106 @@ function renderCard(
 function buildDefinitionStepsSlide(input: string, d: DefinitionStepsData, dir: string): string {
   const parts: string[] = [];
   const cards  = d.cards ?? [];
-  const defCol = d.definition ? (CARD_COLORS[d.definition.color] ?? "0xA855F7") : "0xA855F7";
-  const accent = defCol;
+  const accent = d.definition
+    ? (CARD_COLORS[d.definition.color] ?? "0xA855F7")
+    : cards[0] ? (CARD_COLORS[cards[0].color] ?? "0xA855F7") : "0xA855F7";
 
-  // Top accent bar
-  parts.push(db(0, 0, W, 8, accent, 1));
-
-  // Ambient glow
-  parts.push(db(-80, -80, 480, 480, accent, 0.04));
-  parts.push(db(W - 200, H - 280, 400, 400, "0x22D3EE", 0.03));
+  // Top accent bar (full width, bold)
+  parts.push(db(0, 0, W, 10, accent, 1));
 
   // Heading
-  const headLines = wrapLines(d.heading ?? "", 22);
-  const headY     = 55;
-  const headSize  = 64;
+  const headLines = wrapLines(d.heading ?? "", 20);
+  const headY     = 60;
+  const headSize  = 72;
   headLines.forEach((l, i) => {
-    parts.push(dt(dir, l, { font: FONT_BOLD, x: "(w-text_w)/2", y: headY + i * (headSize + 10), size: headSize, color: "0xFFFFFF" }));
+    parts.push(dt(dir, l, { font: FONT_BOLD, x: "(w-text_w)/2", y: headY + i * (headSize + 8), size: headSize, color: "0xFFFFFF" }));
   });
 
-  let y = headY + headLines.length * (headSize + 10) + 40;
+  // Underline accent below heading
+  const headBottom = headY + headLines.length * (headSize + 8) + 16;
+  parts.push(db(W / 2 - 80, headBottom, 160, 4, accent, 1));
 
-  // Definition box (if present)
+  let y = headBottom + 40;
+
+  // Definition box — tighter, more modern card style
   if (d.definition) {
-    const defH = 290;
-    parts.push(db(60, y, 7, defH, defCol, 1));
-    parts.push(db(67, y, 953, defH, defCol, 0.08));
+    const defTitleLines = wrapLines(trunc(d.definition.title, 36), 28);
+    const defBodyLines  = wrapLines(d.definition.body ?? "", 44);
+    const defH = 50 + defTitleLines.length * 46 + (defBodyLines.length > 0 ? 14 + defBodyLines.length * 38 : 0) + 30;
 
-    const defTitleLines = wrapLines(trunc(d.definition.title, 40), 32);
+    // Card background + thick left accent bar
+    parts.push(db(60, y, W - 120, defH, accent, 0.10));
+    parts.push(db(60, y, 8, defH, accent, 1));
+
     defTitleLines.forEach((l, i) => {
-      parts.push(dt(dir, l, { font: FONT_BOLD, x: "88", y: y + 28 + i * 50, size: 38, color: defCol }));
+      parts.push(dt(dir, l, { font: FONT_BOLD, x: "90", y: y + 26 + i * 46, size: 40, color: accent }));
+    });
+    const defBodyY = y + 26 + defTitleLines.length * 46 + 12;
+    defBodyLines.forEach((l, i) => {
+      parts.push(dt(dir, l, { x: "90", y: defBodyY + i * 38, size: 30, color: "0xCBD5E1" }));
     });
 
-    const bodyStartY = y + 28 + defTitleLines.length * 50 + 14;
-    const bodyLines  = wrapLines(d.definition.body ?? "", 44);
-    bodyLines.forEach((l, i) => {
-      parts.push(dt(dir, l, { x: "88", y: bodyStartY + i * 42, size: 30, color: "0x94A3B8" }));
-    });
-
-    y += defH + 36;
+    y += defH + 28;
   }
 
-  // Cards
-  const cardCount  = Math.min(cards.length, 4);
-  const cardH      = 155;
-  const cardGap    = 18;
-  const totalCards = cardH * cardCount + cardGap * (cardCount - 1);
+  // "Steps" label
+  if (cards.length > 0) {
+    parts.push(dt(dir, "KEY POINTS", { font: FONT_BOLD, x: "68", y, size: 26, color: `${accent}` }));
+    // Horizontal rule after label
+    parts.push(db(68, y + 34, W - 136, 1, "0x1E293B", 1));
+    y += 52;
+  }
 
-  // Vertically center cards in remaining space above footer
-  const footerY    = 1848;
-  const remaining  = footerY - y - 40;
-  const cardStartY = remaining > totalCards ? y + Math.floor((remaining - totalCards) / 2) : y;
+  // Cards — numbered modern style, no centering gap
+  const cardH   = 148;
+  const cardGap = 16;
 
   cards.slice(0, 4).forEach((card, i) => {
-    renderCard(dir, parts, card, cardStartY + i * (cardH + cardGap), cardH);
+    const cy = y + i * (cardH + cardGap);
+
+    // Card background
+    parts.push(db(60, cy, W - 120, cardH, "0x0F172A", 1));
+    parts.push(db(60, cy, W - 120, cardH, accent, 0.07));
+    // Left accent bar
+    parts.push(db(60, cy, 6, cardH, accent, 1));
+
+    // Circle label: A/B/C/D for quiz options, or step number otherwise
+    const isQuizOpt = /^opt_[a-d]$/.test(card.icon ?? "");
+    const circleLabel = isQuizOpt
+      ? (ICON_CHARS[card.icon] ?? String(i + 1))  // "A", "B", "C", "D"
+      : String(i + 1);
+    const numX = 80;
+    const numY = cy + Math.floor(cardH / 2) - 22;
+    parts.push(db(numX, numY, 44, 44, accent, 0.25));
+    parts.push(dt(dir, circleLabel, { font: FONT_BOLD, x: String(numX + 10), y: numY + 8, size: 30, color: accent }));
+
+    // Title — strip redundant "A)  " prefix if circle already shows the letter
+    const rawTitle   = isQuizOpt ? card.title.replace(/^[A-D]\)\s*/i, "") : card.title;
+    const titleLines = wrapLines(trunc(rawTitle, 30), 24);
+    const hasBody    = card.body && card.body.trim().length > 0;
+    const totalH     = titleLines.length * 42 + (hasBody ? 34 : 0);
+    const textY      = cy + Math.floor((cardH - totalH) / 2);
+
+    titleLines.forEach((l, li) => {
+      parts.push(dt(dir, l, { font: FONT_BOLD, x: "144", y: textY + li * 42, size: 36, color: "0xF1F5F9" }));
+    });
+    if (hasBody) {
+      const bodyLines = wrapLines(trunc(card.body, 46), 38);
+      bodyLines.slice(0, 1).forEach((l, li) => {
+        parts.push(dt(dir, l, { x: "144", y: textY + titleLines.length * 42 + 4 + li * 32, size: 28, color: "0x94A3B8" }));
+      });
+    }
   });
 
-  // Handle
-  parts.push(dt(dir, "@QuizBytesDaily", { x: "80", y: 1850, size: 28, color: "0x374151" }));
+  // Slide counter — bottom right
+  if (d.slideNum != null && d.totalSlides != null) {
+    parts.push(dt(dir, `${d.slideNum} / ${d.totalSlides}`, {
+      font: FONT_BOLD, x: String(W - 195), y: 1858, size: 26, color: "0x374151",
+    }));
+  }
+
+  // Handle — bottom left
+  parts.push(dt(dir, "@QuizBytesDaily", { x: "80", y: 1858, size: 26, color: "0x374151" }));
 
   return `${input}${parts.join(",")}`;
 }
@@ -256,7 +327,9 @@ function buildDefinitionStepsSlide(input: string, d: DefinitionStepsData, dir: s
 function buildPipelineSlide(input: string, d: PipelineData, dir: string): string {
   const parts  = [] as string[];
   const cards  = d.cards ?? [];
+  // Single accent color for the whole pipeline slide
   const accent = cards[0] ? (CARD_COLORS[cards[0].color] ?? "0x22D3EE") : "0x22D3EE";
+  const accentKey = Object.keys(CARD_COLORS).find(k => CARD_COLORS[k] === accent) ?? "cyan";
 
   // Top accent bar
   parts.push(db(0, 0, W, 8, accent, 1));
@@ -287,18 +360,26 @@ function buildPipelineSlide(input: string, d: PipelineData, dir: string): string
   cards.slice(0, 6).forEach((card, i) => {
     const cardY = y + i * step;
 
-    // Arrow before card (not first)
+    // Arrow before card (not first) — same accent color
     if (i > 0) {
-      const prevCol = CARD_COLORS[cards[i - 1].color] ?? "0xA855F7";
-      parts.push(dt(dir, "▼", { font: FONT_BOLD, x: "(w-text_w)/2", y: cardY - arrowH + 4, size: 26, color: prevCol }));
+      parts.push(dt(dir, "▼", { font: FONT_BOLD, x: "(w-text_w)/2", y: cardY - arrowH + 4, size: 26, color: accent }));
     }
 
-    renderCard(dir, parts, card, cardY, cardH, 80, 148, 36, 28);
+    // Override card color with slide accent
+    renderCard(dir, parts, { ...card, color: accentKey }, cardY, cardH, 80, 148, 36, 28);
   });
 
   // Make sure we don't overflow — warn handle may overlap on 6+ cards but keep it
   const lastCardEnd = y + total * step - arrowH;
   const handleY     = Math.max(lastCardEnd + 30, 1840);
+
+  // Slide counter — bottom right
+  if (d.slideNum != null && d.totalSlides != null) {
+    parts.push(dt(dir, `${d.slideNum} / ${d.totalSlides}`, {
+      font: FONT_BOLD, x: String(W - 195), y: handleY, size: 28, color: "0x374151",
+    }));
+  }
+
   parts.push(dt(dir, "@QuizBytesDaily", { x: "80", y: handleY, size: 28, color: "0x374151" }));
 
   return `${input}${parts.join(",")}`;
@@ -306,38 +387,34 @@ function buildPipelineSlide(input: string, d: PipelineData, dir: string): string
 
 function buildCtaSlide(input: string, _d: CtaData, dir: string): string {
   const parts: string[] = [];
-
-  // Ambient glow blobs
-  parts.push(db(-100, -100, 600, 600, "0xA855F7", 0.07));
-  parts.push(db(W - 200, H - 300, 600, 600, "0x22D3EE", 0.05));
+  const accent = "0xA855F7";
 
   // Top accent bar
-  parts.push(db(0, 0, W, 8, "0xA855F7", 1));
+  parts.push(db(0, 0, W, 8, accent, 1));
+  // Bottom accent bar for balance
+  parts.push(db(0, H - 8, W, 8, accent, 1));
 
-  // Celebration emoji
-  parts.push(dt(dir, "🎉", { x: "(w-text_w)/2", y: 560, size: 110, color: "0xFFFFFF" }));
+  // Large "?" decorative — DejaVu-safe, no emoji
+  parts.push(dt(dir, "?", { font: FONT_BOLD, x: "(w-text_w)/2", y: 480, size: 160, color: `${accent}` }));
 
   // Main heading
-  parts.push(dt(dir, "Enjoyed This Quiz?", { font: FONT_BOLD, x: "(w-text_w)/2", y: 730, size: 62, color: "0xFFFFFF" }));
+  parts.push(dt(dir, "Enjoyed This Quiz?", { font: FONT_BOLD, x: "(w-text_w)/2", y: 710, size: 62, color: "0xFFFFFF" }));
 
   // Sub-line
-  parts.push(dt(dir, "New quiz every day — never miss one", { x: "(w-text_w)/2", y: 840, size: 34, color: "0x475569" }));
+  parts.push(dt(dir, "New quiz every day -- never miss one", { x: "(w-text_w)/2", y: 820, size: 34, color: "0x94A3B8" }));
 
-  // Separator
-  parts.push(db(W / 2 - 130, 910, 260, 2, "0x1E1E2E", 1));
+  // Divider
+  parts.push(db(W / 2 - 200, 890, 400, 2, "0x374151", 1));
 
-  // Subscribe button pill
-  parts.push(db(120, 940, 840, 100, "0xA855F7", 1));
-  parts.push(dt(dir, "▶  Subscribe on YouTube", { font: FONT_BOLD, x: "(w-text_w)/2", y: 972, size: 40, color: "0xFFFFFF" }));
+  // Subscribe button
+  parts.push(db(120, 920, 840, 110, accent, 1));
+  parts.push(dt(dir, "Subscribe on YouTube", { font: FONT_BOLD, x: "(w-text_w)/2", y: 958, size: 42, color: "0xFFFFFF" }));
 
-  // Comment invite
-  parts.push(dt(dir, "💬  Drop a comment if you're interested!", { x: "(w-text_w)/2", y: 1090, size: 34, color: "0x22D3EE" }));
+  // Website line
+  parts.push(dt(dir, "quizbytes.dev", { font: FONT_BOLD, x: "(w-text_w)/2", y: 1080, size: 40, color: accent }));
 
-  // Separator 2
-  parts.push(db(W / 2 - 130, 1150, 260, 2, "0x1E1E2E", 1));
-
-  // Website
-  parts.push(dt(dir, "quizbytesdaily.com", { font: FONT_BOLD, x: "(w-text_w)/2", y: 1176, size: 36, color: "0x22D3EE" }));
+  // Sub-note
+  parts.push(dt(dir, "Daily tech quizzes -- subscribe & learn!", { x: "(w-text_w)/2", y: 1160, size: 32, color: "0x94A3B8" }));
 
   // Handle
   parts.push(dt(dir, "@QuizBytesDaily", { x: "80", y: 1850, size: 28, color: "0x374151" }));
@@ -353,10 +430,10 @@ export async function renderSeries(
 ): Promise<string> {
   fs.mkdirSync(RENDERS_DIR, { recursive: true });
 
-  const series = getSeriesById(seriesId);
+  const series = await getSeriesById(seriesId);
   if (!series) throw new Error(`Series ${seriesId} not found`);
 
-  const slideRows = getSlides(seriesId);
+  const slideRows = await getSlides(seriesId);
   if (slideRows.length === 0) throw new Error("No slides found for this series");
 
   const outFile = path.join(RENDERS_DIR, `${series.slug}.mp4`);
@@ -381,8 +458,12 @@ export async function renderSeries(
     let filterComplex = "";
     const labels: string[] = [];
 
+    const totalSlides = slideRows.length;
     slideRows.forEach((row, i) => {
       const data = JSON.parse(row.data) as Record<string, unknown>;
+      // Inject slide position so builders can render "N / total" counters
+      data.slideNum    = i + 1;
+      data.totalSlides = totalSlides;
       let f = `[${i}:v]`;
 
       switch (row.template) {
@@ -412,16 +493,37 @@ export async function renderSeries(
     const totalDur = slideRows.reduce((s, r) => s + dur(r.template), 0);
     onLog?.(`[render] "${series.title}" — ${slideRows.length} slides, ~${totalDur}s`);
 
+    // ── Ambient background music ──────────────────────────────────────────────
+    // C minor chord (C3 + Eb3 + G3) with slow tremolo — no external files needed
+    const musicIdx = slideRows.length;
+    args.push("-f", "lavfi", "-i",
+      `aevalsrc=0.04*sin(2*PI*t*130.81)*(0.85+0.15*sin(2*PI*t*0.3))+0.035*sin(2*PI*t*155.56)*(0.85+0.15*sin(2*PI*t*0.4))+0.03*sin(2*PI*t*196.0)*(0.85+0.15*sin(2*PI*t*0.25)):s=44100:c=mono:d=${totalDur}`
+    );
+
+    // Audio chain: mono → stereo → fade in/out → volume
+    const fadeDur = Math.min(3, totalDur * 0.1);
+    filterComplex += `;[${musicIdx}:a]aformat=channel_layouts=stereo,` +
+      `afade=t=in:st=0:d=${fadeDur},` +
+      `afade=t=out:st=${totalDur - fadeDur}:d=${fadeDur},` +
+      `volume=0.14[aout]`;
+
     args.push(
       "-filter_complex", filterComplex,
       "-map", "[out]",
+      "-map", "[aout]",
       "-c:v", "libx264",
-      "-preset", "fast",
-      "-crf", "20",
+      "-preset", "ultrafast",  // fastest encode — critical for Vercel 120s limit
+      "-crf", "23",
+      "-c:a", "aac",
+      "-b:a", "96k",
       "-pix_fmt", "yuv420p",
       "-movflags", "+faststart",
+      "-threads", "0",         // use all available cores
       outFile
     );
+
+    // Ensure binary is executable (Vercel may deploy without execute bit)
+    try { fs.chmodSync(FFMPEG, 0o755); } catch { /* ignore */ }
 
     const result = spawnSync(FFMPEG, args, {
       encoding: "utf8",
@@ -429,9 +531,20 @@ export async function renderSeries(
       timeout: 180_000,
     });
 
-    if (result.status !== 0) {
-      const err = result.stderr ?? result.stdout ?? "";
-      throw new Error(`FFmpeg error:\n${err.slice(-3000)}`);
+    if (result.status !== 0 || result.error) {
+      const spawnMsg = result.error ? ` [spawn: ${result.error.message}]` : "";
+      const stderr = result.stderr ?? "";
+      // FFmpeg prints version header (~300 chars) before the real error.
+      // Extract lines that contain actual error keywords.
+      const errorLines = stderr
+        .split("\n")
+        .filter((l) =>
+          /error|invalid|cannot|failed|unable|not found|no such|unrecognized|undefined|option|unknown/i.test(l)
+        )
+        .join("\n")
+        .slice(0, 3000);
+      const fallback = stderr.slice(300, 3300); // skip version header
+      throw new Error(`FFmpeg error${spawnMsg} (exit ${result.status}):\n${errorLines || fallback}`);
     }
 
     onLog?.(`[render] Done → ${outFile}`);
