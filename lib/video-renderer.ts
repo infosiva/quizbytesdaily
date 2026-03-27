@@ -3,8 +3,6 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { getSlides, getSeriesById } from "./db";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const ffmpegInstaller: { path: string } = require("@ffmpeg-installer/ffmpeg");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -13,6 +11,20 @@ function findFont(candidates: string[]): string {
     if (fs.existsSync(f)) return f;
   }
   return candidates[0]; // best-guess fallback
+}
+
+// Lazy-load @ffmpeg-installer so Next.js build doesn't try to resolve it at
+// compile time (it's platform-native and only available at runtime on Vercel).
+function getFFmpegPath(): string {
+  const FFMPEG_FULL = "/usr/local/opt/ffmpeg-full/bin/ffmpeg";
+  if (fs.existsSync(FFMPEG_FULL)) return FFMPEG_FULL;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const installer = require("@ffmpeg-installer/ffmpeg") as { path: string };
+    return installer.path ?? "ffmpeg";
+  } catch {
+    return "ffmpeg";
+  }
 }
 
 const BUNDLED_DIR = path.join(process.cwd(), "fonts");
@@ -30,12 +42,6 @@ const FONT_BOLD = findFont([
   "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",            // Debian/Ubuntu
   "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",          // RHEL/Amazon Linux
 ]);
-
-// ffmpeg-full includes drawtext (libfreetype). Use it if available.
-const FFMPEG_FULL = "/usr/local/opt/ffmpeg-full/bin/ffmpeg";
-const FFMPEG = fs.existsSync(FFMPEG_FULL)
-  ? FFMPEG_FULL
-  : (ffmpegInstaller.path ?? "ffmpeg");
 
 const W   = 1080;
 const H   = 1920;
@@ -522,6 +528,8 @@ export async function renderSeries(
       outFile
     );
 
+    // Resolve ffmpeg path at render time (lazy — avoids build-time resolution)
+    const FFMPEG = getFFmpegPath();
     // Ensure binary is executable (Vercel may deploy without execute bit)
     try { fs.chmodSync(FFMPEG, 0o755); } catch { /* ignore */ }
 
