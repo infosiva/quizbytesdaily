@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # sync-vercel-env.sh
-# Pushes every key in .env.local to the linked Vercel project (all environments).
+# PUSHES .env.local → Vercel (production + preview + development).
+#
+# ⚠️  NEVER run "vercel env pull" — it will OVERWRITE .env.local with only
+#     what Vercel currently has, destroying any keys not yet pushed.
+#
 # Usage:
 #   1. vercel login          (opens browser — one-time)
-#   2. vercel link           (links this directory to your Vercel project — one-time)
+#   2. vercel link --yes     (links directory; do NOT accept env pull prompt)
 #   3. bash scripts/sync-vercel-env.sh
 
 set -euo pipefail
