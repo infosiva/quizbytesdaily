@@ -40,7 +40,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 // ── Build YouTube tags from category ──────────────────────────────────────────
-function buildTags(category: string, title: string): string[] {
+function buildTags(category: string): string[] {
   const common = ["QuizBytesDaily", "TechQuiz", "CodingQuiz", "LearnToCode", "Shorts", "ProgrammingQuiz"];
   const catTags: Record<string, string[]> = {
     "AI/ML":         ["AI", "MachineLearning", "LLM", "ArtificialIntelligence"],
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
     ].join("\n");
 
     const youtubeTitle = `${series.title} #Shorts`;
-    const tags         = buildTags(series.category, series.title);
+    const tags         = buildTags(series.category);
 
     // Upload to YouTube
     const videoId  = await uploadToYouTube(videoBuffer, youtubeTitle, description, tags);

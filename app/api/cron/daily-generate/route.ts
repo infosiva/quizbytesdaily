@@ -22,27 +22,6 @@ function authorized(req: NextRequest): boolean {
   return auth === `Bearer ${secret}`;
 }
 
-// ── YouTube-style description ──────────────────────────────────────────────────
-function buildDescription(topic: string, category: string, layout: string): string {
-  const layoutLabel: Record<string, string> = {
-    "quiz-reveal":  "🎯 Quiz Reveal",
-    "explainer":    "📚 Explainer",
-    "code-example": "💻 Code Example",
-    "quick-tips":   "⚡ Quick Tips",
-  };
-  return [
-    `🧠 Daily Tech Quiz: ${topic}`,
-    "",
-    "Think you know the answer? Drop it in the comments! 👇",
-    "",
-    `Format: ${layoutLabel[layout] ?? layout} | Category: ${category}`,
-    "",
-    "✅ Subscribe for daily bite-sized tech quizzes",
-    "",
-    "#TechQuiz #QuizBytesDaily #CodingQuiz #Shorts #LearnToCode",
-  ].join("\n");
-}
-
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   if (!authorized(req)) {
