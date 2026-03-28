@@ -332,6 +332,12 @@ export default function AdminPage() {
   const [deletingYT, setDeletingYT] = useState(false);
   const [deleteYTResult, setDeleteYTResult] = useState("");
 
+  // Library: inline regenerate layout picker
+  const [regenId, setRegenId] = useState<number | null>(null);
+  const [regenLayout, setRegenLayout] = useState<LayoutId>("quiz-reveal");
+  const [regenning, setRegenning] = useState(false);
+  const [regenError, setRegenError] = useState("");
+
   // Load library
   const loadLibrary = useCallback(async () => {
     setLoadingLib(true);
@@ -394,6 +400,33 @@ export default function AdminPage() {
       setGenError(e instanceof Error ? e.message : "Network error");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  // Regenerate slides for an existing series with a new layout
+  async function handleRegen(s: SeriesRecord) {
+    setRegenning(true);
+    setRegenError("");
+    try {
+      const res = await fetch("/api/admin/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: s.topic,
+          category: s.category,
+          difficulty: s.difficulty,
+          layout: regenLayout,
+          seriesId: s.id,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setRegenError(json.error ?? "Regeneration failed"); return; }
+      setRegenId(null);
+      await loadLibrary();
+    } catch (e) {
+      setRegenError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setRegenning(false);
     }
   }
 
@@ -789,34 +822,100 @@ export default function AdminPage() {
               </div>
             )}
 
+            {regenError && (
+              <p style={{ fontSize: "0.8rem", color: "#f87171", marginBottom: "0.75rem" }}>Regen error: {regenError}</p>
+            )}
+
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {library.map((s) => (
-                <div key={s.id} style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.title}</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                      <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>{s.category}</span>
-                      <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: difficultyColor(s.difficulty), background: "rgba(255,255,255,0.05)" }}>{s.difficulty}</span>
-                      <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: statusColor(s.status), background: "rgba(255,255,255,0.05)" }}>{s.status}</span>
-                      <span style={{ fontSize: "0.7rem", color: "#4a4a5a" }}>{s.slide_count ?? 0} slides · {new Date(s.created_at).toLocaleDateString()}</span>
+                <div key={s.id} style={{ background: "#111118", border: `1px solid ${regenId === s.id ? "#a855f760" : "#1e1e2e"}`, borderRadius: 10, overflow: "hidden", transition: "border-color 0.15s" }}>
+
+                  {/* Main row */}
+                  <div style={{ padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.title}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                        <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>{s.category}</span>
+                        <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: difficultyColor(s.difficulty), background: "rgba(255,255,255,0.05)" }}>{s.difficulty}</span>
+                        <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: statusColor(s.status), background: "rgba(255,255,255,0.05)" }}>{s.status}</span>
+                        <span style={{ fontSize: "0.7rem", color: "#4a4a5a" }}>{s.slide_count ?? 0} slides · {new Date(s.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+                      {s.youtube_url && (
+                        <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" style={{ padding: "0.4rem 0.75rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 6, color: "#4ade80", textDecoration: "none", fontSize: "0.75rem" }}>▶ YouTube</a>
+                      )}
+                      {s.youtube_id && (
+                        <button onClick={async () => {
+                          if (!confirm(`Remove "${s.title}" from YouTube?`)) return;
+                          await fetch("/api/youtube/delete", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videoId: s.youtube_id }) });
+                          loadLibrary();
+                        }} style={{ padding: "0.4rem 0.75rem", background: "rgba(251,191,36,0.1)", border: "1px solid #fbbf24", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: "0.75rem" }}>
+                          🗑 YT
+                        </button>
+                      )}
+                      {/* Regenerate layout button */}
+                      <button
+                        onClick={() => { setRegenId(regenId === s.id ? null : s.id); setRegenError(""); }}
+                        style={{
+                          padding: "0.4rem 0.75rem",
+                          background: regenId === s.id ? "rgba(168,85,247,0.2)" : "rgba(168,85,247,0.08)",
+                          border: `1px solid ${regenId === s.id ? "#a855f7" : "#a855f740"}`,
+                          borderRadius: 6, color: "#a855f7", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600,
+                        }}>
+                        {regenId === s.id ? "✕ Cancel" : "↻ Layout"}
+                      </button>
+                      <button onClick={() => goToUpload(s)} style={{ padding: "0.4rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 6, color: "#22d3ee", cursor: "pointer", fontSize: "0.75rem" }}>🚀 Upload</button>
+                      <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 DB</button>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-                    {s.youtube_url && (
-                      <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" style={{ padding: "0.4rem 0.75rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 6, color: "#4ade80", textDecoration: "none", fontSize: "0.75rem" }}>▶ YouTube</a>
-                    )}
-                    {s.youtube_id && (
-                      <button onClick={async () => {
-                        if (!confirm(`Remove "${s.title}" from YouTube?`)) return;
-                        await fetch("/api/youtube/delete", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videoId: s.youtube_id }) });
-                        loadLibrary();
-                      }} style={{ padding: "0.4rem 0.75rem", background: "rgba(251,191,36,0.1)", border: "1px solid #fbbf24", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: "0.75rem" }}>
-                        🗑 YT
+
+                  {/* Inline layout picker — slides down when active */}
+                  {regenId === s.id && (
+                    <div style={{ borderTop: "1px solid #a855f720", background: "#0d0d18", padding: "1rem 1.25rem" }}>
+                      <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#a855f7", textTransform: "uppercase" as const, letterSpacing: 1, marginBottom: 10 }}>
+                        Regenerate slides with a new layout — topic &amp; category stay the same
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.5rem", marginBottom: "0.85rem" }}>
+                        {LAYOUTS.map((l) => {
+                          const active = regenLayout === l.id;
+                          return (
+                            <button key={l.id} onClick={() => setRegenLayout(l.id as LayoutId)} style={{
+                              padding: "0.65rem 0.6rem", borderRadius: 10,
+                              border: `2px solid ${active ? l.color : "#1e1e2e"}`,
+                              background: active ? `${l.color}18` : "#111118",
+                              cursor: "pointer", textAlign: "left" as const, outline: "none",
+                            }}>
+                              <div style={{ fontSize: "1.1rem", marginBottom: 4 }}>{l.icon}</div>
+                              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: active ? l.color : "#e2e8f0", marginBottom: 2 }}>{l.name}</div>
+                              <div style={{ fontSize: "0.63rem", color: "#64748b" }}>~{l.slides} slides</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {/* Slide structure preview for selected regen layout */}
+                      {LAYOUT_STRUCTURE[regenLayout] && (
+                        <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 4, alignItems: "center", marginBottom: "0.85rem" }}>
+                          {LAYOUT_STRUCTURE[regenLayout].map((chip, i) => (
+                            <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: chip.bg, color: chip.color, border: `1px solid ${chip.color}40`, whiteSpace: "nowrap" as const }}>{chip.label}</span>
+                              {i < LAYOUT_STRUCTURE[regenLayout].length - 1 && <span style={{ color: "#374151", fontSize: "0.6rem" }}>→</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <button onClick={() => handleRegen(s)} disabled={regenning} style={{
+                        padding: "0.5rem 1.25rem", background: regenning ? "#333" : "#a855f7",
+                        border: "none", borderRadius: 8, color: "#fff", fontWeight: 700,
+                        cursor: regenning ? "not-allowed" : "pointer", fontSize: "0.85rem",
+                      }}>
+                        {regenning ? "⏳ Regenerating…" : `↻ Regenerate as ${LAYOUTS.find(l => l.id === regenLayout)?.name}`}
                       </button>
-                    )}
-                    <button onClick={() => goToUpload(s)} style={{ padding: "0.4rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 6, color: "#22d3ee", cursor: "pointer", fontSize: "0.75rem" }}>🚀 Upload</button>
-                    <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 DB</button>
-                  </div>
+                      <span style={{ marginLeft: 12, fontSize: "0.72rem", color: "#4a4a5a" }}>
+                        Topic: &ldquo;{s.topic}&rdquo; · {s.category} · {s.difficulty}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
