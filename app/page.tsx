@@ -26,13 +26,22 @@ interface ApiStats {
   categories: { name: string; count: number }[];
 }
 
+interface SiteSettings {
+  gridColumns: 2 | 3 | 4;
+  defaultView: "grid" | "table";
+  pageSize: number;
+  sortDefault: "newest" | "oldest" | "az" | "za" | "category";
+  showStats: boolean;
+  accentColor: string;
+}
+
 type SortBy = "newest" | "oldest" | "az" | "za" | "category";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const BG   = "#0b0b12";
 const CARD = "#111118";
 const BORD = "#1c1c2e";
-const CYN  = "#22d3ee";
+const CYN  = "#22d3ee"; // module-level fallback used by sub-components
 
 // ── Category colours ───────────────────────────────────────────────────────────
 const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
@@ -358,14 +367,33 @@ function EmptyState({ message }: { message: string }) {
 export default function Home() {
   const [allSeries,      setAllSeries]      = useState<SeriesItem[]>([]);
   const [apiStats,       setApiStats]       = useState<ApiStats | null>(null);
+  const [siteSettings,   setSiteSettings]   = useState<SiteSettings | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery,    setSearchQuery]    = useState("");
   const [viewMode,       setViewMode]       = useState<"grid" | "table">("table");
   const [sortBy,         setSortBy]         = useState<SortBy>("newest");
   const [page,           setPage]           = useState(1);
-  const PAGE_SIZE = 20;
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Derived from settings (with fallbacks)
+  // Note: sub-components use module-level CYN; accent here applies to root-level chrome
+  const accent    = siteSettings?.accentColor ?? CYN;
+  const PAGE_SIZE = siteSettings?.pageSize ?? 20;
+  const gridCols  = siteSettings?.gridColumns ?? 3;
+  const showStats = siteSettings?.showStats ?? true;
 
   useEffect(() => {
+    // Load settings first — they control view/sort defaults
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((s: SiteSettings) => {
+        setSiteSettings(s);
+        setViewMode(s.defaultView ?? "table");
+        setSortBy(s.sortDefault ?? "newest");
+        setSettingsLoaded(true);
+      })
+      .catch(() => setSettingsLoaded(true));
+
     fetch("/api/series").then((r) => r.json()).then(setAllSeries).catch(() => {});
     fetch("/api/stats").then((r) => r.json()).then(setApiStats).catch(() => {});
     fetch("/api/track", { method: "POST" }).catch(() => {});
@@ -439,11 +467,11 @@ export default function Home() {
           <div className="flex items-center gap-3 rounded-xl px-5 py-0 border transition-colors"
             style={{
               background: "#0d0d1a",
-              borderColor: searchQuery ? `${CYN}60` : "#22222e",
-              boxShadow: searchQuery ? `0 0 0 3px ${CYN}12` : "none",
+              borderColor: searchQuery ? `${accent}60` : "#22222e",
+              boxShadow: searchQuery ? `0 0 0 3px ${accent}12` : "none",
               height: 56,
             }}>
-            <span style={{ color: searchQuery ? CYN : "#374151", transition: "color 0.15s" }}>
+            <span style={{ color: searchQuery ? accent : "#374151", transition: "color 0.15s" }}>
               <Ico.Search />
             </span>
             <input
@@ -465,11 +493,11 @@ export default function Home() {
       </div>
 
       {/* ── Stats strip ── */}
-      {(published > 0 || apiCats.length > 0) && (
+      {showStats && (published > 0 || apiCats.length > 0) && (
         <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
           <div className="flex items-center gap-5 px-6 py-2 overflow-x-auto"
             style={{ maxWidth: 1440, margin: "0 auto" }}>
-            <span className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap" style={{ color: CYN }}>
+            <span className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap" style={{ color: accent }}>
               <span className="font-black text-sm">{published}</span> Videos
             </span>
             <span className="text-slate-800">·</span>
@@ -480,7 +508,7 @@ export default function Home() {
             <span className="text-xs text-slate-600 whitespace-nowrap">Daily tech quiz Shorts</span>
             <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
               className="ml-auto shrink-0 text-xs font-bold flex items-center gap-1.5 transition-opacity hover:opacity-80"
-              style={{ color: CYN }}>
+              style={{ color: accent }}>
               <Ico.YT /> Watch all on YouTube →
             </a>
           </div>
@@ -488,7 +516,7 @@ export default function Home() {
       )}
 
       {/* ── Main content ── */}
-      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "1.5rem 1.5rem" }}>
+      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "1.5rem 1.5rem", opacity: settingsLoaded ? 1 : 0, transition: "opacity 0.15s" }}>
 
         {/* Controls row: category pills | sort | view toggle */}
         <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
@@ -503,7 +531,7 @@ export default function Home() {
                   className="text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all"
                   style={active
                     ? cat === "All"
-                      ? { background: CYN, borderColor: CYN, color: "#000" }
+                      ? { background: accent, borderColor: accent, color: "#000" }
                       : { background: col.badge, borderColor: col.badge, color: col.text }
                     : { background: "transparent", borderColor: BORD, color: "#64748b" }}>
                   {cat === "All" ? `All (${allSeries.length})` : cat}
@@ -536,12 +564,12 @@ export default function Home() {
               style={{ borderColor: BORD, background: "#080810" }}>
               <button onClick={() => setViewMode("table")} className="p-2 rounded-lg transition-all"
                 title="Table view"
-                style={viewMode === "table" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
+                style={viewMode === "table" ? { background: `${accent}20`, color: accent } : { color: "#475569" }}>
                 <Ico.Table />
               </button>
               <button onClick={() => setViewMode("grid")} className="p-2 rounded-lg transition-all"
                 title="Grid view"
-                style={viewMode === "grid" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
+                style={viewMode === "grid" ? { background: `${accent}20`, color: accent } : { color: "#475569" }}>
                 <Ico.Grid />
               </button>
             </div>
@@ -567,7 +595,8 @@ export default function Home() {
               : `No quizzes in "${activeCategory}" yet.`
           } />
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid gap-5"
+            style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
             {visible.map((s) => <SeriesCard key={s.id} series={s} />)}
           </div>
         ) : (
@@ -613,7 +642,7 @@ export default function Home() {
               <button key={n} onClick={() => setPage(n)}
                 className="w-9 h-9 rounded-xl text-sm font-bold font-mono transition-all"
                 style={page === n
-                  ? { background: CYN, color: "#000" }
+                  ? { background: accent, color: "#000" }
                   : { background: CARD, color: "#64748b", border: `1px solid ${BORD}` }}>
                 {n}
               </button>
@@ -628,7 +657,7 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer className="border-t mt-12 py-8 text-center" style={{ borderColor: BORD }}>
         <p className="text-sm text-slate-600">
-          <span className="font-bold" style={{ color: CYN }}>QuizBytesDaily</span>
+          <span className="font-bold" style={{ color: accent }}>QuizBytesDaily</span>
           {" · "}
           <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
             className="hover:text-slate-400 transition-colors">YouTube</a>

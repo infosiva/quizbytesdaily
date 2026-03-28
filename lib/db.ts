@@ -2,11 +2,12 @@ import { createClient, type Client, type Row, type InValue } from "@libsql/clien
 
 // ── Site Settings ──────────────────────────────────────────────────────────────
 export interface SiteSettings {
-  gridColumns:   2 | 3 | 4;
-  defaultView:   "grid" | "list";
-  pageSize:      8 | 12 | 16 | 24;
-  heroEnabled:   boolean;
-  showDashboard: boolean;
+  gridColumns:  2 | 3 | 4;
+  defaultView:  "grid" | "table";
+  pageSize:     8 | 12 | 16 | 24 | 32;
+  sortDefault:  "newest" | "oldest" | "az" | "za" | "category";
+  showStats:    boolean;
+  accentColor:  string;  // hex, e.g. "#22d3ee"
 }
 
 // ── Client singleton ──────────────────────────────────────────────────────────
@@ -399,11 +400,12 @@ export async function getPageViewStats(): Promise<{ today: number; week: number;
 // ── Site Settings CRUD ────────────────────────────────────────────────────────
 
 const SETTING_DEFAULTS: Record<string, string> = {
-  grid_columns:   "3",
-  default_view:   "grid",
-  page_size:      "12",
-  hero_enabled:   "1",
-  show_dashboard: "1",
+  grid_columns:  "3",
+  default_view:  "table",
+  page_size:     "20",
+  sort_default:  "newest",
+  show_stats:    "1",
+  accent_color:  "#22d3ee",
 };
 
 export async function getSiteSettings(): Promise<SiteSettings> {
@@ -414,11 +416,12 @@ export async function getSiteSettings(): Promise<SiteSettings> {
   for (const r of rs.rows) m[String(r.key)] = String(r.value);
   const g = (k: string) => m[k] ?? SETTING_DEFAULTS[k] ?? "";
   return {
-    gridColumns:   (Number(g("grid_columns")) as 2 | 3 | 4)           || 3,
-    defaultView:   (g("default_view") as "grid" | "list")             || "grid",
-    pageSize:      (Number(g("page_size")) as 8 | 12 | 16 | 24)       || 12,
-    heroEnabled:   g("hero_enabled") !== "0",
-    showDashboard: g("show_dashboard") !== "0",
+    gridColumns:  (Number(g("grid_columns")) as 2 | 3 | 4)                    || 3,
+    defaultView:  (g("default_view") as "grid" | "table")                     || "table",
+    pageSize:     (Number(g("page_size")) as 8 | 12 | 16 | 24 | 32)           || 20,
+    sortDefault:  (g("sort_default") as SiteSettings["sortDefault"])           || "newest",
+    showStats:    g("show_stats") !== "0",
+    accentColor:  g("accent_color") || "#22d3ee",
   };
 }
 
@@ -426,11 +429,12 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
   await ensureSchema();
   const c       = getClient();
   const entries: [string, string][] = [];
-  if (settings.gridColumns   !== undefined) entries.push(["grid_columns",   String(settings.gridColumns)]);
-  if (settings.defaultView   !== undefined) entries.push(["default_view",   settings.defaultView]);
-  if (settings.pageSize      !== undefined) entries.push(["page_size",      String(settings.pageSize)]);
-  if (settings.heroEnabled   !== undefined) entries.push(["hero_enabled",   settings.heroEnabled   ? "1" : "0"]);
-  if (settings.showDashboard !== undefined) entries.push(["show_dashboard", settings.showDashboard ? "1" : "0"]);
+  if (settings.gridColumns !== undefined) entries.push(["grid_columns",  String(settings.gridColumns)]);
+  if (settings.defaultView !== undefined) entries.push(["default_view",  settings.defaultView]);
+  if (settings.pageSize    !== undefined) entries.push(["page_size",     String(settings.pageSize)]);
+  if (settings.sortDefault !== undefined) entries.push(["sort_default",  settings.sortDefault]);
+  if (settings.showStats   !== undefined) entries.push(["show_stats",    settings.showStats ? "1" : "0"]);
+  if (settings.accentColor !== undefined) entries.push(["accent_color",  settings.accentColor]);
   if (entries.length === 0) return;
   await c.batch(
     entries.map(([key, value]) => ({

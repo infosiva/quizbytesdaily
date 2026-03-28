@@ -287,7 +287,7 @@ interface AnalyticsData {
 }
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"generate" | "library" | "upload" | "analytics">("generate");
+  const [tab, setTab] = useState<"generate" | "library" | "upload" | "analytics" | "settings">("generate");
 
   // Generate
   const [topic, setTopic] = useState("");
@@ -321,6 +321,18 @@ export default function AdminPage() {
   // Analytics
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+  // Site settings
+  const [siteCfg, setSiteCfg] = useState({
+    gridColumns:  3 as 2 | 3 | 4,
+    defaultView:  "table" as "grid" | "table",
+    pageSize:     20 as 8 | 12 | 16 | 20 | 24 | 32,
+    sortDefault:  "newest" as "newest" | "oldest" | "az" | "za" | "category",
+    showStats:    true,
+    accentColor:  "#22d3ee",
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Render
   const [rendering, setRendering] = useState(false);
@@ -359,6 +371,19 @@ export default function AdminPage() {
         .then(setAnalytics)
         .catch(() => {})
         .finally(() => setLoadingAnalytics(false));
+    }
+    if (tab === "settings") {
+      fetch("/api/admin/settings")
+        .then((r) => r.json())
+        .then((s) => setSiteCfg({
+          gridColumns:  s.gridColumns  ?? 3,
+          defaultView:  s.defaultView  ?? "table",
+          pageSize:     s.pageSize     ?? 20,
+          sortDefault:  s.sortDefault  ?? "newest",
+          showStats:    s.showStats    ?? true,
+          accentColor:  s.accentColor  ?? "#22d3ee",
+        }))
+        .catch(() => {});
     }
   }, [tab, loadLibrary]);
 
@@ -400,6 +425,23 @@ export default function AdminPage() {
       setGenError(e instanceof Error ? e.message : "Network error");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  // Save site settings
+  async function handleSaveSettings() {
+    setSavingSettings(true);
+    setSettingsSaved(false);
+    try {
+      await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(siteCfg),
+      });
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
+    } finally {
+      setSavingSettings(false);
     }
   }
 
@@ -574,6 +616,7 @@ export default function AdminPage() {
           <button style={tabBtn(tab === "library")} onClick={() => setTab("library")}>📚 Library</button>
           <button style={tabBtn(tab === "upload")} onClick={() => setTab("upload")}>🚀 Upload</button>
           <button style={tabBtn(tab === "analytics")} onClick={() => setTab("analytics")}>📊 Analytics</button>
+          <button style={tabBtn(tab === "settings")} onClick={() => setTab("settings")}>⚙️ Settings</button>
         </div>
 
         {/* ═══════════════════════ GENERATE ═══════════════════════════════ */}
@@ -1234,6 +1277,164 @@ export default function AdminPage() {
                 </>
               );
             })()}
+          </div>
+        )}
+
+        {/* ═══════════════════════ SETTINGS ═══════════════════════════════ */}
+        {tab === "settings" && (
+          <div style={{ maxWidth: 680 }}>
+            <div style={{ marginBottom: "2rem" }}>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.25rem" }}>Site Layout Settings</h2>
+              <p style={{ fontSize: "0.82rem", color: "#64748b" }}>
+                Controls what visitors see on <a href="/" target="_blank" rel="noopener noreferrer" style={{ color: "#6366f1" }}>quizbytes.dev</a>. Changes take effect immediately after saving.
+              </p>
+            </div>
+
+            {/* ── Default View ── */}
+            <section style={{ marginBottom: "2rem", paddingBottom: "2rem", borderBottom: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>Default View</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                {(["table", "grid"] as const).map((v) => (
+                  <button key={v} onClick={() => setSiteCfg((c) => ({ ...c, defaultView: v }))} style={{
+                    flex: 1, padding: "1rem", borderRadius: 10, cursor: "pointer",
+                    border: `2px solid ${siteCfg.defaultView === v ? "#22d3ee" : "#1e1e2e"}`,
+                    background: siteCfg.defaultView === v ? "#22d3ee12" : "#111118",
+                    textAlign: "left" as const,
+                  }}>
+                    <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>{v === "table" ? "☰" : "⊞"}</div>
+                    <div style={{ fontWeight: 700, color: siteCfg.defaultView === v ? "#22d3ee" : "#e2e8f0", marginBottom: 3 }}>
+                      {v === "table" ? "Table" : "Grid"}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      {v === "table" ? "Ranked rows — rank, thumbnail, title, category, date, watch" : "Card grid — thumbnail cards with preview"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Grid Columns (only relevant when view=grid) ── */}
+            <section style={{ marginBottom: "2rem", paddingBottom: "2rem", borderBottom: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>Grid Columns <span style={{ color: "#374151", textTransform: "none" as const, fontWeight: 400 }}>(used when grid view is active)</span></label>
+              <div style={{ display: "flex", gap: 10 }}>
+                {([2, 3, 4] as const).map((n) => (
+                  <button key={n} onClick={() => setSiteCfg((c) => ({ ...c, gridColumns: n }))} style={{
+                    flex: 1, padding: "0.85rem", borderRadius: 10, cursor: "pointer",
+                    border: `2px solid ${siteCfg.gridColumns === n ? "#a855f7" : "#1e1e2e"}`,
+                    background: siteCfg.gridColumns === n ? "#a855f712" : "#111118",
+                    fontWeight: 700, fontSize: "1.25rem",
+                    color: siteCfg.gridColumns === n ? "#a855f7" : "#e2e8f0",
+                  }}>
+                    {n} col{n > 1 ? "s" : ""}
+                    <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 400, marginTop: 4 }}>
+                      {n === 2 ? "Large cards" : n === 3 ? "Balanced" : "Compact"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Page Size ── */}
+            <section style={{ marginBottom: "2rem", paddingBottom: "2rem", borderBottom: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>Videos per page</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {([8, 12, 16, 20, 24, 32] as const).map((n) => (
+                  <button key={n} onClick={() => setSiteCfg((c) => ({ ...c, pageSize: n }))} style={{
+                    padding: "0.5rem 1rem", borderRadius: 8, cursor: "pointer",
+                    border: `2px solid ${siteCfg.pageSize === n ? "#22d3ee" : "#1e1e2e"}`,
+                    background: siteCfg.pageSize === n ? "#22d3ee12" : "#111118",
+                    fontWeight: 700, color: siteCfg.pageSize === n ? "#22d3ee" : "#94a3b8",
+                  }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Default Sort ── */}
+            <section style={{ marginBottom: "2rem", paddingBottom: "2rem", borderBottom: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>Default sort order</label>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                {([
+                  { v: "newest",   label: "Newest First" },
+                  { v: "oldest",   label: "Oldest First" },
+                  { v: "az",       label: "A → Z" },
+                  { v: "za",       label: "Z → A" },
+                  { v: "category", label: "By Category" },
+                ] as const).map(({ v, label }) => (
+                  <button key={v} onClick={() => setSiteCfg((c) => ({ ...c, sortDefault: v }))} style={{
+                    padding: "0.5rem 1.1rem", borderRadius: 8, cursor: "pointer",
+                    border: `2px solid ${siteCfg.sortDefault === v ? "#fbbf24" : "#1e1e2e"}`,
+                    background: siteCfg.sortDefault === v ? "#fbbf2412" : "#111118",
+                    fontWeight: 600, fontSize: "0.82rem",
+                    color: siteCfg.sortDefault === v ? "#fbbf24" : "#94a3b8",
+                  }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* ── Accent Colour ── */}
+            <section style={{ marginBottom: "2rem", paddingBottom: "2rem", borderBottom: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>Accent colour <span style={{ color: "#374151", textTransform: "none" as const, fontWeight: 400 }}>(active filters, pagination, search glow)</span></label>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 10 }}>
+                {["#22d3ee", "#a855f7", "#4ade80", "#f472b6", "#fbbf24", "#f87171", "#38bdf8", "#fb923c"].map((col) => (
+                  <button key={col} onClick={() => setSiteCfg((c) => ({ ...c, accentColor: col }))} style={{
+                    width: 40, height: 40, borderRadius: 10, background: col, cursor: "pointer",
+                    border: `3px solid ${siteCfg.accentColor === col ? "#fff" : "transparent"}`,
+                    boxShadow: siteCfg.accentColor === col ? `0 0 12px ${col}88` : "none",
+                    transition: "all 0.15s",
+                  }} title={col} />
+                ))}
+                <input type="color" value={siteCfg.accentColor}
+                  onChange={(e) => setSiteCfg((c) => ({ ...c, accentColor: e.target.value }))}
+                  style={{ width: 40, height: 40, borderRadius: 10, cursor: "pointer", border: "2px solid #1e1e2e", background: "transparent", padding: 2 }}
+                  title="Custom colour" />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#64748b" }}>
+                <div style={{ width: 14, height: 14, borderRadius: 4, background: siteCfg.accentColor }} />
+                Preview: <span style={{ color: siteCfg.accentColor, fontWeight: 700 }}>{siteCfg.accentColor}</span>
+              </div>
+            </section>
+
+            {/* ── Toggles ── */}
+            <section style={{ marginBottom: "2rem", paddingBottom: "2rem", borderBottom: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>Display options</label>
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                  <span style={{
+                    width: 44, height: 24, borderRadius: 12, position: "relative" as const,
+                    background: siteCfg.showStats ? "#22d3ee" : "#1e1e2e",
+                    transition: "background 0.15s", flexShrink: 0, display: "inline-block",
+                  }}>
+                    <span style={{
+                      position: "absolute" as const, top: 3, left: siteCfg.showStats ? 22 : 3,
+                      width: 18, height: 18, borderRadius: 9, background: "#fff",
+                      transition: "left 0.15s",
+                    }} />
+                    <input type="checkbox" checked={siteCfg.showStats} onChange={(e) => setSiteCfg((c) => ({ ...c, showStats: e.target.checked }))} style={{ opacity: 0, position: "absolute" as const }} />
+                  </span>
+                  <span style={{ fontSize: "0.875rem" }}>
+                    Show stats strip <span style={{ color: "#64748b", fontSize: "0.75rem" }}>(video count, category count, &ldquo;Watch all on YouTube&rdquo; bar)</span>
+                  </span>
+                </label>
+              </div>
+            </section>
+
+            {/* ── Save ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={handleSaveSettings} disabled={savingSettings} style={{
+                padding: "0.65rem 2rem", background: savingSettings ? "#333" : "#22d3ee",
+                border: "none", borderRadius: 8, color: "#0a0a0f", fontWeight: 800,
+                cursor: savingSettings ? "not-allowed" : "pointer", fontSize: "0.9rem",
+              }}>
+                {savingSettings ? "⏳ Saving…" : "💾 Save Settings"}
+              </button>
+              {settingsSaved && (
+                <span style={{ fontSize: "0.82rem", color: "#4ade80", fontWeight: 600 }}>✓ Saved — changes live on public site</span>
+              )}
+            </div>
           </div>
         )}
 

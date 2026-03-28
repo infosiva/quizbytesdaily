@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json(settings);
   } catch {
     return NextResponse.json(
-      { gridColumns: 3, defaultView: "grid", pageSize: 12, heroEnabled: true, showDashboard: true },
+      { gridColumns: 3, defaultView: "table", pageSize: 20, sortDefault: "newest", showStats: true, accentColor: "#22d3ee" },
     );
   }
 }
