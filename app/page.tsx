@@ -25,6 +25,7 @@ interface ApiStats {
   total: number;
   published: number;
   categories: { name: string; count: number }[];
+  pageViews?: { today: number; week: number; total: number; daily: { date: string; count: number }[] };
 }
 
 interface SiteSettings {
@@ -318,11 +319,12 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
   const total      = apiStats?.total ?? 0;
   const published  = apiStats?.published ?? 0;
   const apiCats    = apiStats?.categories ?? [];
-  const catCount   = apiCats.length;
   const maxCat     = Math.max(...apiCats.map((c) => c.count), 1);
   const totalViews = ytStats?.totalViews ?? 0;
   const totalLikes = ytStats?.totalLikes ?? 0;
   const topVideos  = ytStats?.stats.slice(0, 5) ?? [];
+  const pageViews  = apiStats?.pageViews;
+  const maxDay     = Math.max(...(pageViews?.daily.map((d) => d.count) ?? []), 1);
 
   return (
     <div>
@@ -375,19 +377,20 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
       )}
 
       {/* ── Stat strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 border-b" style={{ borderColor: BORD }}>
+      <div className="grid grid-cols-2 md:grid-cols-5 border-b" style={{ borderColor: BORD }}>
         {[
-          { label: "Quizzes Published", value: String(published),          icon: "▶",  color: "#a855f7" },
-          { label: "Total Views",        value: ytLoading ? "…" : fmtNum(totalViews), icon: "◈",  color: "#22d3ee" },
-          { label: "Total Likes",        value: ytLoading ? "…" : fmtNum(totalLikes), icon: "♥",  color: "#f472b6" },
-          { label: "Categories",         value: String(catCount || "—"),   icon: "#",  color: "#4ade80" },
+          { label: "Published",    value: String(published),                           icon: "▶", color: "#a855f7" },
+          { label: "YT Views",     value: ytLoading ? "…" : fmtNum(totalViews),        icon: "◈", color: "#22d3ee" },
+          { label: "YT Likes",     value: ytLoading ? "…" : fmtNum(totalLikes),        icon: "♥", color: "#f472b6" },
+          { label: "Today's Visits", value: pageViews ? fmtNum(pageViews.today) : "…", icon: "👁", color: "#fbbf24" },
+          { label: "Total Visits", value: pageViews ? fmtNum(pageViews.total) : "…",  icon: "✦", color: "#4ade80" },
         ].map((s) => (
-          <div key={s.label} className="px-6 py-4 flex items-center gap-4 border-r last:border-r-0"
+          <div key={s.label} className="px-5 py-4 flex items-center gap-3 border-r last:border-r-0"
             style={{ borderColor: BORD, borderTop: `1px solid ${BORD}` }}>
-            <span className="text-xl font-black shrink-0 w-8 text-center" style={{ color: s.color }}>{s.icon}</span>
+            <span className="text-lg font-black shrink-0 w-7 text-center" style={{ color: s.color }}>{s.icon}</span>
             <div>
-              <p className="font-mono text-xl font-black" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{s.label}</p>
+              <p className="font-mono text-xl font-black leading-none" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[11px] text-slate-500 mt-1">{s.label}</p>
             </div>
           </div>
         ))}
@@ -474,6 +477,52 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
           )}
         </div>
       </div>
+
+      {/* ── Page visitors mini-chart ── */}
+      {pageViews && pageViews.daily.length > 0 && (
+        <div className="p-6 border-t" style={{ borderColor: BORD }}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+              👁 Page Visitors — Last 30 Days
+            </p>
+            <div className="flex items-center gap-4 text-[11px] font-mono">
+              <span className="text-slate-500">Today <span className="font-bold text-fuchsia-400">{fmtNum(pageViews.today)}</span></span>
+              <span className="text-slate-500">Week <span className="font-bold text-amber-400">{fmtNum(pageViews.week)}</span></span>
+              <span className="text-slate-500">Total <span className="font-bold text-green-400">{fmtNum(pageViews.total)}</span></span>
+            </div>
+          </div>
+          {/* Bar chart */}
+          <div className="flex items-end gap-[3px] h-20">
+            {pageViews.daily.map((d, i) => {
+              const pct = Math.max(4, Math.round((d.count / maxDay) * 100));
+              const isToday = d.date === new Date().toISOString().slice(0, 10);
+              return (
+                <div key={i} className="flex-1 group relative flex flex-col items-center justify-end h-full">
+                  <div className="w-full rounded-t-sm transition-all"
+                    style={{
+                      height: `${pct}%`,
+                      background: isToday
+                        ? "linear-gradient(to top, #a855f7, #c084fc)"
+                        : "linear-gradient(to top, #1e1e32, #2a2a4a)",
+                      minHeight: 3,
+                    }} />
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap">
+                    <div className="text-[10px] font-bold px-2 py-1 rounded-md shadow-lg"
+                      style={{ background: "#1e1e32", color: "#e2e8f0", border: `1px solid ${BORD}` }}>
+                      {d.date.slice(5)}: {d.count}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-1.5">
+            <span className="text-[10px] text-slate-700 font-mono">{pageViews.daily[0]?.date.slice(5)}</span>
+            <span className="text-[10px] text-slate-700 font-mono">Today</span>
+          </div>
+        </div>
+      )}
 
       {/* ── Recent quizzes ── */}
       {total > 0 && recent.length > 0 && (
@@ -653,10 +702,13 @@ export default function Home() {
   });
 
   useEffect(() => {
+    // Load settings
     fetch("/api/settings")
       .then((r) => r.json())
       .then((s: SiteSettings) => setSettings(s))
       .catch(() => {});
+    // Track this page visit (fire-and-forget, no PII)
+    fetch("/api/track", { method: "POST" }).catch(() => {});
   }, []);
 
   const navItems = settings.showDashboard ? NAV_BASE : NAV_BASE.filter((n) => n.id !== "dashboard");

@@ -40,6 +40,13 @@ async function ensureSchema() {
       args: [],
     },
     {
+      sql: `CREATE TABLE IF NOT EXISTS page_views (
+        date  TEXT PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 0
+      )`,
+      args: [],
+    },
+    {
       sql: `CREATE TABLE IF NOT EXISTS series (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         slug TEXT UNIQUE NOT NULL,
@@ -287,6 +294,43 @@ export async function getAnalytics(): Promise<AnalyticsData> {
       count:  Number(r.count ?? 0),
     })),
     totalSlides: Number(slidesCount.rows[0]?.total ?? 0),
+  };
+}
+
+// ── Page View Tracking ────────────────────────────────────────────────────────
+
+export async function trackPageView(): Promise<void> {
+  await ensureSchema();
+  const c    = getClient();
+  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  await c.execute({
+    sql:  "INSERT INTO page_views (date, count) VALUES (?, 1) ON CONFLICT(date) DO UPDATE SET count = count + 1",
+    args: [date],
+  });
+}
+
+export async function getPageViewStats(): Promise<{ today: number; week: number; total: number; daily: { date: string; count: number }[] }> {
+  await ensureSchema();
+  const c = getClient();
+  const [totals, daily] = await Promise.all([
+    c.execute(`
+      SELECT
+        SUM(count) AS total,
+        SUM(CASE WHEN date = date('now') THEN count ELSE 0 END) AS today,
+        SUM(CASE WHEN date >= date('now', '-6 days') THEN count ELSE 0 END) AS week
+      FROM page_views
+    `),
+    c.execute(`
+      SELECT date, count FROM page_views
+      WHERE date >= date('now', '-29 days')
+      ORDER BY date ASC
+    `),
+  ]);
+  return {
+    today: Number(totals.rows[0]?.today ?? 0),
+    week:  Number(totals.rows[0]?.week  ?? 0),
+    total: Number(totals.rows[0]?.total ?? 0),
+    daily: daily.rows.map((r) => ({ date: String(r.date), count: Number(r.count) })),
   };
 }
 
