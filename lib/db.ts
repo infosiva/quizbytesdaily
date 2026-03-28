@@ -164,7 +164,11 @@ export async function getSeriesById(id: number): Promise<SeriesRow | null> {
 export async function getSeriesBySlug(slug: string): Promise<SeriesRow | null> {
   await ensureSchema();
   const c = getClient();
-  const rs = await c.execute({ sql: "SELECT * FROM series WHERE slug = ?", args: [slug] });
+  const rs = await c.execute({
+    sql: `SELECT s.*, (SELECT COUNT(*) FROM slides WHERE series_id = s.id) AS slide_count
+          FROM series s WHERE s.slug = ?`,
+    args: [slug],
+  });
   return rs.rows[0] ? rowToSeries(rs.rows[0]) : null;
 }
 

@@ -26,6 +26,8 @@ interface ApiStats {
   categories: { name: string; count: number }[];
 }
 
+type SortBy = "newest" | "oldest" | "az" | "za" | "category";
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const BG   = "#0b0b12";
 const CARD = "#111118";
@@ -62,9 +64,6 @@ function getCatColor(name: string) {
 const DIFF_COLOR: Record<string, string> = {
   Beginner: "#4ade80", Intermediate: "#fbbf24", Advanced: "#f87171",
 };
-const DIFF_LABEL: Record<string, string> = {
-  Beginner: "BEGINNER", Intermediate: "INTERMEDIATE", Advanced: "ADVANCED",
-};
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function seriesUrl(s: SeriesItem): string {
@@ -77,6 +76,9 @@ function seriesThumbnail(s: SeriesItem): string {
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+function fmtDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 const Ico = {
@@ -86,9 +88,10 @@ const Ico = {
       <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
     </svg>
   ),
-  List: () => (
+  Table: () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round"/>
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M3 9h18M3 15h18M9 3v18" strokeLinecap="round"/>
     </svg>
   ),
   YT: () => (
@@ -97,7 +100,7 @@ const Ico = {
     </svg>
   ),
   Play: () => (
-    <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
   ),
   Slides: () => (
     <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -110,20 +113,21 @@ const Ico = {
     </svg>
   ),
   Search: () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
     </svg>
   ),
+  Sort: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path d="M3 6h18M7 12h10M11 18h2" strokeLinecap="round"/>
+    </svg>
+  ),
+  External: () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
 };
-
-// ── Thumbnail ──────────────────────────────────────────────────────────────────
-function Thumb({ series }: { series: SeriesItem }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={seriesThumbnail(series)} alt={series.title}
-      className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-  );
-}
 
 // ── Series card (grid) ─────────────────────────────────────────────────────────
 function SeriesCard({ series }: { series: SeriesItem }) {
@@ -131,7 +135,6 @@ function SeriesCard({ series }: { series: SeriesItem }) {
   const col     = getCatColor(series.category);
   const isLive  = Boolean(series.youtube_id);
   const diffCol = DIFF_COLOR[series.difficulty] ?? "#94a3b8";
-  const diffLbl = DIFF_LABEL[series.difficulty] ?? series.difficulty.toUpperCase();
   const slides  = series.slide_count ?? 0;
 
   return (
@@ -149,9 +152,10 @@ function SeriesCard({ series }: { series: SeriesItem }) {
       {/* Thumbnail */}
       <a href={url} target="_blank" rel="noopener noreferrer"
         className="block relative overflow-hidden bg-[#07070e]" style={{ aspectRatio: "16/9" }}>
-        <Thumb series={series} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={seriesThumbnail(series)} alt={series.title}
+          className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
 
-        {/* Overlays only for YouTube thumbnails — SVG thumbnails have badges built in */}
         {isLive && (
           <>
             <div className="absolute inset-0"
@@ -167,7 +171,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
             <div className="absolute top-2.5 right-2.5">
               <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
                 style={{ background: "rgba(0,0,0,0.8)", color: diffCol, border: `1px solid ${diffCol}50` }}>
-                {diffLbl}
+                {series.difficulty.toUpperCase()}
               </span>
             </div>
             {slides > 0 && (
@@ -240,8 +244,8 @@ function SeriesCard({ series }: { series: SeriesItem }) {
   );
 }
 
-// ── Series list row ────────────────────────────────────────────────────────────
-function SeriesListRow({ series, rank }: { series: SeriesItem; rank: number }) {
+// ── Table row ─────────────────────────────────────────────────────────────────
+function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; even: boolean }) {
   const url     = seriesUrl(series);
   const col     = getCatColor(series.category);
   const isLive  = Boolean(series.youtube_id);
@@ -249,52 +253,92 @@ function SeriesListRow({ series, rank }: { series: SeriesItem; rank: number }) {
   const slides  = series.slide_count ?? 0;
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-3 transition-colors"
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#13131e")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-      <span className="w-6 shrink-0 text-center font-mono text-[12px] font-bold text-slate-700">{rank}</span>
+    <tr style={{ background: even ? "#0e0e18" : "#111118" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "#14141f"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = even ? "#0e0e18" : "#111118"; }}>
 
-      <a href={url} target="_blank" rel="noopener noreferrer"
-        className="relative shrink-0 rounded-xl overflow-hidden bg-[#07070e]"
-        style={{ width: 100, aspectRatio: "16/9" }}>
-        <Thumb series={series} />
-        {isLive && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-            <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      {/* Rank */}
+      <td className="text-center font-mono text-[12px] font-bold text-slate-700 py-3 pl-4 pr-2" style={{ width: 36 }}>
+        {rank}
+      </td>
+
+      {/* Thumbnail */}
+      <td className="py-3 pr-3" style={{ width: 110 }}>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="group/thumb relative block overflow-hidden rounded-lg bg-[#07070e]"
+          style={{ width: 104, aspectRatio: "16/9" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={seriesThumbnail(series)} alt={series.title}
+            className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+          {isLive && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/40 transition-colors">
+              <svg className="w-4 h-4 opacity-0 group-hover/thumb:opacity-100 transition-opacity" fill="white" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          )}
+        </a>
+      </td>
+
+      {/* Title + topic */}
+      <td className="py-3 pr-4">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="group/title">
+          <div className="text-[14px] font-bold text-slate-100 group-hover/title:text-cyan-300 transition-colors leading-snug line-clamp-1">
+            {series.title}
           </div>
+        </a>
+        {series.topic && (
+          <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-1">{series.topic}</div>
         )}
-      </a>
+      </td>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-bold text-slate-200 group-hover:text-white transition-colors truncate">
-          {series.title}
-        </p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ background: `${col.badge}25`, color: col.text }}>
-            {series.category}
-          </span>
-          <span className="text-[10px] font-mono" style={{ color: diffCol }}>{series.difficulty}</span>
-          {slides > 0 && <span className="text-[10px] text-slate-700 font-mono">{slides} slides</span>}
-        </div>
-      </div>
-
-      <div className="shrink-0 flex items-center gap-3">
-        <span className="hidden sm:block text-[11px] font-mono text-slate-700">
-          {new Date(series.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+      {/* Category */}
+      <td className="py-3 pr-4 hidden sm:table-cell" style={{ width: 130 }}>
+        <span className="text-[11px] font-black uppercase tracking-wider px-2 py-1 rounded-lg"
+          style={{ background: `${col.badge}30`, color: col.text, border: `1px solid ${col.badge}50` }}>
+          {series.category}
         </span>
+      </td>
+
+      {/* Difficulty */}
+      <td className="py-3 pr-4 hidden md:table-cell" style={{ width: 110 }}>
+        <span className="text-[11px] font-bold px-2 py-1 rounded-lg font-mono"
+          style={{ background: `${diffCol}15`, color: diffCol, border: `1px solid ${diffCol}30` }}>
+          {series.difficulty}
+        </span>
+      </td>
+
+      {/* Slides */}
+      <td className="py-3 pr-4 hidden lg:table-cell text-center" style={{ width: 70 }}>
+        {slides > 0 ? (
+          <span className="text-[12px] font-mono font-bold text-slate-500">{slides}</span>
+        ) : (
+          <span className="text-[12px] text-slate-800">—</span>
+        )}
+      </td>
+
+      {/* Date */}
+      <td className="py-3 pr-4 hidden sm:table-cell whitespace-nowrap" style={{ width: 90 }}>
+        <span className="text-[11px] font-mono text-slate-600">{fmtDateShort(series.created_at)}</span>
+      </td>
+
+      {/* Watch */}
+      <td className="py-3 pr-4 text-right" style={{ width: 120 }}>
         {isLive ? (
           <a href={url} target="_blank" rel="noopener noreferrer"
-            className="text-[12px] font-black tracking-wider uppercase transition-colors hover:opacity-80 flex items-center gap-1"
-            style={{ color: CYN }}>
+            className="inline-flex items-center gap-1.5 text-[11px] font-black tracking-wider uppercase px-3 py-1.5 rounded-lg transition-all hover:opacity-85"
+            style={{ background: `${CYN}15`, color: CYN, border: `1px solid ${CYN}35` }}>
             <Ico.Play />Watch
+            <span className="hidden xl:inline"><Ico.External /></span>
           </a>
         ) : (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-amber-400/70"
-            style={{ background: "#451a0330" }}>Soon</span>
+          <span className="text-[10px] font-semibold px-2.5 py-1.5 rounded-lg text-amber-400/60"
+            style={{ background: "#451a0320", border: "1px solid #451a0340" }}>
+            Soon
+          </span>
         )}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -312,13 +356,14 @@ function EmptyState({ message }: { message: string }) {
 
 // ── Root page ──────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [allSeries,       setAllSeries]       = useState<SeriesItem[]>([]);
-  const [apiStats,        setApiStats]        = useState<ApiStats | null>(null);
-  const [activeCategory,  setActiveCategory]  = useState("All");
-  const [searchQuery,     setSearchQuery]     = useState("");
-  const [viewMode,        setViewMode]        = useState<"grid" | "list">("grid");
-  const [page,            setPage]            = useState(1);
-  const PAGE_SIZE = 12;
+  const [allSeries,      setAllSeries]      = useState<SeriesItem[]>([]);
+  const [apiStats,       setApiStats]       = useState<ApiStats | null>(null);
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery,    setSearchQuery]    = useState("");
+  const [viewMode,       setViewMode]       = useState<"grid" | "table">("table");
+  const [sortBy,         setSortBy]         = useState<SortBy>("newest");
+  const [page,           setPage]           = useState(1);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     fetch("/api/series").then((r) => r.json()).then(setAllSeries).catch(() => {});
@@ -343,14 +388,23 @@ export default function Home() {
           || s.category.toLowerCase().includes(q),
       );
     }
-    return items;
-  }, [allSeries, activeCategory, searchQuery]);
+    // Sort
+    const sorted = [...items];
+    switch (sortBy) {
+      case "oldest":   sorted.sort((a, b) => a.created_at.localeCompare(b.created_at)); break;
+      case "az":       sorted.sort((a, b) => a.title.localeCompare(b.title)); break;
+      case "za":       sorted.sort((a, b) => b.title.localeCompare(a.title)); break;
+      case "category": sorted.sort((a, b) => a.category.localeCompare(b.category) || a.title.localeCompare(b.title)); break;
+      default:         sorted.sort((a, b) => b.created_at.localeCompare(a.created_at)); break;
+    }
+    return sorted;
+  }, [allSeries, activeCategory, searchQuery, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const visible    = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleCat = useCallback((cat: string) => { setActiveCategory(cat); setPage(1); }, []);
-  useEffect(() => { setPage(1); }, [searchQuery]);
+  useEffect(() => { setPage(1); }, [searchQuery, sortBy]);
 
   const published = apiStats?.published ?? 0;
   const apiCats   = apiStats?.categories ?? [];
@@ -361,59 +415,71 @@ export default function Home() {
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 border-b"
         style={{ borderColor: BORD, background: `${BG}f5`, backdropFilter: "blur(16px)" }}>
-        <div className="flex items-center gap-4 px-5" style={{ height: 60, maxWidth: 1400, margin: "0 auto" }}>
+        <div className="flex items-center gap-5 px-6" style={{ height: 68, maxWidth: 1440, margin: "0 auto" }}>
 
-          {/* Logo */}
+          {/* Logo — full native SVG size */}
           <Link href="/" className="shrink-0">
-            <Image src="/logo.svg" alt="QuizBytesDaily" width={130} height={34} priority />
+            <Image src="/logo.svg" alt="QuizBytesDaily" width={200} height={44} priority />
           </Link>
 
-          {/* Search bar */}
-          <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-2 rounded-xl px-4 py-2 border w-full max-w-lg transition-colors"
-              style={{ background: "#0d0d18", borderColor: searchQuery ? `${CYN}55` : BORD }}>
-              <span className="text-slate-500 shrink-0"><Ico.Search /></span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search quizzes by topic or category…"
-                className="bg-transparent text-sm text-white placeholder-slate-600 outline-none flex-1 min-w-0"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")}
-                  className="text-slate-500 hover:text-white transition-colors shrink-0 text-xs leading-none">
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
+          <div className="flex-1" />
 
           {/* YouTube subscribe */}
           <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-85"
+            className="flex items-center gap-2 shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white transition-opacity hover:opacity-85"
             style={{ background: "#dc2626" }}>
             <Ico.YT /> Subscribe
           </a>
         </div>
       </header>
 
+      {/* ── Hero search bar ── */}
+      <div className="border-b" style={{ borderColor: BORD, background: "#09091380" }}>
+        <div className="px-6 py-5" style={{ maxWidth: 1440, margin: "0 auto" }}>
+          <div className="flex items-center gap-3 rounded-xl px-5 py-0 border transition-colors"
+            style={{
+              background: "#0d0d1a",
+              borderColor: searchQuery ? `${CYN}60` : "#22222e",
+              boxShadow: searchQuery ? `0 0 0 3px ${CYN}12` : "none",
+              height: 56,
+            }}>
+            <span style={{ color: searchQuery ? CYN : "#374151", transition: "color 0.15s" }}>
+              <Ico.Search />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search quizzes — try 'Python', 'RAG', 'binary search'…"
+              className="bg-transparent text-base text-white placeholder-slate-700 outline-none flex-1 min-w-0"
+              style={{ fontSize: 15 }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")}
+                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10 text-slate-500 hover:text-white text-sm">
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* ── Stats strip ── */}
       {(published > 0 || apiCats.length > 0) && (
-        <div className="border-b" style={{ borderColor: BORD, background: "#09091388" }}>
-          <div className="flex items-center gap-6 px-5 py-2.5 overflow-x-auto"
-            style={{ maxWidth: 1400, margin: "0 auto" }}>
+        <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
+          <div className="flex items-center gap-5 px-6 py-2 overflow-x-auto"
+            style={{ maxWidth: 1440, margin: "0 auto" }}>
             <span className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap" style={{ color: CYN }}>
               <span className="font-black text-sm">{published}</span> Videos
             </span>
-            <span className="text-slate-800">|</span>
+            <span className="text-slate-800">·</span>
             <span className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-slate-500">
               <span className="font-black text-sm text-green-400">{apiCats.length}</span> Categories
             </span>
-            <span className="text-slate-800">|</span>
+            <span className="text-slate-800">·</span>
             <span className="text-xs text-slate-600 whitespace-nowrap">Daily tech quiz Shorts</span>
             <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
-              className="ml-auto shrink-0 text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-80"
+              className="ml-auto shrink-0 text-xs font-bold flex items-center gap-1.5 transition-opacity hover:opacity-80"
               style={{ color: CYN }}>
               <Ico.YT /> Watch all on YouTube →
             </a>
@@ -422,10 +488,12 @@ export default function Home() {
       )}
 
       {/* ── Main content ── */}
-      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "1.5rem 1.25rem" }}>
+      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "1.5rem 1.5rem" }}>
 
-        {/* Category filters + view toggle */}
+        {/* Controls row: category pills | sort | view toggle */}
         <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+
+          {/* Category pills */}
           <div className="flex flex-wrap gap-2">
             {dynCategories.map((cat) => {
               const active = activeCategory === cat;
@@ -444,28 +512,46 @@ export default function Home() {
             })}
           </div>
 
-          {/* View toggle */}
-          <div className="flex items-center gap-1 shrink-0 rounded-xl border p-1"
-            style={{ borderColor: BORD, background: "#080810" }}>
-            <button onClick={() => setViewMode("grid")} className="p-2 rounded-lg transition-all"
-              title="Grid view"
-              style={viewMode === "grid" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
-              <Ico.Grid />
-            </button>
-            <button onClick={() => setViewMode("list")} className="p-2 rounded-lg transition-all"
-              title="List view"
-              style={viewMode === "list" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
-              <Ico.List />
-            </button>
+          {/* Right controls */}
+          <div className="flex items-center gap-2 shrink-0">
+
+            {/* Sort dropdown */}
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <Ico.Sort />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                className="text-[12px] font-semibold outline-none rounded-xl border px-2.5 py-1.5 appearance-none cursor-pointer transition-colors"
+                style={{ background: CARD, borderColor: BORD, color: "#94a3b8", minWidth: 130 }}>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="az">A → Z</option>
+                <option value="za">Z → A</option>
+                <option value="category">By Category</option>
+              </select>
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-1 rounded-xl border p-1"
+              style={{ borderColor: BORD, background: "#080810" }}>
+              <button onClick={() => setViewMode("table")} className="p-2 rounded-lg transition-all"
+                title="Table view"
+                style={viewMode === "table" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
+                <Ico.Table />
+              </button>
+              <button onClick={() => setViewMode("grid")} className="p-2 rounded-lg transition-all"
+                title="Grid view"
+                style={viewMode === "grid" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
+                <Ico.Grid />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Results count */}
-        {(searchQuery || activeCategory !== "All") && (
+        {(searchQuery || activeCategory !== "All") && filtered.length > 0 && (
           <p className="text-sm text-slate-500 mb-4">
-            {filtered.length === 0
-              ? "No results found"
-              : `${filtered.length} quiz${filtered.length !== 1 ? "es" : ""}`}
+            {filtered.length} quiz{filtered.length !== 1 ? "zes" : ""}
             {searchQuery && ` matching "${searchQuery}"`}
             {activeCategory !== "All" && ` in ${activeCategory}`}
           </p>
@@ -485,10 +571,27 @@ export default function Home() {
             {visible.map((s) => <SeriesCard key={s.id} series={s} />)}
           </div>
         ) : (
-          <div className="rounded-2xl border divide-y overflow-hidden" style={{ background: CARD, borderColor: BORD }}>
-            {visible.map((s, i) => (
-              <SeriesListRow key={s.id} series={s} rank={(page - 1) * PAGE_SIZE + i + 1} />
-            ))}
+          /* Table view */
+          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: BORD }}>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr style={{ background: "#0d0d1a", borderBottom: `1px solid ${BORD}` }}>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pl-4 pr-2" style={{ width: 36 }}>#</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-3" style={{ width: 110 }}>Thumb</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4">Title</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden sm:table-cell" style={{ width: 130 }}>Category</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden md:table-cell" style={{ width: 110 }}>Difficulty</th>
+                  <th className="text-center text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden lg:table-cell" style={{ width: 70 }}>Slides</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden sm:table-cell" style={{ width: 90 }}>Date</th>
+                  <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4" style={{ width: 120 }}>Watch</th>
+                </tr>
+              </thead>
+              <tbody style={{ borderTop: `1px solid ${BORD}` }}>
+                {visible.map((s, i) => (
+                  <TableRow key={s.id} series={s} rank={(page - 1) * PAGE_SIZE + i + 1} even={i % 2 === 0} />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -498,7 +601,15 @@ export default function Home() {
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
               className="px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors disabled:opacity-30"
               style={{ background: CARD, border: `1px solid ${BORD}` }}>←</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              // Show pages around current page
+              let n: number;
+              if (totalPages <= 7) n = i + 1;
+              else if (page <= 4) n = i + 1;
+              else if (page >= totalPages - 3) n = totalPages - 6 + i;
+              else n = page - 3 + i;
+              return n;
+            }).map((n) => (
               <button key={n} onClick={() => setPage(n)}
                 className="w-9 h-9 rounded-xl text-sm font-bold font-mono transition-all"
                 style={page === n
