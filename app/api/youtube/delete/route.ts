@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listSeries, updateSeriesYouTube } from "@/lib/db";
+import { listSeries } from "@/lib/db";
 
 export const runtime = "nodejs";
 
