@@ -36,25 +36,114 @@ const statusColor = (s: string) =>
 
 // ── Slide mini-preview ────────────────────────────────────────────────────────
 
+const SLIDE_COLORS: Record<string, string> = {
+  cyan: "#22d3ee", purple: "#a855f7", green: "#4ade80", pink: "#f472b6", amber: "#fbbf24",
+};
+
+interface CardItem { color: string; title: string; body?: string }
+interface DefItem  { color: string; title: string; body: string }
+
 function SlidePreview({ slide }: { slide: SlideData }) {
   const { template, data } = slide;
 
-  if (template === "title") {
+  if (template === "definition-steps") {
+    const def   = data.definition as DefItem | undefined;
+    const cards = (data.cards as CardItem[]) ?? [];
     return (
-      <div style={{ background: "linear-gradient(135deg,#1e1b4b,#111118)", border: "1px solid #312e81", borderRadius: 8, padding: "0.75rem", textAlign: "center" }}>
-        <div style={{ fontSize: "0.6rem", color: "#a78bfa", marginBottom: 4, textTransform: "uppercase", letterSpacing: 2 }}>
-          {String(data.topic ?? "")}
+      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.6rem", fontSize: "0.62rem", overflow: "hidden" }}>
+        {/* Slide number + heading */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
+          {(data.slideNum as number) > 0 && (
+            <span style={{ fontSize: "0.55rem", color: "#374151", fontFamily: "monospace", background: "#1e1e2e", padding: "1px 4px", borderRadius: 3 }}>
+              {String(data.slideNum)}/{String(data.totalSlides)}
+            </span>
+          )}
+          <span style={{ fontWeight: 700, color: "#e2e8f0", fontSize: "0.67rem", lineHeight: 1.3, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {String(data.heading ?? "")}
+          </span>
         </div>
-        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#e2e8f0" }}>
-          {String(data.title ?? "")}
-        </div>
-        <div style={{ fontSize: "0.6rem", color: "#94a3b8", marginTop: 4 }}>
-          {String(data.subtitle ?? "")}
+        {/* Definition box */}
+        {def && (
+          <div style={{ padding: "4px 8px", borderRadius: 4, marginBottom: 4, background: `${SLIDE_COLORS[def.color] ?? "#a855f7"}18`, borderLeft: `2px solid ${SLIDE_COLORS[def.color] ?? "#a855f7"}`, overflow: "hidden" }}>
+            <div style={{ color: SLIDE_COLORS[def.color] ?? "#a855f7", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.title}</div>
+            {def.body && <div style={{ color: "#64748b", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.body}</div>}
+          </div>
+        )}
+        {/* Cards */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {cards.slice(0, 5).map((c, i) => {
+            const col = SLIDE_COLORS[c.color] ?? "#94a3b8";
+            const hasBody = c.body?.trim() && c.body.trim() !== " ";
+            return (
+              <div key={i} style={{ padding: "3px 6px", borderRadius: 4, background: `${col}0d`, borderLeft: `2px solid ${col}`, display: "flex", gap: 4, alignItems: "flex-start", overflow: "hidden" }}>
+                <span style={{ color: col, fontWeight: 700, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: hasBody ? "45%" : "100%" }}>{c.title}</span>
+                {hasBody && (
+                  <span style={{ color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{c.body}</span>
+                )}
+              </div>
+            );
+          })}
+          {cards.length > 5 && (
+            <div style={{ color: "#374151", fontSize: "0.55rem", paddingLeft: 4 }}>+{cards.length - 5} more</div>
+          )}
         </div>
       </div>
     );
   }
 
+  if (template === "pipeline") {
+    const cards = (data.cards as CardItem[]) ?? [];
+    return (
+      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.6rem", fontSize: "0.62rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
+          {(data.slideNum as number) > 0 && (
+            <span style={{ fontSize: "0.55rem", color: "#374151", fontFamily: "monospace", background: "#1e1e2e", padding: "1px 4px", borderRadius: 3 }}>
+              {String(data.slideNum)}/{String(data.totalSlides)}
+            </span>
+          )}
+          <span style={{ fontWeight: 700, color: "#e2e8f0", fontSize: "0.67rem", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {String(data.heading ?? "")}
+          </span>
+        </div>
+        {cards.map((c, i) => {
+          const col = SLIDE_COLORS[c.color] ?? "#22d3ee";
+          return (
+            <div key={i}>
+              <div style={{ padding: "3px 8px", borderRadius: 4, background: `${col}12`, border: `1px solid ${col}30`, color: col, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {c.title}
+              </div>
+              {i < cards.length - 1 && (
+                <div style={{ textAlign: "center", color: "#374151", fontSize: "0.55rem", lineHeight: "14px" }}>▼</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (template === "cta") {
+    return (
+      <div style={{ background: "linear-gradient(135deg,#1a0a2e,#111118)", border: "1px solid #a855f7", borderRadius: 8, padding: "0.75rem", textAlign: "center" }}>
+        <div style={{ fontSize: "1.4rem", marginBottom: 4 }}>🎉</div>
+        <div style={{ fontSize: "0.68rem", color: "#a855f7", fontWeight: 700 }}>{String(data.heading ?? "CTA")}</div>
+        <div style={{ fontSize: "0.58rem", color: "#374151", marginTop: 3 }}>▶ Subscribe on YouTube</div>
+      </div>
+    );
+  }
+
+  // Legacy template: title
+  if (template === "title") {
+    return (
+      <div style={{ background: "linear-gradient(135deg,#1e1b4b,#111118)", border: "1px solid #312e81", borderRadius: 8, padding: "0.75rem", textAlign: "center" }}>
+        <div style={{ fontSize: "0.6rem", color: "#a78bfa", marginBottom: 4, textTransform: "uppercase", letterSpacing: 2 }}>{String(data.topic ?? "")}</div>
+        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#e2e8f0" }}>{String(data.title ?? "")}</div>
+        <div style={{ fontSize: "0.6rem", color: "#94a3b8", marginTop: 4 }}>{String(data.subtitle ?? "")}</div>
+      </div>
+    );
+  }
+
+  // Legacy template: quiz
   if (template === "quiz") {
     const options = (data.options as Array<{ label: string; text: string; correct: boolean }>) ?? [];
     return (
@@ -77,6 +166,55 @@ function SlidePreview({ slide }: { slide: SlideData }) {
     </div>
   );
 }
+
+// ── Layout structure preview (static, shown when layout is selected) ──────────
+
+const LAYOUT_STRUCTURE: Record<string, { label: string; color: string; bg: string }[]> = {
+  "quiz-reveal": [
+    { label: "What is it?",     color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "How It Works",    color: "#a855f7", bg: "#a855f718" },
+    { label: "Why It Matters",  color: "#4ade80", bg: "#4ade8018" },
+    { label: "Key Concepts",    color: "#fbbf24", bg: "#fbbf2418" },
+    { label: "Pitfalls",        color: "#f472b6", bg: "#f472b618" },
+    { label: "Advanced",        color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "📚 Resources",    color: "#22d3ee", bg: "#22d3ee25" },
+    { label: "❓ Quiz",          color: "#fbbf24", bg: "#fbbf2425" },
+    { label: "✅ Answer",        color: "#4ade80", bg: "#4ade8025" },
+    { label: "🎉 CTA",           color: "#a855f7", bg: "#a855f725" },
+  ],
+  "explainer": [
+    { label: "What is it?",     color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "How It Works",    color: "#a855f7", bg: "#a855f718" },
+    { label: "Why It Matters",  color: "#4ade80", bg: "#4ade8018" },
+    { label: "Architecture",    color: "#fbbf24", bg: "#fbbf2418" },
+    { label: "Real Example",    color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "Adv. Patterns",   color: "#a855f7", bg: "#a855f718" },
+    { label: "Pitfalls",        color: "#f472b6", bg: "#f472b618" },
+    { label: "📚 Resources",    color: "#22d3ee", bg: "#22d3ee25" },
+    { label: "🎉 CTA",           color: "#a855f7", bg: "#a855f725" },
+  ],
+  "code-example": [
+    { label: "The Problem",     color: "#f472b6", bg: "#f472b618" },
+    { label: "The Solution",    color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "Code Walkthrough",color: "#a855f7", bg: "#a855f718" },
+    { label: "Adv. Pattern",    color: "#fbbf24", bg: "#fbbf2418" },
+    { label: "Edge Cases",      color: "#f472b6", bg: "#f472b618" },
+    { label: "Real Usage",      color: "#4ade80", bg: "#4ade8018" },
+    { label: "Mistakes",        color: "#f472b6", bg: "#f472b618" },
+    { label: "📚 Resources",    color: "#22d3ee", bg: "#22d3ee25" },
+    { label: "🎉 CTA",           color: "#a855f7", bg: "#a855f725" },
+  ],
+  "quick-tips": [
+    { label: "Tip #1",          color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "Tip #2",          color: "#a855f7", bg: "#a855f718" },
+    { label: "Tip #3",          color: "#4ade80", bg: "#4ade8018" },
+    { label: "Tip #4",          color: "#fbbf24", bg: "#fbbf2418" },
+    { label: "Tip #5",          color: "#f472b6", bg: "#f472b618" },
+    { label: "+ more",          color: "#374151", bg: "#1e1e2e" },
+    { label: "📚 Resources",    color: "#22d3ee", bg: "#22d3ee25" },
+    { label: "🎉 CTA",           color: "#a855f7", bg: "#a855f725" },
+  ],
+};
 
 // ── Canvas thumbnail ──────────────────────────────────────────────────────────
 
@@ -439,11 +577,38 @@ export default function AdminPage() {
                       <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>{l.icon}</div>
                       <div style={{ fontSize: "0.82rem", fontWeight: 700, color: active ? l.color : "#e2e8f0", marginBottom: 3 }}>{l.name}</div>
                       <div style={{ fontSize: "0.7rem", color: "#64748b", lineHeight: 1.4 }}>{l.desc}</div>
-                      <div style={{ fontSize: "0.65rem", color: active ? l.color : "#374151", marginTop: 6, fontWeight: 600 }}>{l.slides} slides</div>
+                      <div style={{ fontSize: "0.65rem", color: active ? l.color : "#374151", marginTop: 6, fontWeight: 600 }}>~{l.slides} slides</div>
                     </button>
                   );
                 })}
               </div>
+
+              {/* Layout structure preview — shows slide flow for selected layout */}
+              {LAYOUT_STRUCTURE[genLayout] && (
+                <div style={{ marginTop: 12, padding: "0.75rem 1rem", background: "#0d0d18", border: "1px solid #1e1e2e", borderRadius: 10 }}>
+                  <div style={{ fontSize: "0.65rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1, marginBottom: 8 }}>
+                    Slide structure (dynamic — AI may add/remove based on topic depth)
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                    {LAYOUT_STRUCTURE[genLayout].map((s, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <span style={{
+                          fontSize: "0.67rem", fontWeight: 700,
+                          padding: "3px 9px", borderRadius: 20,
+                          background: s.bg, color: s.color,
+                          border: `1px solid ${s.color}40`,
+                          whiteSpace: "nowrap" as const,
+                        }}>
+                          {s.label}
+                        </span>
+                        {i < LAYOUT_STRUCTURE[genLayout].length - 1 && (
+                          <span style={{ color: "#374151", fontSize: "0.65rem" }}>→</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Trending topics for selected category ── */}

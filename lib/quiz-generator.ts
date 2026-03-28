@@ -23,8 +23,8 @@ export const LAYOUTS = [
     id: "quiz-reveal",
     name: "Quiz Reveal",
     icon: "🎯",
-    desc: "Concept intro + quiz question + answer reveal",
-    slides: 7,
+    desc: "Concept intro + deep dive + quiz question + answer reveal",
+    slides: 10,
     color: "#a855f7",
   },
   {
@@ -32,23 +32,23 @@ export const LAYOUTS = [
     name: "Explainer",
     icon: "📚",
     desc: "Educational deep-dive — pure learning, no quiz",
-    slides: 6,
+    slides: 9,
     color: "#22d3ee",
   },
   {
     id: "code-example",
     name: "Code Example",
     icon: "💻",
-    desc: "Code snippet walkthrough with real-world example",
-    slides: 6,
+    desc: "Code snippet walkthrough with real-world examples",
+    slides: 9,
     color: "#4ade80",
   },
   {
     id: "quick-tips",
     name: "Quick Tips",
     icon: "⚡",
-    desc: "5 punchy, actionable tips or facts on the topic",
-    slides: 5,
+    desc: "Punchy, actionable tips or facts on the topic",
+    slides: 8,
     color: "#fbbf24",
   },
 ] as const;
@@ -116,15 +116,40 @@ function difficultyNote(d: string) {
     : "assume solid knowledge, go deep";
 }
 
-// ── Prompt: Quiz Reveal (7 slides — default) ──────────────────────────────────
+// ── Prompt: Quiz Reveal (8–12 slides — dynamic) ───────────────────────────────
 function buildQuizRevealPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
 
-  return `Create a 7-slide educational ${category} series about: "${topic}"
+  return `Create an educational ${category} quiz series about: "${topic}"
 Difficulty: ${difficulty} (${diffNote})
 
+DECIDE HOW MANY SLIDES to generate based on topic depth:
+- 8 slides: simple/focused topics with one clear concept
+- 9–10 slides: moderate depth with multiple aspects worth covering
+- 11–12 slides: complex/multi-faceted topics that need deeper explanation
+
+Set "totalSlides" to the actual count you generate (between 8 and 12).
+IMPORTANT: slideNum must go 1, 2, 3 … totalSlides without gaps or repeats.
+
+REQUIRED SLIDE ORDER (always include these):
+1. Introduction — definition + 3 key aspects
+2. How It Works — step-by-step pipeline
+3. Why It Matters — benefits + real use cases
+[INSERT 2–5 optional deep-dive slides here for complex topics]
+N-3. Resources & Learn More — official docs and links
+N-2. Quick Quiz! — one meaningful knowledge-testing question
+N-1. Answer — correct answer + 3 reinforcing takeaways
+N. CTA
+
+OPTIONAL SLIDES to insert between slide 3 and Resources (include based on topic depth):
+- "Key Concepts" — core terminology and distinctions (definition-steps)
+- "Advanced Details" — inner workings, technical depth (definition-steps)
+- "Real-World Scenario" — concrete production example (definition-steps or pipeline)
+- "Common Pitfalls" — mistakes and how to avoid them (definition-steps)
+- "Comparison" — vs alternatives or similar tools (definition-steps)
+
 Return ONLY raw JSON — no markdown fences, no extra text.
-Copy this EXACT structure and fill in the content for "${topic}":
+Copy and expand this structure for "${topic}":
 
 {
   "title": "Series title — punchy, max 8 words",
@@ -133,16 +158,16 @@ Copy this EXACT structure and fill in the content for "${topic}":
       "template": "definition-steps",
       "heading": "What is ${topic}?",
       "slideNum": 1,
-      "totalSlides": 7,
+      "totalSlides": 10,
       "definition": {
         "color": "cyan",
         "title": "Core concept name (max 6 words)",
-        "body": "What it is and why it exists — 2 sentences max (max 140 chars)"
+        "body": "What it is and why it exists — 2 sentences (max 200 chars)"
       },
       "cards": [
-        { "color": "cyan",   "icon": "search", "title": "Key aspect 1 (max 20 chars)", "body": "Explanation (max 44 chars)" },
-        { "color": "purple", "icon": "gear",   "title": "Key aspect 2 (max 20 chars)", "body": "Explanation (max 44 chars)" },
-        { "color": "green",  "icon": "check",  "title": "Key aspect 3 (max 20 chars)", "body": "Explanation (max 44 chars)" }
+        { "color": "cyan",   "icon": "search", "title": "Key aspect 1 (max 22 chars)", "body": "Clear explanation with context (max 60 chars)" },
+        { "color": "purple", "icon": "gear",   "title": "Key aspect 2 (max 22 chars)", "body": "Clear explanation with context (max 60 chars)" },
+        { "color": "green",  "icon": "check",  "title": "Key aspect 3 (max 22 chars)", "body": "Clear explanation with context (max 60 chars)" }
       ]
     },
     {
@@ -150,107 +175,183 @@ Copy this EXACT structure and fill in the content for "${topic}":
       "heading": "How ${topic} Works",
       "subtitle": "Step-by-step flow",
       "slideNum": 2,
-      "totalSlides": 7,
+      "totalSlides": 10,
       "cards": [
-        { "color": "cyan",   "icon": "code",     "title": "Step 1 name (max 20 chars)", "body": "What happens here (max 42 chars)" },
-        { "color": "purple", "icon": "gear",     "title": "Step 2 name (max 20 chars)", "body": "What happens here (max 42 chars)" },
-        { "color": "green",  "icon": "database", "title": "Step 3 name (max 20 chars)", "body": "What happens here (max 42 chars)" },
-        { "color": "pink",   "icon": "robot",    "title": "Step 4 name (max 20 chars)", "body": "What happens here (max 42 chars)" }
+        { "color": "cyan",   "icon": "code",     "title": "Step 1 (max 22 chars)", "body": "What happens here — be specific (max 55 chars)" },
+        { "color": "purple", "icon": "gear",     "title": "Step 2 (max 22 chars)", "body": "What happens here — be specific (max 55 chars)" },
+        { "color": "green",  "icon": "database", "title": "Step 3 (max 22 chars)", "body": "What happens here — be specific (max 55 chars)" },
+        { "color": "pink",   "icon": "robot",    "title": "Step 4 (max 22 chars)", "body": "What happens here — be specific (max 55 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Why It Matters",
       "slideNum": 3,
-      "totalSlides": 7,
+      "totalSlides": 10,
       "definition": {
         "color": "purple",
-        "title": "Real-world benefit (max 6 words)",
-        "body": "Why engineers and developers actually use this in production (max 140 chars)"
+        "title": "Real-world benefit (max 7 words)",
+        "body": "Why engineers and developers actually use this in production (max 200 chars)"
       },
       "cards": [
-        { "color": "cyan",   "icon": "lightning", "title": "Use case 1 (max 20 chars)", "body": "Real scenario (max 44 chars)" },
-        { "color": "purple", "icon": "book",      "title": "Use case 2 (max 20 chars)", "body": "Real scenario (max 44 chars)" },
-        { "color": "green",  "icon": "check",     "title": "Use case 3 (max 20 chars)", "body": "Real scenario (max 44 chars)" }
+        { "color": "cyan",   "icon": "lightning", "title": "Use case 1 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" },
+        { "color": "purple", "icon": "book",      "title": "Use case 2 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Use case 3 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
-      "heading": "Key Things to Know",
+      "heading": "Key Concepts",
       "slideNum": 4,
-      "totalSlides": 7,
+      "totalSlides": 10,
       "definition": {
         "color": "amber",
-        "title": "Most important insight (max 7 words)",
-        "body": "The one thing you must understand before using this in production (max 140 chars)"
+        "title": "Most important technical detail (max 7 words)",
+        "body": "The key insight every developer must understand about this topic (max 200 chars)"
       },
       "cards": [
-        { "color": "pink",   "icon": "warning", "title": "Common mistake (max 20 chars)",  "body": "What to avoid (max 44 chars)" },
-        { "color": "cyan",   "icon": "gear",    "title": "Best practice (max 20 chars)",   "body": "The right approach (max 44 chars)" },
-        { "color": "green",  "icon": "check",   "title": "Pro tip (max 20 chars)",         "body": "Time-saving insight (max 44 chars)" }
+        { "color": "cyan",   "icon": "brain",    "title": "Concept 1 (max 22 chars)",  "body": "Clear technical explanation (max 60 chars)" },
+        { "color": "purple", "icon": "layers",   "title": "Concept 2 (max 22 chars)",  "body": "Clear technical explanation (max 60 chars)" },
+        { "color": "green",  "icon": "code",     "title": "Concept 3 (max 22 chars)",  "body": "Clear technical explanation (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Common Pitfalls",
+      "slideNum": 5,
+      "totalSlides": 10,
+      "definition": {
+        "color": "pink",
+        "title": "The #1 mistake developers make (max 7 words)",
+        "body": "What trips most people up when first using this — and why (max 200 chars)"
+      },
+      "cards": [
+        { "color": "pink",   "icon": "warning", "title": "Mistake (max 22 chars)",      "body": "What most people do wrong (max 60 chars)" },
+        { "color": "cyan",   "icon": "check",   "title": "Better approach (max 22 chars)", "body": "The correct pattern to follow (max 60 chars)" },
+        { "color": "green",  "icon": "lightning","title": "Pro tip (max 22 chars)",       "body": "Expert-level time-saving insight (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Advanced Details",
+      "slideNum": 6,
+      "totalSlides": 10,
+      "definition": {
+        "color": "cyan",
+        "title": "Under the hood — what really happens (max 7 words)",
+        "body": "The technical depth that separates beginners from experts on this topic (max 200 chars)"
+      },
+      "cards": [
+        { "color": "cyan",   "icon": "gear",     "title": "Detail 1 (max 22 chars)", "body": "Technical specifics (max 60 chars)" },
+        { "color": "purple", "icon": "database", "title": "Detail 2 (max 22 chars)", "body": "Technical specifics (max 60 chars)" },
+        { "color": "green",  "icon": "code",     "title": "Detail 3 (max 22 chars)", "body": "Technical specifics (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Resources & Learn More 📚",
+      "slideNum": 7,
+      "totalSlides": 10,
+      "definition": {
+        "color": "cyan",
+        "title": "Official docs and resources",
+        "body": "Where to go to master ${topic} — start with the official docs (max 160 chars)"
+      },
+      "cards": [
+        { "color": "cyan",   "icon": "book", "title": "Official Docs",    "body": "e.g. docs.python.org or official site URL (max 60 chars)" },
+        { "color": "purple", "icon": "book", "title": "GitHub / Source",  "body": "e.g. github.com/org/repo or main repo (max 60 chars)" },
+        { "color": "green",  "icon": "book", "title": "Best Tutorial",    "body": "e.g. realpython.com, roadmap.sh, or MDN (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Quick Quiz! 🎯",
-      "slideNum": 5,
-      "totalSlides": 7,
+      "slideNum": 8,
+      "totalSlides": 10,
       "definition": {
         "color": "amber",
         "title": "Write a real knowledge-testing question here?",
         "body": "Pick the best answer ↓"
       },
       "cards": [
-        { "color": "cyan",   "icon": "opt_a", "title": "A)  Option A text (max 34 chars)", "body": " " },
-        { "color": "purple", "icon": "opt_b", "title": "B)  Option B text (max 34 chars)", "body": " " },
-        { "color": "green",  "icon": "opt_c", "title": "C)  Option C text (max 34 chars)", "body": " " },
-        { "color": "pink",   "icon": "opt_d", "title": "D)  Option D text (max 34 chars)", "body": " " }
+        { "color": "cyan",   "icon": "opt_a", "title": "A)  Option A text (max 36 chars)", "body": " " },
+        { "color": "purple", "icon": "opt_b", "title": "B)  Option B text (max 36 chars)", "body": " " },
+        { "color": "green",  "icon": "opt_c", "title": "C)  Option C text (max 36 chars)", "body": " " },
+        { "color": "pink",   "icon": "opt_d", "title": "D)  Option D text (max 36 chars)", "body": " " }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Answer ✅",
-      "slideNum": 6,
-      "totalSlides": 7,
+      "slideNum": 9,
+      "totalSlides": 10,
       "definition": {
         "color": "green",
         "title": "X)  Correct answer text here",
-        "body": "Why this is correct — and what the key insight is (max 150 chars)"
+        "body": "Why this is correct — and what the key insight is (max 200 chars)"
       },
       "cards": [
-        { "color": "green",  "icon": "check", "title": "Key takeaway 1 (max 22 chars)", "body": "Reinforcing fact (max 44 chars)" },
-        { "color": "cyan",   "icon": "check", "title": "Key takeaway 2 (max 22 chars)", "body": "Reinforcing fact (max 44 chars)" },
-        { "color": "purple", "icon": "check", "title": "Key takeaway 3 (max 22 chars)", "body": "Reinforcing fact (max 44 chars)" }
+        { "color": "green",  "icon": "check", "title": "Key takeaway 1 (max 24 chars)", "body": "Reinforcing fact with detail (max 60 chars)" },
+        { "color": "cyan",   "icon": "check", "title": "Key takeaway 2 (max 24 chars)", "body": "Reinforcing fact with detail (max 60 chars)" },
+        { "color": "purple", "icon": "check", "title": "Key takeaway 3 (max 24 chars)", "body": "Reinforcing fact with detail (max 60 chars)" }
       ]
     },
     {
       "template": "cta",
       "heading": "Enjoyed This Quiz?",
-      "slideNum": 7,
-      "totalSlides": 7,
+      "slideNum": 10,
+      "totalSlides": 10,
       "cards": []
     }
   ]
 }
 
 STRICT RULES:
-- Slide 1–4: use real educational content about "${topic}"
-- Slide 5 (quiz): definition.title IS the question (end with ?), definition.body = "Pick the best answer ↓"
+- Decide totalSlides (8–12) based on topic complexity. Set it consistently on every slide.
+- slideNum MUST be sequential: 1, 2, 3, … totalSlides — no gaps, no repeats
+- For simpler topics: omit slides 4 and/or 6 (Key Concepts, Advanced Details). Adjust all slideNum/totalSlides accordingly.
+- For complex topics: keep all optional slides or add extra ones (Comparison, Real-World Scenario)
+- The Resources slide MUST always appear two slides before the CTA (at slideNum = totalSlides - 3)
+- Quiz Question: definition.title IS the question (end with ?), definition.body = "Pick the best answer ↓"
   — cards MUST use icons opt_a, opt_b, opt_c, opt_d — body MUST be a single space " "
   — exactly one option should be clearly correct
-- Slide 6 (answer): definition.title MUST start with the correct letter: "A)  " or "B)  " or "C)  " or "D)  "
+- Answer slide: definition.title MUST start with the correct letter: "A)  " or "B)  " or "C)  " or "D)  "
   — cards: 3 reinforcing takeaways with "check" icon in green/cyan/purple
-- Slide 7 (cta): only heading and slideNum/totalSlides, cards: []
+- CTA slide: only heading and slideNum/totalSlides, cards: []
 - colors MUST be one of: "cyan", "purple", "green", "pink", "amber"
 - icons MUST be one of: "search", "gear", "database", "book", "brain", "robot", "plus", "lock", "lightning", "check", "warning", "clock", "code", "layers", "opt_a", "opt_b", "opt_c", "opt_d"
 - Return ONLY raw JSON`;
 }
 
-// ── Prompt: Explainer (6 slides — no quiz) ────────────────────────────────────
+// ── Prompt: Explainer (7–10 slides — dynamic) ─────────────────────────────────
 function buildExplainerPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
-  return `Create a 6-slide educational ${category} explainer about: "${topic}"
+  return `Create an educational ${category} explainer series about: "${topic}"
 Difficulty: ${difficulty} (${diffNote})
+
+DECIDE HOW MANY SLIDES (7–10) based on topic depth:
+- 7 slides: simple/focused topics
+- 8–9 slides: moderate depth with multiple aspects
+- 10 slides: complex topics needing thorough coverage
+
+Set "totalSlides" to the actual count you generate.
+IMPORTANT: slideNum must be sequential 1 … totalSlides with no gaps.
+
+REQUIRED SLIDE ORDER:
+1. What is it? [definition-steps]
+2. How It Works [pipeline]
+3. Why It Matters [definition-steps]
+[2–4 optional deep-dive slides for complex topics]
+N-2. Common Pitfalls [definition-steps]
+N-1. Resources & Learn More [definition-steps, book icons]
+N. CTA
+
+OPTIONAL SLIDES between slide 3 and Common Pitfalls:
+- Key Concepts / Architecture — technical depth (definition-steps)
+- Real-World Example — concrete scenario from production (definition-steps or pipeline)
+- Comparison — vs alternatives or similar approaches (definition-steps)
+- Advanced Patterns — how experts use it (definition-steps)
+
 Return ONLY raw JSON — no markdown fences, no extra text.
 
 {
@@ -259,73 +360,134 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     {
       "template": "definition-steps",
       "heading": "What is ${topic}?",
-      "slideNum": 1, "totalSlides": 6,
-      "definition": { "color": "cyan", "title": "Core concept (max 6 words)", "body": "What it is — 2 sentences (max 140 chars)" },
+      "slideNum": 1, "totalSlides": 9,
+      "definition": { "color": "cyan", "title": "Core concept (max 6 words)", "body": "What it is and why developers use it — 2 sentences (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "search", "title": "Key point 1 (max 20 chars)", "body": "Brief explanation (max 44 chars)" },
-        { "color": "purple", "icon": "gear",   "title": "Key point 2 (max 20 chars)", "body": "Brief explanation (max 44 chars)" },
-        { "color": "green",  "icon": "check",  "title": "Key point 3 (max 20 chars)", "body": "Brief explanation (max 44 chars)" }
+        { "color": "cyan",   "icon": "search", "title": "Key point 1 (max 22 chars)", "body": "Explanation with real context (max 60 chars)" },
+        { "color": "purple", "icon": "gear",   "title": "Key point 2 (max 22 chars)", "body": "Explanation with real context (max 60 chars)" },
+        { "color": "green",  "icon": "check",  "title": "Key point 3 (max 22 chars)", "body": "Explanation with real context (max 60 chars)" }
       ]
     },
     {
       "template": "pipeline",
       "heading": "How It Works",
       "subtitle": "Step by step",
-      "slideNum": 2, "totalSlides": 6,
+      "slideNum": 2, "totalSlides": 9,
       "cards": [
-        { "color": "cyan",   "icon": "code",     "title": "Step 1 (max 20 chars)", "body": "What happens (max 42 chars)" },
-        { "color": "purple", "icon": "gear",     "title": "Step 2 (max 20 chars)", "body": "What happens (max 42 chars)" },
-        { "color": "green",  "icon": "database", "title": "Step 3 (max 20 chars)", "body": "What happens (max 42 chars)" },
-        { "color": "pink",   "icon": "robot",    "title": "Step 4 (max 20 chars)", "body": "What happens (max 42 chars)" }
+        { "color": "cyan",   "icon": "code",     "title": "Step 1 (max 22 chars)", "body": "Specific action/process (max 55 chars)" },
+        { "color": "purple", "icon": "gear",     "title": "Step 2 (max 22 chars)", "body": "Specific action/process (max 55 chars)" },
+        { "color": "green",  "icon": "database", "title": "Step 3 (max 22 chars)", "body": "Specific action/process (max 55 chars)" },
+        { "color": "pink",   "icon": "robot",    "title": "Step 4 (max 22 chars)", "body": "Specific action/process (max 55 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Why It Matters",
-      "slideNum": 3, "totalSlides": 6,
-      "definition": { "color": "purple", "title": "Core benefit (max 7 words)", "body": "Why engineers use it in production (max 140 chars)" },
+      "slideNum": 3, "totalSlides": 9,
+      "definition": { "color": "purple", "title": "Core benefit (max 7 words)", "body": "Why engineers rely on this in production — specific impact (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "lightning", "title": "Use case 1 (max 20 chars)", "body": "Real scenario (max 44 chars)" },
-        { "color": "purple", "icon": "book",      "title": "Use case 2 (max 20 chars)", "body": "Real scenario (max 44 chars)" },
-        { "color": "green",  "icon": "check",     "title": "Use case 3 (max 20 chars)", "body": "Real scenario (max 44 chars)" }
+        { "color": "cyan",   "icon": "lightning", "title": "Use case 1 (max 22 chars)", "body": "Real production scenario (max 60 chars)" },
+        { "color": "purple", "icon": "book",      "title": "Use case 2 (max 22 chars)", "body": "Real production scenario (max 60 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Use case 3 (max 22 chars)", "body": "Real production scenario (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
-      "heading": "Common Pitfalls",
-      "slideNum": 4, "totalSlides": 6,
-      "definition": { "color": "pink", "title": "The #1 mistake (max 7 words)", "body": "What trips people up and why (max 140 chars)" },
+      "heading": "Key Architecture",
+      "slideNum": 4, "totalSlides": 9,
+      "definition": { "color": "amber", "title": "Internal structure — how it's built (max 7 words)", "body": "The architectural decisions that make this work the way it does (max 200 chars)" },
       "cards": [
-        { "color": "pink",   "icon": "warning", "title": "Mistake 1 (max 20 chars)",     "body": "What to avoid (max 44 chars)" },
-        { "color": "cyan",   "icon": "check",   "title": "Better approach (max 20 chars)","body": "What to do instead (max 44 chars)" },
-        { "color": "green",  "icon": "check",   "title": "Pro tip (max 20 chars)",        "body": "Expert insight (max 44 chars)" }
+        { "color": "cyan",   "icon": "layers",   "title": "Component 1 (max 22 chars)", "body": "Role and responsibility (max 60 chars)" },
+        { "color": "purple", "icon": "database", "title": "Component 2 (max 22 chars)", "body": "Role and responsibility (max 60 chars)" },
+        { "color": "green",  "icon": "gear",     "title": "Component 3 (max 22 chars)", "body": "Role and responsibility (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Real-World Example",
-      "slideNum": 5, "totalSlides": 6,
-      "definition": { "color": "amber", "title": "Concrete example (max 7 words)", "body": "How it looks in a real codebase or system (max 140 chars)" },
+      "slideNum": 5, "totalSlides": 9,
+      "definition": { "color": "green", "title": "Concrete example from production (max 7 words)", "body": "How a real company or project uses this — specific names welcome (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "code",  "title": "Example component 1 (max 20 chars)", "body": "What it does (max 44 chars)" },
-        { "color": "purple", "icon": "gear",  "title": "Example component 2 (max 20 chars)", "body": "What it does (max 44 chars)" },
-        { "color": "green",  "icon": "check", "title": "Result (max 20 chars)",               "body": "Outcome/output (max 44 chars)" }
+        { "color": "cyan",   "icon": "code",   "title": "Example aspect 1 (max 22 chars)", "body": "Specifics of real usage (max 60 chars)" },
+        { "color": "purple", "icon": "layers", "title": "Example aspect 2 (max 22 chars)", "body": "Specifics of real usage (max 60 chars)" },
+        { "color": "green",  "icon": "check",  "title": "Outcome (max 22 chars)",           "body": "What was achieved (max 60 chars)" }
       ]
     },
-    { "template": "cta", "heading": "Enjoyed This?", "slideNum": 6, "totalSlides": 6, "cards": [] }
+    {
+      "template": "definition-steps",
+      "heading": "Advanced Patterns",
+      "slideNum": 6, "totalSlides": 9,
+      "definition": { "color": "cyan", "title": "How experts level up their usage (max 7 words)", "body": "The patterns and techniques that separate good code from great code (max 200 chars)" },
+      "cards": [
+        { "color": "cyan",   "icon": "brain",     "title": "Pattern 1 (max 22 chars)", "body": "When and how to apply it (max 60 chars)" },
+        { "color": "purple", "icon": "lightning", "title": "Pattern 2 (max 22 chars)", "body": "When and how to apply it (max 60 chars)" },
+        { "color": "green",  "icon": "code",      "title": "Pattern 3 (max 22 chars)", "body": "When and how to apply it (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Common Pitfalls",
+      "slideNum": 7, "totalSlides": 9,
+      "definition": { "color": "pink", "title": "The #1 mistake (max 7 words)", "body": "What trips developers up most — and how to catch it early (max 200 chars)" },
+      "cards": [
+        { "color": "pink",   "icon": "warning", "title": "Mistake 1 (max 22 chars)",       "body": "What to avoid and why (max 60 chars)" },
+        { "color": "cyan",   "icon": "check",   "title": "Better approach (max 22 chars)", "body": "The correct pattern (max 60 chars)" },
+        { "color": "green",  "icon": "lightning","title": "Pro tip (max 22 chars)",         "body": "Expert shortcut or trick (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Resources & Learn More 📚",
+      "slideNum": 8, "totalSlides": 9,
+      "definition": { "color": "cyan", "title": "Official docs and top resources", "body": "Where to go to master ${topic} — these are the best starting points (max 160 chars)" },
+      "cards": [
+        { "color": "cyan",   "icon": "book", "title": "Official Docs",   "body": "e.g. docs.python.org or official site (max 60 chars)" },
+        { "color": "purple", "icon": "book", "title": "GitHub / Source", "body": "e.g. github.com/org/repo (max 60 chars)" },
+        { "color": "green",  "icon": "book", "title": "Best Tutorial",   "body": "e.g. realpython.com or roadmap.sh (max 60 chars)" }
+      ]
+    },
+    { "template": "cta", "heading": "Enjoyed This?", "slideNum": 9, "totalSlides": 9, "cards": [] }
   ]
 }
 STRICT RULES:
+- Decide totalSlides (7–10) based on complexity. Set it consistently on every slide.
+- slideNum MUST be sequential 1 … totalSlides — no gaps.
+- For simpler topics: omit optional slides (4, 5, 6). Adjust all slideNum/totalSlides.
+- Resources slide MUST always appear as slide N-1 (one before CTA).
 - colors: "cyan","purple","green","pink","amber" only
 - icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
 - Return ONLY raw JSON`;
 }
 
-// ── Prompt: Code Example (6 slides) ──────────────────────────────────────────
+// ── Prompt: Code Example (7–10 slides — dynamic) ──────────────────────────────
 function buildCodeExamplePrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
-  return `Create a 6-slide code-focused ${category} series about: "${topic}"
+  return `Create a code-focused ${category} series about: "${topic}"
 Difficulty: ${difficulty} (${diffNote})
+
+DECIDE HOW MANY SLIDES (7–10) based on topic depth:
+- 7 slides: focused single pattern or function
+- 8–9 slides: moderate depth with multiple patterns
+- 10 slides: complex API or system with many aspects
+
+Set "totalSlides" to the actual count you generate.
+IMPORTANT: slideNum must be sequential 1 … totalSlides with no gaps.
+
+REQUIRED SLIDE ORDER:
+1. The Problem [definition-steps]
+2. The Solution [definition-steps]
+3. Code Walkthrough [pipeline]
+[1–3 optional deep-dive slides for complex topics]
+N-3. Real Project Usage [definition-steps]
+N-2. Common Mistakes [definition-steps]
+N-1. Resources & Learn More [definition-steps, book icons]
+N. CTA
+
+OPTIONAL SLIDES between slide 3 and Real Project Usage:
+- Advanced Pattern — a more powerful usage variant (definition-steps or pipeline)
+- Edge Cases / Gotchas — surprising behaviors (definition-steps)
+- Performance Considerations — when and why it matters (definition-steps)
+
 Return ONLY raw JSON — no markdown fences, no extra text.
 
 {
@@ -334,74 +496,123 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     {
       "template": "definition-steps",
       "heading": "The Problem",
-      "slideNum": 1, "totalSlides": 6,
-      "definition": { "color": "pink", "title": "What problem does this solve? (max 7 words)", "body": "The pain point before this solution existed (max 140 chars)" },
+      "slideNum": 1, "totalSlides": 9,
+      "definition": { "color": "pink", "title": "What pain does this solve? (max 7 words)", "body": "The real developer pain before this solution existed — be specific (max 200 chars)" },
       "cards": [
-        { "color": "pink",   "icon": "warning", "title": "Pain point 1 (max 20 chars)", "body": "Without ${topic} (max 44 chars)" },
-        { "color": "cyan",   "icon": "check",   "title": "Pain point 2 (max 20 chars)", "body": "Without ${topic} (max 44 chars)" },
-        { "color": "purple", "icon": "code",    "title": "Pain point 3 (max 20 chars)", "body": "Without ${topic} (max 44 chars)" }
+        { "color": "pink",   "icon": "warning", "title": "Pain point 1 (max 22 chars)", "body": "Without ${topic} — real impact (max 60 chars)" },
+        { "color": "cyan",   "icon": "warning", "title": "Pain point 2 (max 22 chars)", "body": "Without ${topic} — real impact (max 60 chars)" },
+        { "color": "purple", "icon": "code",    "title": "Pain point 3 (max 22 chars)", "body": "Without ${topic} — real impact (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "The Solution",
-      "slideNum": 2, "totalSlides": 6,
-      "definition": { "color": "cyan", "title": "How ${topic} fixes it (max 7 words)", "body": "The elegant solution and what makes it work (max 140 chars)" },
+      "slideNum": 2, "totalSlides": 9,
+      "definition": { "color": "cyan", "title": "How ${topic} fixes it (max 7 words)", "body": "The elegant solution — what makes it work and why it's the right approach (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "code",  "title": "Core syntax (max 20 chars)",  "body": "Basic usage pattern (max 44 chars)" },
-        { "color": "purple", "icon": "gear",  "title": "Key parameter (max 20 chars)", "body": "What it controls (max 44 chars)" },
-        { "color": "green",  "icon": "check", "title": "Return value (max 20 chars)",  "body": "What you get back (max 44 chars)" }
+        { "color": "cyan",   "icon": "code",  "title": "Core syntax (max 22 chars)",   "body": "Basic usage pattern — be specific (max 60 chars)" },
+        { "color": "purple", "icon": "gear",  "title": "Key parameter (max 22 chars)",  "body": "What it controls — with example (max 60 chars)" },
+        { "color": "green",  "icon": "check", "title": "Return / result (max 22 chars)", "body": "What you get back (max 60 chars)" }
       ]
     },
     {
       "template": "pipeline",
       "heading": "Code Walkthrough",
       "subtitle": "Step by step",
-      "slideNum": 3, "totalSlides": 6,
+      "slideNum": 3, "totalSlides": 9,
       "cards": [
-        { "color": "cyan",   "icon": "code",  "title": "Line 1-2: Setup (max 20 chars)",    "body": "What these lines do (max 42 chars)" },
-        { "color": "purple", "icon": "gear",  "title": "Line 3-4: Core (max 20 chars)",     "body": "The main logic here (max 42 chars)" },
-        { "color": "green",  "icon": "check", "title": "Line 5-6: Output (max 20 chars)",   "body": "What we return/print (max 42 chars)" },
-        { "color": "amber",  "icon": "lightning", "title": "Result (max 20 chars)",         "body": "What you see when you run it (max 42 chars)" }
+        { "color": "cyan",   "icon": "code",      "title": "Import / Setup (max 22 chars)",   "body": "What these lines do — specific (max 55 chars)" },
+        { "color": "purple", "icon": "gear",      "title": "Core Logic (max 22 chars)",        "body": "The main logic here (max 55 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Output / Return (max 22 chars)",   "body": "What we get back (max 55 chars)" },
+        { "color": "amber",  "icon": "lightning", "title": "Result (max 22 chars)",            "body": "What you see when you run it (max 55 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Advanced Pattern",
+      "slideNum": 4, "totalSlides": 9,
+      "definition": { "color": "purple", "title": "Taking it further (max 7 words)", "body": "A more powerful usage pattern for complex scenarios in real projects (max 200 chars)" },
+      "cards": [
+        { "color": "cyan",   "icon": "brain",     "title": "Advanced use 1 (max 22 chars)", "body": "When and how to apply (max 60 chars)" },
+        { "color": "purple", "icon": "layers",    "title": "Advanced use 2 (max 22 chars)", "body": "When and how to apply (max 60 chars)" },
+        { "color": "green",  "icon": "lightning", "title": "Pro shortcut (max 22 chars)",   "body": "Expert-level idiom (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Edge Cases & Gotchas",
+      "slideNum": 5, "totalSlides": 9,
+      "definition": { "color": "amber", "title": "Surprising behaviors to know (max 7 words)", "body": "The edge cases that trip up even experienced developers using ${topic} (max 200 chars)" },
+      "cards": [
+        { "color": "pink",   "icon": "warning", "title": "Gotcha 1 (max 22 chars)", "body": "What happens and why (max 60 chars)" },
+        { "color": "cyan",   "icon": "warning", "title": "Gotcha 2 (max 22 chars)", "body": "What happens and why (max 60 chars)" },
+        { "color": "green",  "icon": "check",   "title": "Safe pattern (max 22 chars)", "body": "How to avoid these traps (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Real Project Usage",
-      "slideNum": 4, "totalSlides": 6,
-      "definition": { "color": "green", "title": "Where you'd use this in production (max 7 words)", "body": "A realistic scenario from a real project or codebase (max 140 chars)" },
+      "slideNum": 6, "totalSlides": 9,
+      "definition": { "color": "green", "title": "Where you'd use this in production (max 7 words)", "body": "A realistic scenario from a real project — be specific about the context (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "layers", "title": "Project type 1 (max 20 chars)", "body": "How it's used there (max 44 chars)" },
-        { "color": "purple", "icon": "code",   "title": "Project type 2 (max 20 chars)", "body": "How it's used there (max 44 chars)" },
-        { "color": "green",  "icon": "check",  "title": "Best practice (max 20 chars)",  "body": "The pattern to follow (max 44 chars)" }
+        { "color": "cyan",   "icon": "layers", "title": "Project type 1 (max 22 chars)", "body": "How it's used there (max 60 chars)" },
+        { "color": "purple", "icon": "code",   "title": "Project type 2 (max 22 chars)", "body": "How it's used there (max 60 chars)" },
+        { "color": "green",  "icon": "check",  "title": "Best practice (max 22 chars)",  "body": "The pattern to follow (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
       "heading": "Common Mistakes",
-      "slideNum": 5, "totalSlides": 6,
-      "definition": { "color": "pink", "title": "The bug most beginners write (max 7 words)", "body": "The mistake that causes silent bugs or bad performance (max 140 chars)" },
+      "slideNum": 7, "totalSlides": 9,
+      "definition": { "color": "pink", "title": "The bug most developers write (max 7 words)", "body": "The mistake causing silent bugs or bad performance — with the correct fix (max 200 chars)" },
       "cards": [
-        { "color": "pink",   "icon": "warning", "title": "Wrong way (max 20 chars)",  "body": "What not to write (max 44 chars)" },
-        { "color": "green",  "icon": "check",   "title": "Right way (max 20 chars)",   "body": "The correct pattern (max 44 chars)" },
-        { "color": "amber",  "icon": "lightning","title": "Pro shortcut (max 20 chars)", "body": "The advanced idiom (max 44 chars)" }
+        { "color": "pink",   "icon": "warning",   "title": "Wrong way (max 22 chars)",   "body": "What not to write — why it fails (max 60 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Right way (max 22 chars)",    "body": "The correct pattern — why it works (max 60 chars)" },
+        { "color": "amber",  "icon": "lightning", "title": "Pro shortcut (max 22 chars)", "body": "The advanced idiom pros use (max 60 chars)" }
       ]
     },
-    { "template": "cta", "heading": "Code Every Day", "slideNum": 6, "totalSlides": 6, "cards": [] }
+    {
+      "template": "definition-steps",
+      "heading": "Resources & Learn More 📚",
+      "slideNum": 8, "totalSlides": 9,
+      "definition": { "color": "cyan", "title": "Official docs and top resources", "body": "Where to go to master ${topic} and see real-world examples (max 160 chars)" },
+      "cards": [
+        { "color": "cyan",   "icon": "book", "title": "Official Docs",   "body": "e.g. docs.python.org/3/library/topic (max 60 chars)" },
+        { "color": "purple", "icon": "book", "title": "GitHub / Source", "body": "e.g. github.com/org/repo (max 60 chars)" },
+        { "color": "green",  "icon": "book", "title": "Tutorial / Guide","body": "e.g. realpython.com or MDN Web Docs (max 60 chars)" }
+      ]
+    },
+    { "template": "cta", "heading": "Code Every Day", "slideNum": 9, "totalSlides": 9, "cards": [] }
   ]
 }
 STRICT RULES:
+- Decide totalSlides (7–10) based on complexity. Set it consistently on every slide.
+- slideNum MUST be sequential 1 … totalSlides — no gaps.
+- For simpler topics: omit optional slides 4 and/or 5. Adjust all slideNum/totalSlides.
+- Resources slide MUST always appear as slide N-1 (one before CTA).
 - colors: "cyan","purple","green","pink","amber" only
 - icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
 - Return ONLY raw JSON`;
 }
 
-// ── Prompt: Quick Tips (5 slides) ─────────────────────────────────────────────
+// ── Prompt: Quick Tips (6–9 slides — dynamic) ─────────────────────────────────
 function buildQuickTipsPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
-  return `Create a 5-slide quick-tips ${category} series about: "${topic}"
+  return `Create a quick-tips ${category} series about: "${topic}"
 Difficulty: ${difficulty} (${diffNote})
-Each slide is a single punchy tip or fact. High-signal, low-fluff.
+
+DECIDE HOW MANY TIP SLIDES (4–7 tips) based on topic richness:
+- 4 tips: focused topic with fewer distinct actionable insights
+- 5–6 tips: moderate depth
+- 7 tips: rich topic with many distinct actionable tips
+
+Total slides = tip count + 2 (Resources slide + CTA slide at the end).
+Set "totalSlides" to the actual count you generate.
+IMPORTANT: slideNum must be sequential 1 … totalSlides with no gaps.
+
+Each tip slide: one concrete, actionable insight with a clear "Do this / Because / Pro move" structure.
+Last 2 slides are always: Resources & Learn More, then CTA.
+
 Return ONLY raw JSON — no markdown fences, no extra text.
 
 {
@@ -409,63 +620,78 @@ Return ONLY raw JSON — no markdown fences, no extra text.
   "slides": [
     {
       "template": "definition-steps",
-      "heading": "Tip #1: [one-line tip title]",
-      "slideNum": 1, "totalSlides": 5,
-      "definition": { "color": "cyan", "title": "The key insight in 6 words", "body": "Why this tip matters and how to apply it (max 140 chars)" },
+      "heading": "Tip #1: [one-line punchy tip title]",
+      "slideNum": 1, "totalSlides": 7,
+      "definition": { "color": "cyan", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "check", "title": "Do this (max 20 chars)",     "body": "Specific action (max 44 chars)" },
-        { "color": "green",  "icon": "check", "title": "Because (max 20 chars)",      "body": "The reason it works (max 44 chars)" },
-        { "color": "purple", "icon": "lightning", "title": "Pro move (max 20 chars)", "body": "Advanced application (max 44 chars)" }
+        { "color": "cyan",   "icon": "check",     "title": "Do this (max 22 chars)",     "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Because (max 22 chars)",      "body": "The real reason it works (max 60 chars)" },
+        { "color": "purple", "icon": "lightning", "title": "Pro move (max 22 chars)",     "body": "Advanced application or variation (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
-      "heading": "Tip #2: [one-line tip title]",
-      "slideNum": 2, "totalSlides": 5,
-      "definition": { "color": "purple", "title": "The key insight in 6 words", "body": "Why this tip matters and how to apply it (max 140 chars)" },
+      "heading": "Tip #2: [one-line punchy tip title]",
+      "slideNum": 2, "totalSlides": 7,
+      "definition": { "color": "purple", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
       "cards": [
-        { "color": "purple", "icon": "check",     "title": "Do this (max 20 chars)",     "body": "Specific action (max 44 chars)" },
-        { "color": "cyan",   "icon": "check",     "title": "Because (max 20 chars)",      "body": "The reason it works (max 44 chars)" },
-        { "color": "green",  "icon": "lightning", "title": "Pro move (max 20 chars)",     "body": "Advanced application (max 44 chars)" }
+        { "color": "purple", "icon": "check",     "title": "Do this (max 22 chars)",  "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "cyan",   "icon": "check",     "title": "Because (max 22 chars)",   "body": "The real reason it works (max 60 chars)" },
+        { "color": "green",  "icon": "lightning", "title": "Pro move (max 22 chars)",  "body": "Advanced application or variation (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
-      "heading": "Tip #3: [one-line tip title]",
-      "slideNum": 3, "totalSlides": 5,
-      "definition": { "color": "green", "title": "The key insight in 6 words", "body": "Why this tip matters and how to apply it (max 140 chars)" },
+      "heading": "Tip #3: [one-line punchy tip title]",
+      "slideNum": 3, "totalSlides": 7,
+      "definition": { "color": "green", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
       "cards": [
-        { "color": "green",  "icon": "check",     "title": "Do this (max 20 chars)",     "body": "Specific action (max 44 chars)" },
-        { "color": "purple", "icon": "check",     "title": "Because (max 20 chars)",      "body": "The reason it works (max 44 chars)" },
-        { "color": "cyan",   "icon": "lightning", "title": "Pro move (max 20 chars)",     "body": "Advanced application (max 44 chars)" }
+        { "color": "green",  "icon": "check",     "title": "Do this (max 22 chars)",  "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "purple", "icon": "check",     "title": "Because (max 22 chars)",   "body": "The real reason it works (max 60 chars)" },
+        { "color": "cyan",   "icon": "lightning", "title": "Pro move (max 22 chars)",  "body": "Advanced application or variation (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
-      "heading": "Tip #4: [one-line tip title]",
-      "slideNum": 4, "totalSlides": 5,
-      "definition": { "color": "amber", "title": "The key insight in 6 words", "body": "Why this tip matters and how to apply it (max 140 chars)" },
+      "heading": "Tip #4: [one-line punchy tip title]",
+      "slideNum": 4, "totalSlides": 7,
+      "definition": { "color": "amber", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
       "cards": [
-        { "color": "amber",  "icon": "check",     "title": "Do this (max 20 chars)",     "body": "Specific action (max 44 chars)" },
-        { "color": "cyan",   "icon": "check",     "title": "Because (max 20 chars)",      "body": "The reason it works (max 44 chars)" },
-        { "color": "purple", "icon": "lightning", "title": "Pro move (max 20 chars)",     "body": "Advanced application (max 44 chars)" }
+        { "color": "amber",  "icon": "check",     "title": "Do this (max 22 chars)",  "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "cyan",   "icon": "check",     "title": "Because (max 22 chars)",   "body": "The real reason it works (max 60 chars)" },
+        { "color": "purple", "icon": "lightning", "title": "Pro move (max 22 chars)",  "body": "Advanced application or variation (max 60 chars)" }
       ]
     },
     {
       "template": "definition-steps",
-      "heading": "Tip #5: [one-line tip title]",
-      "slideNum": 5, "totalSlides": 5,
-      "definition": { "color": "pink", "title": "The key insight in 6 words", "body": "Why this tip matters and how to apply it (max 140 chars)" },
+      "heading": "Tip #5: [one-line punchy tip title]",
+      "slideNum": 5, "totalSlides": 7,
+      "definition": { "color": "pink", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
       "cards": [
-        { "color": "pink",   "icon": "check",     "title": "Do this (max 20 chars)",     "body": "Specific action (max 44 chars)" },
-        { "color": "green",  "icon": "check",     "title": "Because (max 20 chars)",      "body": "The reason it works (max 44 chars)" },
-        { "color": "amber",  "icon": "lightning", "title": "Pro move (max 20 chars)",     "body": "Advanced application (max 44 chars)" }
+        { "color": "pink",   "icon": "check",     "title": "Do this (max 22 chars)",  "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Because (max 22 chars)",   "body": "The real reason it works (max 60 chars)" },
+        { "color": "amber",  "icon": "lightning", "title": "Pro move (max 22 chars)",  "body": "Advanced application or variation (max 60 chars)" }
       ]
-    }
+    },
+    {
+      "template": "definition-steps",
+      "heading": "Resources & Learn More 📚",
+      "slideNum": 6, "totalSlides": 7,
+      "definition": { "color": "cyan", "title": "Best places to go deeper", "body": "Master ${topic} with these official and community resources (max 160 chars)" },
+      "cards": [
+        { "color": "cyan",   "icon": "book", "title": "Official Docs",   "body": "e.g. docs.python.org or official site (max 60 chars)" },
+        { "color": "purple", "icon": "book", "title": "GitHub / Source", "body": "e.g. github.com/org/repo (max 60 chars)" },
+        { "color": "green",  "icon": "book", "title": "Best Tutorial",   "body": "e.g. realpython.com or roadmap.sh (max 60 chars)" }
+      ]
+    },
+    { "template": "cta", "heading": "More Tips Every Day!", "slideNum": 7, "totalSlides": 7, "cards": [] }
   ]
 }
 STRICT RULES:
-- heading for each slide MUST start with "Tip #N: " followed by a concrete one-line tip title
+- heading for each tip slide MUST start with "Tip #N: " followed by a concrete one-line title
+- Decide totalSlides (6–9) based on topic richness. Last 2 slides are always Resources + CTA.
+- slideNum MUST be sequential 1 … totalSlides — no gaps.
+- Resources slide MUST always appear as slide N-1 (one before CTA).
 - colors: "cyan","purple","green","pink","amber" only
 - icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
 - Return ONLY raw JSON`;
@@ -490,7 +716,7 @@ async function tryGroq(prompt: string): Promise<string> {
   const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const chat = await client.chat.completions.create({
     model: "llama-3.3-70b-versatile",
-    max_tokens: 4096,
+    max_tokens: 6144,
     temperature: 0.7,
     messages: [
       { role: "system", content: SYSTEM_MSG },
@@ -510,7 +736,7 @@ async function tryGemini(prompt: string): Promise<string> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 6144 },
         systemInstruction: { parts: [{ text: SYSTEM_MSG }] },
       }),
     }
@@ -531,7 +757,7 @@ async function tryNvidia(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: "meta/llama-3.3-70b-instruct",
-      max_tokens: 4096,
+      max_tokens: 6144,
       temperature: 0.7,
       messages: [
         { role: "system", content: SYSTEM_MSG },
@@ -555,7 +781,7 @@ async function tryOpenAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
-      max_tokens: 4096,
+      max_tokens: 6144,
       temperature: 0.7,
       messages: [
         { role: "system", content: SYSTEM_MSG },
@@ -581,7 +807,7 @@ async function tryOpenRouter(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: "qwen/qwen3-235b-a22b:free",
-      max_tokens: 4096,
+      max_tokens: 6144,
       temperature: 0.7,
       messages: [
         { role: "system", content: SYSTEM_MSG },
@@ -625,7 +851,7 @@ export async function generateQuizSeries(
       console.log(`[quiz-generator] Trying ${provider.name}…`);
       const text = await provider.fn();
       const parsed = parseJson(text);
-      console.log(`[quiz-generator] ✓ ${provider.name} succeeded`);
+      console.log(`[quiz-generator] ✓ ${provider.name} succeeded (${parsed.slides.length} slides)`);
       return {
         slug: slugify(`${topic}-${Date.now()}`),
         title: parsed.title ?? topic,
