@@ -190,6 +190,10 @@ export default function AdminPage() {
   const [renderError, setRenderError] = useState("");
   const [renderStatus, setRenderStatus] = useState("");
 
+  // YouTube delete
+  const [deletingYT, setDeletingYT] = useState(false);
+  const [deleteYTResult, setDeleteYTResult] = useState("");
+
   // Load library
   const loadLibrary = useCallback(async () => {
     setLoadingLib(true);
@@ -579,10 +583,37 @@ export default function AdminPage() {
         {/* ═══════════════════════ LIBRARY ════════════════════════════════ */}
         {tab === "library" && (
           <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap" as const, gap: 8 }}>
               <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Series Library</h2>
-              <button onClick={loadLibrary} style={{ padding: "0.4rem 1rem", background: "transparent", border: "1px solid #1e1e2e", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: "0.8rem" }}>↺ Refresh</button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {library.some((s) => s.youtube_id) && (
+                  <button
+                    disabled={deletingYT}
+                    onClick={async () => {
+                      if (!confirm("Delete ALL uploaded YouTube videos? This cannot be undone.")) return;
+                      setDeletingYT(true);
+                      setDeleteYTResult("");
+                      try {
+                        const res  = await fetch("/api/youtube/delete", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ all: true }) });
+                        const json = await res.json();
+                        setDeleteYTResult(`Deleted ${json.deleted ?? 0} video(s) from YouTube.`);
+                        loadLibrary();
+                      } catch (e) {
+                        setDeleteYTResult(`Error: ${e instanceof Error ? e.message : String(e)}`);
+                      } finally {
+                        setDeletingYT(false);
+                      }
+                    }}
+                    style={{ padding: "0.4rem 1rem", background: deletingYT ? "#1e1e2e" : "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 8, color: "#f87171", cursor: deletingYT ? "not-allowed" : "pointer", fontSize: "0.8rem", fontWeight: 600 }}>
+                    {deletingYT ? "⏳ Deleting…" : "🗑 Delete All from YouTube"}
+                  </button>
+                )}
+                <button onClick={loadLibrary} style={{ padding: "0.4rem 1rem", background: "transparent", border: "1px solid #1e1e2e", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: "0.8rem" }}>↺ Refresh</button>
+              </div>
             </div>
+            {deleteYTResult && (
+              <p style={{ fontSize: "0.8rem", color: deleteYTResult.startsWith("Error") ? "#f87171" : "#4ade80", marginBottom: "1rem" }}>{deleteYTResult}</p>
+            )}
 
             {loadingLib && <p style={{ color: "#94a3b8" }}>Loading…</p>}
 
@@ -605,12 +636,21 @@ export default function AdminPage() {
                       <span style={{ fontSize: "0.7rem", color: "#4a4a5a" }}>{s.slide_count ?? 0} slides · {new Date(s.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
                     {s.youtube_url && (
                       <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" style={{ padding: "0.4rem 0.75rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 6, color: "#4ade80", textDecoration: "none", fontSize: "0.75rem" }}>▶ YouTube</a>
                     )}
+                    {s.youtube_id && (
+                      <button onClick={async () => {
+                        if (!confirm(`Remove "${s.title}" from YouTube?`)) return;
+                        await fetch("/api/youtube/delete", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ videoId: s.youtube_id }) });
+                        loadLibrary();
+                      }} style={{ padding: "0.4rem 0.75rem", background: "rgba(251,191,36,0.1)", border: "1px solid #fbbf24", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: "0.75rem" }}>
+                        🗑 YT
+                      </button>
+                    )}
                     <button onClick={() => goToUpload(s)} style={{ padding: "0.4rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 6, color: "#22d3ee", cursor: "pointer", fontSize: "0.75rem" }}>🚀 Upload</button>
-                    <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 Delete</button>
+                    <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 DB</button>
                   </div>
                 </div>
               ))}
