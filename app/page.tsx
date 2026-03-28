@@ -194,38 +194,43 @@ function SeriesCard({ series }: { series: SeriesItem }) {
         className="block relative overflow-hidden bg-[#07070e]" style={{ aspectRatio: "16/9" }}>
         <Thumb series={series} />
 
-        {/* Bottom gradient for readability */}
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
+        {/* Overlays only for YouTube thumbnails — SVG thumbnails have badges built in */}
+        {isLive && (
+          <>
+            {/* Bottom gradient for readability */}
+            <div className="absolute inset-0"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
 
-        {/* Top gradient for badges */}
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 40%)" }} />
+            {/* Top gradient for badges */}
+            <div className="absolute inset-0"
+              style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 40%)" }} />
 
-        {/* Category badge — top-left */}
-        <div className="absolute top-2.5 left-2.5">
-          <span className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md uppercase"
-            style={{ background: `${col.badge}ee`, color: col.text }}>
-            {series.category}
-          </span>
-        </div>
+            {/* Category badge — top-left */}
+            <div className="absolute top-2.5 left-2.5">
+              <span className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md uppercase"
+                style={{ background: `${col.badge}ee`, color: col.text }}>
+                {series.category}
+              </span>
+            </div>
 
-        {/* Difficulty badge — top-right */}
-        <div className="absolute top-2.5 right-2.5">
-          <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
-            style={{ background: "rgba(0,0,0,0.8)", color: diffCol, border: `1px solid ${diffCol}50` }}>
-            {diffLbl}
-          </span>
-        </div>
+            {/* Difficulty badge — top-right */}
+            <div className="absolute top-2.5 right-2.5">
+              <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
+                style={{ background: "rgba(0,0,0,0.8)", color: diffCol, border: `1px solid ${diffCol}50` }}>
+                {diffLbl}
+              </span>
+            </div>
 
-        {/* Slide count — bottom-right */}
-        {slides > 0 && (
-          <div className="absolute bottom-2.5 right-2.5">
-            <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md"
-              style={{ background: "rgba(0,0,0,0.75)", color: "#e2e8f0" }}>
-              <Ico.Slides />{slides} slides
-            </span>
-          </div>
+            {/* Slide count — bottom-right (YouTube videos) */}
+            {slides > 0 && (
+              <div className="absolute bottom-2.5 right-2.5">
+                <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md"
+                  style={{ background: "rgba(0,0,0,0.75)", color: "#e2e8f0" }}>
+                  <Ico.Slides />{slides} slides
+                </span>
+              </div>
+            )}
+          </>
         )}
 
         {/* Play button on hover (published only) */}
