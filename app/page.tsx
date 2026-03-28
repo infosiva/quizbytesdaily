@@ -43,10 +43,11 @@ interface VideoStat {
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
-const BG   = "#0e0e18";
-const SIDE = "#09090f";
-const CARD = "#13131f";
-const BORD = "#1e1e32";
+const BG    = "#0b0b12";
+const SIDE  = "#080810";
+const CARD  = "#111118";
+const BORD  = "#1c1c2e";
+const CYN   = "#22d3ee";   // primary accent — cyan
 
 // ── Category colours ───────────────────────────────────────────────────────────
 const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
@@ -62,6 +63,7 @@ const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
   "Database":         { text: "#fb923c", badge: "#9a3412" },
   "Machine Learning": { text: "#a78bfa", badge: "#4c1d95" },
   "DevOps":           { text: "#34d399", badge: "#064e3b" },
+  "Data Structures":  { text: "#f472b6", badge: "#831843" },
 };
 const _FALLBACK = [
   { text: "#f472b6", badge: "#831843" }, { text: "#fb923c", badge: "#7c2d12" },
@@ -78,7 +80,7 @@ const DIFF_COLOR: Record<string, string> = {
   Beginner: "#4ade80", Intermediate: "#fbbf24", Advanced: "#f87171",
 };
 const DIFF_LABEL: Record<string, string> = {
-  Beginner: "EASY", Intermediate: "MED", Advanced: "HARD",
+  Beginner: "BEGINNER", Intermediate: "INTERMEDIATE", Advanced: "ADVANCED",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -93,6 +95,9 @@ function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -139,9 +144,22 @@ const Ico = {
       <path d="M23.5 6.19a3.02 3.02 0 0 0-2.13-2.14C19.5 3.67 12 3.67 12 3.67s-7.5 0-9.37.38A3.02 3.02 0 0 0 .5 6.19C.12 8.07 0 10 0 12s.12 3.93.5 5.81a3.02 3.02 0 0 0 2.13 2.14C4.5 20.33 12 20.33 12 20.33s7.5 0 9.37-.38a3.02 3.02 0 0 0 2.13-2.14C23.88 15.93 24 14 24 12s-.12-3.93-.5-5.81zM9.75 15.52V8.48L15.5 12l-5.75 3.52z"/>
     </svg>
   ),
+  Play: () => (
+    <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+  ),
+  Slides: () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  Cal: () => (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4" strokeLinecap="round"/>
+    </svg>
+  ),
 };
 
-// ── Thumbnail ──────────────────────────────────────────────────────────────────
+// ── Thumbnail img ──────────────────────────────────────────────────────────────
 function Thumb({ series }: { series: SeriesItem }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -152,78 +170,124 @@ function Thumb({ series }: { series: SeriesItem }) {
 
 // ── Series card (grid) ─────────────────────────────────────────────────────────
 function SeriesCard({ series }: { series: SeriesItem }) {
-  const url      = seriesUrl(series);
-  const col      = getCatColor(series.category);
-  const isLive   = Boolean(series.youtube_id);
-  const diffCol  = DIFF_COLOR[series.difficulty] ?? "#94a3b8";
-  const diffLbl  = DIFF_LABEL[series.difficulty] ?? series.difficulty.slice(0, 4).toUpperCase();
+  const url     = seriesUrl(series);
+  const col     = getCatColor(series.category);
+  const isLive  = Boolean(series.youtube_id);
+  const diffCol = DIFF_COLOR[series.difficulty] ?? "#94a3b8";
+  const diffLbl = DIFF_LABEL[series.difficulty] ?? series.difficulty.toUpperCase();
+  const slides  = series.slide_count ?? 0;
 
   return (
-    <div className="group rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
-      style={{ background: CARD, borderColor: BORD, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#a855f750"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(168,85,247,0.15)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORD;       e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)"; }}>
+    <div className="group flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1"
+      style={{ background: CARD, borderColor: BORD, boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = `${CYN}40`;
+        e.currentTarget.style.boxShadow   = `0 8px 32px rgba(34,211,238,0.12)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = BORD;
+        e.currentTarget.style.boxShadow   = "0 2px 12px rgba(0,0,0,0.4)";
+      }}>
 
       {/* Thumbnail */}
       <a href={url} target="_blank" rel="noopener noreferrer"
-        className="block relative overflow-hidden bg-[#08080f]" style={{ aspectRatio: "16/9" }}>
+        className="block relative overflow-hidden bg-[#07070e]" style={{ aspectRatio: "16/9" }}>
         <Thumb series={series} />
 
-        {/* Gradient overlay for readability */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)" }} />
+        {/* Bottom gradient for readability */}
+        <div className="absolute inset-0"
+          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
 
-        {/* Category badge */}
+        {/* Top gradient for badges */}
+        <div className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 40%)" }} />
+
+        {/* Category badge — top-left */}
         <div className="absolute top-2.5 left-2.5">
-          <span className="text-[11px] font-bold tracking-wider px-2 py-1 rounded-lg"
-            style={{ background: `${col.badge}dd`, color: col.text }}>
+          <span className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md uppercase"
+            style={{ background: `${col.badge}ee`, color: col.text }}>
             {series.category}
           </span>
         </div>
 
-        {/* Difficulty badge */}
+        {/* Difficulty badge — top-right */}
         <div className="absolute top-2.5 right-2.5">
-          <span className="text-[10px] font-black px-2 py-1 rounded-lg tracking-widest"
-            style={{ background: "rgba(0,0,0,0.75)", color: diffCol, border: `1px solid ${diffCol}40` }}>
+          <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
+            style={{ background: "rgba(0,0,0,0.8)", color: diffCol, border: `1px solid ${diffCol}50` }}>
             {diffLbl}
           </span>
         </div>
 
-        {/* Play icon on hover (published only) */}
+        {/* Slide count — bottom-right */}
+        {slides > 0 && (
+          <div className="absolute bottom-2.5 right-2.5">
+            <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "rgba(0,0,0,0.75)", color: "#e2e8f0" }}>
+              <Ico.Slides />{slides} slides
+            </span>
+          </div>
+        )}
+
+        {/* Play button on hover (published only) */}
         {isLive && (
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl"
-              style={{ background: "rgba(168,85,247,0.9)" }}>
-              <svg className="w-5 h-5 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl"
+              style={{ background: `${CYN}cc`, boxShadow: `0 0 24px ${CYN}66` }}>
+              <svg className="w-6 h-6 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </div>
           </div>
         )}
       </a>
 
       {/* Card body */}
-      <div className="p-3.5">
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          <h3 className="text-[15px] font-bold text-white leading-snug line-clamp-2 mb-2 group-hover:text-purple-200 transition-colors">
+      <div className="flex flex-col flex-1 p-4">
+
+        {/* Title */}
+        <a href={url} target="_blank" rel="noopener noreferrer" className="group/title">
+          <h3 className="text-[17px] font-extrabold text-white leading-snug line-clamp-2 mb-2 transition-colors group-hover/title:text-cyan-300">
             {series.title}
           </h3>
         </a>
 
-        <div className="flex items-center justify-between mt-3 pt-2.5 border-t" style={{ borderColor: BORD }}>
-          {isLive ? (
-            <a href={url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] font-bold text-purple-400 hover:text-purple-300 transition-colors uppercase tracking-wide">
-              <span className="w-4 h-4 rounded-full bg-red-600 flex items-center justify-center shrink-0"><Ico.YT /></span>
-              Watch now
-            </a>
-          ) : (
-            <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              Coming soon
-            </span>
-          )}
-          <span className="text-[11px] font-mono text-slate-600">
-            {new Date(series.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+        {/* Topic description */}
+        {series.topic && (
+          <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2 mb-3 flex-1">
+            {series.topic}
+          </p>
+        )}
+
+        {/* Metadata row */}
+        <div className="flex items-center gap-3 text-[11px] text-slate-600 mb-3">
+          <span className="flex items-center gap-1">
+            <Ico.Cal />{fmtDate(series.created_at)}
           </span>
+          {slides > 0 && (
+            <>
+              <span className="text-slate-700">·</span>
+              <span className="flex items-center gap-1">
+                <Ico.Slides />{slides} slides
+              </span>
+            </>
+          )}
         </div>
+
+        {/* Watch / Coming soon */}
+        {isLive ? (
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase transition-all hover:gap-3"
+            style={{ color: CYN }}>
+            <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: `${CYN}20`, border: `1px solid ${CYN}50` }}>
+              <Ico.Play />
+            </span>
+            Watch on YouTube
+          </a>
+        ) : (
+          <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-slate-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            Coming Soon
+          </span>
+        )}
       </div>
     </div>
   );
@@ -235,46 +299,52 @@ function SeriesListRow({ series, rank }: { series: SeriesItem; rank: number }) {
   const col    = getCatColor(series.category);
   const isLive = Boolean(series.youtube_id);
   const diffCol = DIFF_COLOR[series.difficulty] ?? "#94a3b8";
-  const diffLbl = DIFF_LABEL[series.difficulty] ?? series.difficulty.slice(0, 4).toUpperCase();
+  const slides  = series.slide_count ?? 0;
 
   return (
     <div className="group flex items-center gap-3 px-4 py-3 transition-colors"
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#16161f")}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "#13131e")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-      <span className="w-6 shrink-0 text-center font-mono text-[12px] font-bold text-slate-600">{rank}</span>
+      <span className="w-6 shrink-0 text-center font-mono text-[12px] font-bold text-slate-700">{rank}</span>
 
       <a href={url} target="_blank" rel="noopener noreferrer"
-        className="relative shrink-0 rounded-lg overflow-hidden bg-[#08080f]"
-        style={{ width: 96, aspectRatio: "16/9" }}>
+        className="relative shrink-0 rounded-xl overflow-hidden bg-[#07070e]"
+        style={{ width: 100, aspectRatio: "16/9" }}>
         <Thumb series={series} />
         {isLive && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-            <svg className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           </div>
         )}
       </a>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-semibold text-slate-200 group-hover:text-white transition-colors truncate">
+        <p className="text-[14px] font-bold text-slate-200 group-hover:text-white transition-colors truncate">
           {series.title}
         </p>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ background: `${col.badge}22`, color: col.text }}>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded"
+            style={{ background: `${col.badge}25`, color: col.text }}>
             {series.category}
           </span>
-          <span className="text-[10px] font-mono" style={{ color: diffCol }}>{diffLbl}</span>
+          <span className="text-[10px] font-mono" style={{ color: diffCol }}>
+            {series.difficulty}
+          </span>
+          {slides > 0 && (
+            <span className="text-[10px] text-slate-700 font-mono">{slides} slides</span>
+          )}
         </div>
       </div>
 
       <div className="shrink-0 flex items-center gap-3">
-        <span className="hidden sm:block text-[11px] font-mono text-slate-600">
+        <span className="hidden sm:block text-[11px] font-mono text-slate-700">
           {new Date(series.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
         </span>
         {isLive ? (
           <a href={url} target="_blank" rel="noopener noreferrer"
-            className="text-[12px] font-bold text-purple-400 hover:text-purple-300 transition-colors whitespace-nowrap">
-            Watch →
+            className="text-[12px] font-black tracking-wider uppercase transition-colors hover:opacity-80 flex items-center gap-1"
+            style={{ color: CYN }}>
+            <Ico.Play />Watch
           </a>
         ) : (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-amber-400/70"
@@ -290,7 +360,7 @@ function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center px-6">
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
-        style={{ background: "#a855f710", border: "1px solid #a855f730" }}>🎬</div>
+        style={{ background: `${CYN}12`, border: `1px solid ${CYN}30` }}>🎬</div>
       <p className="text-base font-bold text-white mb-1">No quizzes found</p>
       <p className="text-sm text-slate-500 max-w-xs">{message}</p>
     </div>
@@ -316,7 +386,6 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
       .finally(() => setYtLoading(false));
   }, []);
 
-  const total      = apiStats?.total ?? 0;
   const published  = apiStats?.published ?? 0;
   const apiCats    = apiStats?.categories ?? [];
   const maxCat     = Math.max(...apiCats.map((c) => c.count), 1);
@@ -331,22 +400,22 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
       {/* ── Hero banner ── */}
       {heroEnabled && (
         <div className="relative overflow-hidden px-8 py-12"
-          style={{ background: "linear-gradient(135deg, #0f0f1e 0%, #130d24 50%, #0c1220 100%)" }}>
-          <div className="absolute -top-16 -left-16 w-72 h-72 rounded-full opacity-20 pointer-events-none"
+          style={{ background: "linear-gradient(135deg, #080812 0%, #0a1020 50%, #061218 100%)" }}>
+          <div className="absolute -top-20 right-0 w-80 h-80 rounded-full opacity-15 pointer-events-none"
+            style={{ background: `radial-gradient(circle, ${CYN} 0%, transparent 70%)` }} />
+          <div className="absolute bottom-0 left-16 w-56 h-56 rounded-full opacity-10 pointer-events-none"
             style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }} />
-          <div className="absolute -bottom-12 right-24 w-56 h-56 rounded-full opacity-15 pointer-events-none"
-            style={{ background: "radial-gradient(circle, #22d3ee 0%, transparent 70%)" }} />
 
           <div className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-5 border"
-              style={{ background: "#a855f715", borderColor: "#a855f730", color: "#c084fc" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              style={{ background: `${CYN}12`, borderColor: `${CYN}30`, color: CYN }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: CYN }} />
               Daily quiz channel
             </div>
 
             <h1 className="text-4xl font-black text-white leading-tight mb-3">
               One quiz.<br />
-              <span style={{ background: "linear-gradient(90deg, #a855f7, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <span style={{ background: `linear-gradient(90deg, ${CYN}, #a855f7)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 Every day.
               </span>
             </h1>
@@ -368,8 +437,8 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
             </div>
 
             <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
-              style={{ background: "linear-gradient(135deg, #a855f7, #7c3aed)", boxShadow: "0 0 20px rgba(168,85,247,0.4)" }}>
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black text-black transition-all hover:scale-105 tracking-wide"
+              style={{ background: CYN, boxShadow: `0 0 24px ${CYN}55` }}>
               <Ico.YT /> Watch on YouTube
             </a>
           </div>
@@ -379,11 +448,11 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
       {/* ── Stat strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-5 border-b" style={{ borderColor: BORD }}>
         {[
-          { label: "Published",    value: String(published),                           icon: "▶", color: "#a855f7" },
-          { label: "YT Views",     value: ytLoading ? "…" : fmtNum(totalViews),        icon: "◈", color: "#22d3ee" },
-          { label: "YT Likes",     value: ytLoading ? "…" : fmtNum(totalLikes),        icon: "♥", color: "#f472b6" },
-          { label: "Today's Visits", value: pageViews ? fmtNum(pageViews.today) : "…", icon: "👁", color: "#fbbf24" },
-          { label: "Total Visits", value: pageViews ? fmtNum(pageViews.total) : "…",  icon: "✦", color: "#4ade80" },
+          { label: "Published",      value: String(published),                            color: CYN,       icon: "▶" },
+          { label: "YT Views",       value: ytLoading ? "…" : fmtNum(totalViews),         color: "#4ade80",  icon: "◈" },
+          { label: "YT Likes",       value: ytLoading ? "…" : fmtNum(totalLikes),         color: "#f472b6",  icon: "♥" },
+          { label: "Today's Visits", value: pageViews ? fmtNum(pageViews.today) : "…",    color: "#fbbf24",  icon: "👁" },
+          { label: "Total Visits",   value: pageViews ? fmtNum(pageViews.total) : "…",    color: "#a78bfa",  icon: "✦" },
         ].map((s) => (
           <div key={s.label} className="px-5 py-4 flex items-center gap-3 border-r last:border-r-0"
             style={{ borderColor: BORD, borderTop: `1px solid ${BORD}` }}>
@@ -405,7 +474,7 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
           {ytLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: CARD }} />
+                <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: `${CARD}80` }} />
               ))}
             </div>
           ) : topVideos.length === 0 ? (
@@ -418,7 +487,7 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
                   <a key={v.id} href={v.youtube_url ?? channelConfig.youtubeUrl}
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 p-2.5 rounded-xl transition-colors group"
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#16161f")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#13131e")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                     <span className="w-5 text-center font-mono text-[12px] font-bold shrink-0"
                       style={{ color: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#c2864c" : "#374151" }}>
@@ -432,10 +501,10 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
                         {v.title}
                       </p>
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                        style={{ background: `${col.badge}22`, color: col.text }}>{v.category}</span>
+                        style={{ background: `${col.badge}25`, color: col.text }}>{v.category}</span>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="flex items-center gap-1 text-[12px] font-bold font-mono" style={{ color: "#22d3ee" }}>
+                      <div className="flex items-center gap-1 text-[12px] font-bold font-mono" style={{ color: CYN }}>
                         <Ico.Eye />{fmtNum(v.views)}
                       </div>
                       <div className="flex items-center gap-1 text-[11px] font-mono text-slate-600 justify-end">
@@ -461,10 +530,10 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
                 const pct = Math.round((count / maxCat) * 100);
                 return (
                   <div key={name} className="flex items-center gap-3">
-                    <span className="w-20 text-[11px] font-bold truncate shrink-0" style={{ color: col.text }}>
+                    <span className="w-24 text-[11px] font-bold truncate shrink-0" style={{ color: col.text }}>
                       {name}
                     </span>
-                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: `${col.badge}20` }}>
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: `${col.badge}22` }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: col.text }} />
                     </div>
                     <span className="w-7 text-right text-[12px] font-bold font-mono shrink-0" style={{ color: col.text }}>
@@ -486,12 +555,11 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
               👁 Page Visitors — Last 30 Days
             </p>
             <div className="flex items-center gap-4 text-[11px] font-mono">
-              <span className="text-slate-500">Today <span className="font-bold text-fuchsia-400">{fmtNum(pageViews.today)}</span></span>
+              <span className="text-slate-500">Today <span className="font-bold" style={{ color: CYN }}>{fmtNum(pageViews.today)}</span></span>
               <span className="text-slate-500">Week <span className="font-bold text-amber-400">{fmtNum(pageViews.week)}</span></span>
               <span className="text-slate-500">Total <span className="font-bold text-green-400">{fmtNum(pageViews.total)}</span></span>
             </div>
           </div>
-          {/* Bar chart */}
           <div className="flex items-end gap-[3px] h-20">
             {pageViews.daily.map((d, i) => {
               const pct = Math.max(4, Math.round((d.count / maxDay) * 100));
@@ -502,14 +570,13 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
                     style={{
                       height: `${pct}%`,
                       background: isToday
-                        ? "linear-gradient(to top, #a855f7, #c084fc)"
-                        : "linear-gradient(to top, #1e1e32, #2a2a4a)",
+                        ? `linear-gradient(to top, ${CYN}, #67e8f9)`
+                        : "linear-gradient(to top, #1c1c2e, #252538)",
                       minHeight: 3,
                     }} />
-                  {/* Tooltip */}
                   <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 whitespace-nowrap">
                     <div className="text-[10px] font-bold px-2 py-1 rounded-md shadow-lg"
-                      style={{ background: "#1e1e32", color: "#e2e8f0", border: `1px solid ${BORD}` }}>
+                      style={{ background: "#1c1c2e", color: "#e2e8f0", border: `1px solid ${BORD}` }}>
                       {d.date.slice(5)}: {d.count}
                     </div>
                   </div>
@@ -525,10 +592,10 @@ function DashboardView({ heroEnabled }: { heroEnabled: boolean }) {
       )}
 
       {/* ── Recent quizzes ── */}
-      {total > 0 && recent.length > 0 && (
+      {recent.length > 0 && (
         <div className="p-6 pt-2 border-t" style={{ borderColor: BORD }}>
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Recent Quizzes</p>
-          <div className="rounded-2xl border divide-y overflow-hidden" style={{ background: CARD, borderColor: BORD }}>
+          <div className="rounded-2xl border divide-y overflow-hidden" style={{ background: CARD, borderColor: BORD, borderTopColor: BORD }}>
             {recent.map((s, i) => <SeriesListRow key={s.id} series={s} rank={i + 1} />)}
           </div>
         </div>
@@ -557,7 +624,6 @@ function LibraryView({
   const [viewMode,       setViewMode]       = useState<"grid" | "list">(settings.defaultView);
   const [page,           setPage]           = useState(1);
 
-  // Sync defaultView when settings arrive
   useEffect(() => { setViewMode(settings.defaultView); }, [settings.defaultView]);
 
   useEffect(() => {
@@ -574,7 +640,6 @@ function LibraryView({
     let items = activeCategory === "All"
       ? allSeries
       : allSeries.filter((s) => s.category === activeCategory);
-
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       items = items.filter(
@@ -590,8 +655,6 @@ function LibraryView({
   const visible    = filtered.slice((page - 1) * settings.pageSize, page * settings.pageSize);
 
   const handleCat = useCallback((cat: string) => { setActiveCategory(cat); setPage(1); }, []);
-
-  // Reset page when search changes
   useEffect(() => { setPage(1); }, [searchQuery]);
 
   const gridClass = GRID_COLS[settings.gridColumns] ?? GRID_COLS[3];
@@ -613,12 +676,12 @@ function LibraryView({
         <div className="flex items-center gap-1 shrink-0 rounded-xl border p-1" style={{ borderColor: BORD, background: SIDE }}>
           <button onClick={() => setViewMode("grid")} className="p-2 rounded-lg transition-all"
             title="Grid view"
-            style={viewMode === "grid" ? { background: "#a855f725", color: "#a855f7" } : { color: "#475569" }}>
+            style={viewMode === "grid" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
             <Ico.Grid />
           </button>
           <button onClick={() => setViewMode("list")} className="p-2 rounded-lg transition-all"
             title="List view"
-            style={viewMode === "list" ? { background: "#a855f725", color: "#a855f7" } : { color: "#475569" }}>
+            style={viewMode === "list" ? { background: `${CYN}20`, color: CYN } : { color: "#475569" }}>
             <Ico.List />
           </button>
         </div>
@@ -627,13 +690,15 @@ function LibraryView({
       {/* Category filters */}
       <div className="flex flex-wrap gap-2 mb-6">
         {dynCategories.map((cat) => {
-          const col    = getCatColor(cat);
           const active = activeCategory === cat;
+          const col = getCatColor(cat);
           return (
             <button key={cat} onClick={() => handleCat(cat)}
               className="text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all"
               style={active
-                ? { background: col.badge, borderColor: col.badge, color: col.text }
+                ? cat === "All"
+                  ? { background: CYN, borderColor: CYN, color: "#000" }
+                  : { background: col.badge, borderColor: col.badge, color: col.text }
                 : { background: "transparent", borderColor: BORD, color: "#64748b" }}>
               {cat === "All" ? "All Videos" : cat}
             </button>
@@ -672,7 +737,7 @@ function LibraryView({
             <button key={n} onClick={() => setPage(n)}
               className="w-9 h-9 rounded-xl text-sm font-bold font-mono transition-all"
               style={page === n
-                ? { background: "#a855f7", color: "#fff" }
+                ? { background: CYN, color: "#000" }
                 : { background: CARD, color: "#64748b", border: `1px solid ${BORD}` }}>
               {n}
             </button>
@@ -702,12 +767,10 @@ export default function Home() {
   });
 
   useEffect(() => {
-    // Load settings
     fetch("/api/settings")
       .then((r) => r.json())
       .then((s: SiteSettings) => setSettings(s))
       .catch(() => {});
-    // Track this page visit (fire-and-forget, no PII)
     fetch("/api/track", { method: "POST" }).catch(() => {});
   }, []);
 
@@ -726,12 +789,12 @@ export default function Home() {
             <button key={id} onClick={() => { setSection(id); setSidebarOpen(false); }}
               className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all text-left"
               style={active
-                ? { background: "linear-gradient(90deg,#a855f722,#a855f708)", color: "#fff" }
+                ? { background: `${CYN}15`, color: "#fff" }
                 : { color: "#64748b" }}
               onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "#cbd5e1"; }}
               onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "#64748b"; }}>
-              {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r" style={{ background: "#a855f7" }} />}
-              <span style={active ? { color: "#a855f7" } : {}}><Icon /></span>
+              {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r" style={{ background: CYN }} />}
+              <span style={active ? { color: CYN } : {}}><Icon /></span>
               {label}
             </button>
           );
@@ -751,7 +814,7 @@ export default function Home() {
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 shrink-0 flex-col h-full border-r"
-        style={{ background: "linear-gradient(180deg,#0f0f1e 0%,#0a0a14 60%,#0c0a18 100%)", borderColor: BORD }}>
+        style={{ background: `linear-gradient(180deg, #0b0b18 0%, #080810 60%, #08100e 100%)`, borderColor: BORD }}>
         {sidebarContent}
       </aside>
 
@@ -760,7 +823,7 @@ export default function Home() {
         <>
           <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />
           <aside className="fixed left-0 top-0 h-full z-50 flex flex-col w-56 border-r md:hidden"
-            style={{ background: "linear-gradient(180deg,#0f0f1e 0%,#0a0a14 60%,#0c0a18 100%)", borderColor: BORD }}>
+            style={{ background: `linear-gradient(180deg, #0b0b18 0%, #080810 60%, #08100e 100%)`, borderColor: BORD }}>
             {sidebarContent}
           </aside>
         </>
@@ -778,10 +841,10 @@ export default function Home() {
             <Ico.Menu />
           </button>
 
-          {/* Search — fully functional */}
+          {/* Search */}
           <div className="flex-1 flex justify-center">
             <div className="flex items-center gap-2 rounded-xl px-3.5 py-2 border w-full max-w-xl transition-colors"
-              style={{ background: "#0f0f1c", borderColor: searchQuery ? "#a855f760" : "#2a2a3e" }}>
+              style={{ background: "#0d0d18", borderColor: searchQuery ? `${CYN}55` : "#1e1e2e" }}>
               <span className="text-slate-500 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
@@ -792,7 +855,7 @@ export default function Home() {
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setSection("library"); }}
                 placeholder="Search quizzes by topic, category…"
-                className="bg-transparent text-[14px] text-white placeholder-slate-500 outline-none flex-1 min-w-0"
+                className="bg-transparent text-[14px] text-white placeholder-slate-600 outline-none flex-1 min-w-0"
               />
               {searchQuery ? (
                 <button onClick={() => setSearchQuery("")}
@@ -800,7 +863,7 @@ export default function Home() {
                   ✕
                 </button>
               ) : (
-                <kbd className="hidden sm:inline-block text-[10px] font-mono text-slate-600 bg-white/5 rounded px-1.5 py-0.5 shrink-0">⌘K</kbd>
+                <kbd className="hidden sm:inline-block text-[10px] font-mono text-slate-700 bg-white/5 rounded px-1.5 py-0.5 shrink-0">⌘K</kbd>
               )}
             </div>
           </div>

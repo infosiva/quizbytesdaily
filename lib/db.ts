@@ -74,6 +74,12 @@ async function ensureSchema() {
       args: [],
     },
   ], "write");
+
+  // Add scheduled_at column (migration — safe to fail if already exists)
+  try {
+    await c.execute("ALTER TABLE series ADD COLUMN scheduled_at TEXT");
+  } catch { /* column already exists — ignore */ }
+
   _schemaInit = true;
 }
 
@@ -81,18 +87,19 @@ async function ensureSchema() {
 
 function rowToSeries(r: Row): SeriesRow {
   return {
-    id:          Number(r.id),
-    slug:        String(r.slug ?? ""),
-    title:       String(r.title ?? ""),
-    topic:       String(r.topic ?? ""),
-    category:    String(r.category ?? ""),
-    difficulty:  String(r.difficulty ?? ""),
-    status:      String(r.status ?? "draft"),
-    youtube_id:  r.youtube_id != null ? String(r.youtube_id) : null,
-    youtube_url: r.youtube_url != null ? String(r.youtube_url) : null,
-    created_at:  String(r.created_at ?? ""),
-    updated_at:  String(r.updated_at ?? ""),
-    slide_count: r.slide_count != null ? Number(r.slide_count) : undefined,
+    id:           Number(r.id),
+    slug:         String(r.slug ?? ""),
+    title:        String(r.title ?? ""),
+    topic:        String(r.topic ?? ""),
+    category:     String(r.category ?? ""),
+    difficulty:   String(r.difficulty ?? ""),
+    status:       String(r.status ?? "draft"),
+    youtube_id:   r.youtube_id  != null ? String(r.youtube_id)  : null,
+    youtube_url:  r.youtube_url != null ? String(r.youtube_url) : null,
+    scheduled_at: r.scheduled_at != null ? String(r.scheduled_at) : null,
+    created_at:   String(r.created_at ?? ""),
+    updated_at:   String(r.updated_at ?? ""),
+    slide_count:  r.slide_count != null ? Number(r.slide_count) : undefined,
   };
 }
 
@@ -118,6 +125,7 @@ export interface SeriesRow {
   status: string;
   youtube_id: string | null;
   youtube_url: string | null;
+  scheduled_at: string | null;
   created_at: string;
   updated_at: string;
   slide_count?: number;
@@ -223,6 +231,56 @@ export async function insertSlides(
     })),
   ];
   await c.batch(stmts, "write");
+}
+
+// ── Scheduling / Automation ────────────────────────────────────────────────────
+
+/** Set the scheduled_at datetime for a series (status stays 'draft') */
+export async function scheduleSeriesForDate(id: number, scheduledAt: string): Promise<void> {
+  await ensureSchema();
+  const c = getClient();
+  await c.execute({
+    sql: "UPDATE series SET scheduled_at = ?, updated_at = datetime('now') WHERE id = ?",
+    args: [scheduledAt, id],
+  });
+}
+
+/** Mark series as 'queued' (approved for upload) — called after Telegram approval */
+export async function approveSeriesForUpload(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  await ensureSchema();
+  const c = getClient();
+  const placeholders = ids.map(() => "?").join(", ");
+  await c.execute({
+    sql: `UPDATE series SET status = 'queued', updated_at = datetime('now') WHERE id IN (${placeholders})`,
+    args: ids as InValue[],
+  });
+}
+
+/** Set an arbitrary status on a series */
+export async function setSeriesStatus(id: number, status: string): Promise<void> {
+  await ensureSchema();
+  const c = getClient();
+  await c.execute({
+    sql: "UPDATE series SET status = ?, updated_at = datetime('now') WHERE id = ?",
+    args: [status, id],
+  });
+}
+
+/** Get series that are queued and due for upload (scheduled_at <= now) */
+export async function getQueuedForUpload(): Promise<SeriesRow[]> {
+  await ensureSchema();
+  const c = getClient();
+  const rs = await c.execute(
+    `SELECT s.*, COUNT(sl.id) as slide_count
+     FROM series s
+     LEFT JOIN slides sl ON sl.series_id = s.id
+     WHERE s.status = 'queued'
+       AND (s.scheduled_at IS NULL OR s.scheduled_at <= datetime('now'))
+     GROUP BY s.id
+     ORDER BY s.scheduled_at ASC`
+  );
+  return rs.rows.map(rowToSeries);
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────────

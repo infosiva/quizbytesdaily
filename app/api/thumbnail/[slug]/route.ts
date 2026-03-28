@@ -102,7 +102,7 @@ function buildSvg(title: string, category: string, difficulty: string, slideCoun
     <stop offset="55%"  stop-color="#0d0b1c"/>
     <stop offset="100%" stop-color="#090b18"/>
   </linearGradient>
-  <linearGradient id="titlegrad" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" x1="48" y1="0" x2="800" y2="0">
+  <linearGradient id="titlegrad" x1="48" y1="0" x2="800" y2="0" gradientUnits="userSpaceOnUse">
     <stop offset="0%"   stop-color="#ffffff"/>
     <stop offset="70%"  stop-color="#e2e8f0"/>
     <stop offset="100%" stop-color="${col.primary}"/>
