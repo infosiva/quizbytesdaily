@@ -1,5 +1,14 @@
 import { createClient, type Client, type Row, type InValue } from "@libsql/client";
 
+// ── Site Settings ──────────────────────────────────────────────────────────────
+export interface SiteSettings {
+  gridColumns:   2 | 3 | 4;
+  defaultView:   "grid" | "list";
+  pageSize:      8 | 12 | 16 | 24;
+  heroEnabled:   boolean;
+  showDashboard: boolean;
+}
+
 // ── Client singleton ──────────────────────────────────────────────────────────
 
 let _client: Client | null = null;
@@ -23,6 +32,13 @@ async function ensureSchema() {
   if (_schemaInit) return;
   const c = getClient();
   await c.batch([
+    {
+      sql: `CREATE TABLE IF NOT EXISTS site_settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )`,
+      args: [],
+    },
     {
       sql: `CREATE TABLE IF NOT EXISTS series (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -272,4 +288,49 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     })),
     totalSlides: Number(slidesCount.rows[0]?.total ?? 0),
   };
+}
+
+// ── Site Settings CRUD ────────────────────────────────────────────────────────
+
+const SETTING_DEFAULTS: Record<string, string> = {
+  grid_columns:   "3",
+  default_view:   "grid",
+  page_size:      "12",
+  hero_enabled:   "1",
+  show_dashboard: "1",
+};
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  await ensureSchema();
+  const c  = getClient();
+  const rs = await c.execute("SELECT key, value FROM site_settings");
+  const m: Record<string, string> = {};
+  for (const r of rs.rows) m[String(r.key)] = String(r.value);
+  const g = (k: string) => m[k] ?? SETTING_DEFAULTS[k] ?? "";
+  return {
+    gridColumns:   (Number(g("grid_columns")) as 2 | 3 | 4)           || 3,
+    defaultView:   (g("default_view") as "grid" | "list")             || "grid",
+    pageSize:      (Number(g("page_size")) as 8 | 12 | 16 | 24)       || 12,
+    heroEnabled:   g("hero_enabled") !== "0",
+    showDashboard: g("show_dashboard") !== "0",
+  };
+}
+
+export async function updateSiteSettings(settings: Partial<SiteSettings>): Promise<void> {
+  await ensureSchema();
+  const c       = getClient();
+  const entries: [string, string][] = [];
+  if (settings.gridColumns   !== undefined) entries.push(["grid_columns",   String(settings.gridColumns)]);
+  if (settings.defaultView   !== undefined) entries.push(["default_view",   settings.defaultView]);
+  if (settings.pageSize      !== undefined) entries.push(["page_size",      String(settings.pageSize)]);
+  if (settings.heroEnabled   !== undefined) entries.push(["hero_enabled",   settings.heroEnabled   ? "1" : "0"]);
+  if (settings.showDashboard !== undefined) entries.push(["show_dashboard", settings.showDashboard ? "1" : "0"]);
+  if (entries.length === 0) return;
+  await c.batch(
+    entries.map(([key, value]) => ({
+      sql:  "INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)",
+      args: [key, value] as InValue[],
+    })),
+    "write",
+  );
 }
