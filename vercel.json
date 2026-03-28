@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/daily-generate",
       "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/cron/upload-scheduled",
-      "schedule": "0 9,10,11,12,13,14,15,16 * * *"
     }
   ]
 }
