@@ -21,13 +21,13 @@ const CARD_COLORS: Record<string, { text: string; border: string; bg: string }> 
   amber:  { text: "#fbbf24", border: "#fbbf2466", bg: "#fbbf2418" },
 };
 
-// ── Font: embed DejaVu Bold as base64 so it works on every platform ────────────
-let _fontB64: string | null = null;
-function getFontB64(): string {
-  if (_fontB64 !== null) return _fontB64;
+// ── Font: use file:// URI so librsvg can load it (data: URIs not supported) ────
+let _fontPath: string | null = null;
+function getFontPath(): string {
+  if (_fontPath !== null) return _fontPath;
   const p = path.join(process.cwd(), "fonts", "DejaVuSans-Bold.ttf");
-  _fontB64 = fs.existsSync(p) ? fs.readFileSync(p).toString("base64") : "";
-  return _fontB64;
+  _fontPath = fs.existsSync(p) ? p : "";
+  return _fontPath;
 }
 
 // ── Sharp (lazy require — prevents Next.js bundling this native module) ────────
@@ -241,9 +241,10 @@ function renderDefBoxAtHeight(
 
 // ── SVG wrapper with shared defs ───────────────────────────────────────────────
 function svgWrapper(content: string): string {
-  const fontB64   = getFontB64();
-  const fontStyle = fontB64
-    ? `<style>@font-face{font-family:'DVB';src:url('data:font/truetype;base64,${fontB64}') format('truetype');}</style>`
+  const fontPath  = getFontPath();
+  // librsvg (used by Sharp) does NOT support data: URI fonts — must use file://
+  const fontStyle = fontPath
+    ? `<style>@font-face{font-family:'DVB';src:url('file://${fontPath}') format('truetype');}</style>`
     : "";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
