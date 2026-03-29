@@ -120,12 +120,21 @@ export async function renderSeries(
       );
     });
 
-    // Ambient music (C minor chord with slow tremolo)
+    // Background music — C major chord (C4+E4+G4+C5) with gentle pulse and shimmer.
+    // Amplitudes at 0.18–0.28 so the music is clearly audible at quiz-show volume.
     const musicIdx = frames.length;
     args.push("-f", "lavfi", "-i",
-      `aevalsrc=0.04*sin(2*PI*t*130.81)*(0.85+0.15*sin(2*PI*t*0.3))` +
-      `+0.035*sin(2*PI*t*155.56)*(0.85+0.15*sin(2*PI*t*0.4))` +
-      `+0.03*sin(2*PI*t*196.0)*(0.85+0.15*sin(2*PI*t*0.25))` +
+      `aevalsrc=` +
+      // Root: C4 (261.63 Hz) with slow 0.25 Hz swell
+      `0.28*sin(2*PI*t*261.63)*(0.85+0.15*sin(2*PI*t*0.25))` +
+      // Third: E4 (329.63 Hz) with 0.35 Hz swell (slightly out of phase)
+      `+0.22*sin(2*PI*t*329.63)*(0.85+0.15*sin(2*PI*t*0.35))` +
+      // Fifth: G4 (392.00 Hz) with 0.3 Hz swell
+      `+0.18*sin(2*PI*t*392.00)*(0.85+0.15*sin(2*PI*t*0.30))` +
+      // Octave: C5 (523.25 Hz) — adds brightness / sparkle
+      `+0.10*sin(2*PI*t*523.25)*(0.85+0.15*sin(2*PI*t*0.20))` +
+      // Subtle second harmonic on root for warmth
+      `+0.06*sin(2*PI*t*130.81)*(0.9+0.1*sin(2*PI*t*0.15))` +
       `:s=44100:c=mono:d=${totalDur}`
     );
 
@@ -146,7 +155,7 @@ export async function renderSeries(
       `;[${musicIdx}:a]aformat=channel_layouts=stereo,` +
       `afade=t=in:st=0:d=${fadeDur},` +
       `afade=t=out:st=${totalDur - fadeDur}:d=${fadeDur},` +
-      `volume=0.14[aout]`;
+      `volume=0.45[aout]`;  // 0.45 = clearly audible background; was 0.14 (inaudible)
 
     args.push(
       "-filter_complex", filterComplex,
