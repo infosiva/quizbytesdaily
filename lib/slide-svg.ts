@@ -636,28 +636,33 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
 }
 
 /**
- * Return a sequence of SVGs for a slide with word-by-word text typing.
+ * Return a sequence of SVGs for a slide with text typing effect.
  * Frame 0 = all box shapes visible but no text.
- * Each subsequent frame adds WORDS_PER_FRAME more words of content text.
+ * Frames 1–N = content words revealed in equal-sized chunks.
  * Heading is always fully visible.
- * Used by video-renderer to create a natural reading-pace typing effect.
+ *
+ * MAX_CONTENT_FRAMES caps frames per slide to keep total PNG count
+ * manageable on Vercel (60s function limit). With 8 slides × 6 frames
+ * = 48 PNGs total — well within the render time budget.
  */
 export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
   if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
 
-  const WORDS_PER_FRAME = 2;
+  // Cap content frames per slide: 1 structure frame + up to 5 content frames = 6 total.
+  // 8 slides × 6 frames = 48 PNGs → ~30–45s render (safe for Vercel 60s limit).
+  const MAX_CONTENT_FRAMES = 5;
 
   if (template === "pipeline") {
     const d = data as unknown as PipelineData;
     const totalWords = (d.cards ?? []).reduce(
       (s, c) => s + countWords(c.title) + countWords(c.body ?? ""), 0
     );
-    const numFrames = Math.ceil(totalWords / WORDS_PER_FRAME);
+    if (totalWords === 0) return [buildPipelineSvg(d)];
+    const n   = Math.min(MAX_CONTENT_FRAMES, totalWords);  // never more frames than words
+    const wpt = Math.ceil(totalWords / n);                  // words per content frame
     return [
       buildPipelineSvg(d, 0),  // structure visible, no text
-      ...Array.from({ length: numFrames }, (_, f) =>
-        buildPipelineSvg(d, (f + 1) * WORDS_PER_FRAME)
-      ),
+      ...Array.from({ length: n }, (_, f) => buildPipelineSvg(d, (f + 1) * wpt)),
     ];
   }
 
@@ -670,12 +675,12 @@ export function slideToRevealFrames(template: string, data: Record<string, unkno
     (s, c) => s + countWords(c.title) + countWords(c.body ?? ""), 0
   );
   const totalWords = defWords + cardWords;
-  const numFrames  = Math.ceil(totalWords / WORDS_PER_FRAME);
+  if (totalWords === 0) return [buildDefinitionStepsSvg(d)];
+  const n   = Math.min(MAX_CONTENT_FRAMES, totalWords);
+  const wpt = Math.ceil(totalWords / n);
   return [
     buildDefinitionStepsSvg(d, 0),  // structure visible, no text
-    ...Array.from({ length: numFrames }, (_, f) =>
-      buildDefinitionStepsSvg(d, (f + 1) * WORDS_PER_FRAME)
-    ),
+    ...Array.from({ length: n }, (_, f) => buildDefinitionStepsSvg(d, (f + 1) * wpt)),
   ];
 }
 
