@@ -61,6 +61,24 @@ export async function editMessage(messageId: number, text: string): Promise<void
   });
 }
 
+// ── Edit message with updated keyboard ────────────────────────────────────────
+export async function editMessageWithKeyboard(
+  messageId: number,
+  text: string,
+  keyboard?: InlineButton[][]
+): Promise<void> {
+  const body: Record<string, unknown> = {
+    chat_id: chatId(),
+    message_id: messageId,
+    text,
+    parse_mode: "HTML",
+  };
+  if (keyboard?.length) {
+    body.reply_markup = { inline_keyboard: keyboard };
+  }
+  await apiCall("editMessageText", body);
+}
+
 // ── Answer a callback query (clears the spinner) ──────────────────────────────
 export async function answerCallback(queryId: string, text?: string): Promise<void> {
   await apiCall("answerCallbackQuery", {

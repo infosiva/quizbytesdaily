@@ -44,7 +44,9 @@ interface CardItem { color: string; title: string; body?: string }
 interface DefItem  { color: string; title: string; body: string }
 
 function SlidePreview({ slide }: { slide: SlideData }) {
-  const { template, data } = slide;
+  const template = slide.template;
+  // Generate API returns flat objects (no `data` wrapper); DB-loaded slides have a `data` wrapper
+  const data = (slide.data ?? slide) as Record<string, unknown>;
 
   if (template === "definition-steps") {
     const def   = data.definition as DefItem | undefined;
@@ -290,9 +292,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"generate" | "library" | "upload" | "analytics" | "settings">("generate");
 
   // Generate
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(() => TRENDING_TOPICS["Python"]?.[0] ?? "");
   const [genCategory, setGenCategory] = useState("Python");
-  const [genDifficulty, setGenDifficulty] = useState("Intermediate");
+  const [genDifficulty, setGenDifficulty] = useState("Beginner");
   const [genLayout, setGenLayout] = useState<LayoutId>("quiz-reveal");
   const [catSuggestOpen, setCatSuggestOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState<string[]>([]);
@@ -396,6 +398,12 @@ export default function AdminPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Auto-fill first trending topic when category changes
+  useEffect(() => {
+    const first = TRENDING_TOPICS[genCategory]?.[0];
+    if (first) setTopic(first);
+  }, [genCategory]);
 
   // Draw thumbnail when upload tab loads
   useEffect(() => {
@@ -909,7 +917,7 @@ export default function AdminPage() {
                         {regenId === s.id ? "✕ Cancel" : "↻ Layout"}
                       </button>
                       <button onClick={() => goToUpload(s)} style={{ padding: "0.4rem 0.75rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 6, color: "#22d3ee", cursor: "pointer", fontSize: "0.75rem" }}>🚀 Upload</button>
-                      <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 DB</button>
+                      <button onClick={async () => { if (!confirm(`Delete "${s.title}"?`)) return; await fetch(`/api/admin/series/${s.id}`, { method: "DELETE" }); loadLibrary(); }} style={{ padding: "0.4rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f87171", borderRadius: 6, color: "#f87171", cursor: "pointer", fontSize: "0.75rem" }}>🗑 Delete</button>
                     </div>
                   </div>
 

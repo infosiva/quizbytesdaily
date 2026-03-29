@@ -397,6 +397,26 @@ export async function getPageViewStats(): Promise<{ today: number; week: number;
   };
 }
 
+// ── Bot State (for Telegram stateful flows) ───────────────────────────────────
+
+/** Get the current bot conversation state (e.g. "awaiting_topic") */
+export async function getBotState(): Promise<string> {
+  await ensureSchema();
+  const c = getClient();
+  const rs = await c.execute("SELECT value FROM site_settings WHERE key = 'bot_state'");
+  return rs.rows[0] ? String(rs.rows[0].value) : "";
+}
+
+/** Set the bot conversation state */
+export async function setBotState(state: string): Promise<void> {
+  await ensureSchema();
+  const c = getClient();
+  await c.execute({
+    sql:  "INSERT OR REPLACE INTO site_settings (key, value) VALUES ('bot_state', ?)",
+    args: [state],
+  });
+}
+
 // ── Site Settings CRUD ────────────────────────────────────────────────────────
 
 const SETTING_DEFAULTS: Record<string, string> = {

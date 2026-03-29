@@ -4,6 +4,71 @@
 
 import { TRENDING_TOPICS, type LayoutId } from "@/lib/quiz-generator";
 
+// ── Layout display labels ─────────────────────────────────────────────────────
+export const LAYOUT_LABELS: Record<string, string> = {
+  "quiz-reveal":  "🧩 Quiz",
+  "explainer":    "📖 Explainer",
+  "code-example": "💻 Code Example",
+  "quick-tips":   "⚡ Quick Tips",
+};
+
+// ── Hot suggestions shown after a Decline ─────────────────────────────────────
+export interface HotSuggestion {
+  idx: number;
+  category: string;
+  topic: string;
+  layout: LayoutId;
+  difficulty: string;
+  icon: string;
+  typeLabel: string; // e.g. "🧩 Quiz"
+}
+
+export const HOT_SUGGESTIONS: HotSuggestion[] = [
+  { idx: 0, icon: "🤖", category: "AI/ML",         topic: "Mixture of Experts architecture",       layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { idx: 1, icon: "🤖", category: "AI/ML",         topic: "RAG vs Fine-tuning",                    layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { idx: 2, icon: "🐍", category: "Python",        topic: "UV package manager explained",          layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { idx: 3, icon: "🤖", category: "AI/ML",         topic: "Function calling in LLMs",              layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { idx: 4, icon: "🏗", category: "System Design", topic: "Rate limiting algorithms",              layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { idx: 5, icon: "⚡", category: "JavaScript",    topic: "React server components",               layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { idx: 6, icon: "🧮", category: "Algorithms",    topic: "Two-pointer technique",                 layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { idx: 7, icon: "🤖", category: "AI/ML",         topic: "AI agents vs chatbots: Key differences",layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+];
+
+// ── Single daily topic picker ──────────────────────────────────────────────────
+// Flat rotation across hot AI/tech topics — one per day, AI/ML weighted 50%.
+const DAILY_ROTATION: Omit<HotSuggestion, "idx">[] = [
+  { icon: "🤖", category: "AI/ML",         topic: "Context window limits in LLMs",          layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🐍", category: "Python",        topic: "Python type hints in 2026",               layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "RAG vs Fine-tuning: When to use which",  layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🧮", category: "Algorithms",    topic: "Two-pointer technique",                   layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Mixture of Experts architecture",         layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "⚡", category: "JavaScript",    topic: "React server components deep dive",       layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "🤖", category: "AI/ML",         topic: "Function calling in LLMs",                layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🏗", category: "System Design", topic: "Rate limiting algorithms",                layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🤖", category: "AI/ML",         topic: "Vector databases: How they work",         layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "🐍", category: "Python",        topic: "Dataclasses vs Pydantic models",          layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Chain-of-thought prompting techniques",   layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
+  { icon: "🚀", category: "DevOps",        topic: "Docker multi-stage builds",               layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
+  { icon: "🤖", category: "AI/ML",         topic: "AI hallucination: Causes and fixes",      layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { icon: "🧮", category: "Algorithms",    topic: "Sliding window pattern",                  layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Model context protocol (MCP) explained",  layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "🐍", category: "Python",        topic: "asyncio.gather vs asyncio.wait",          layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Embedding models and semantic search",    layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "⚡", category: "JavaScript",    topic: "TypeScript 5 decorators",                 layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Quantization: Making LLMs run faster",   layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🏗", category: "System Design", topic: "Event-driven architecture",               layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "🤖", category: "AI/ML",         topic: "Structured outputs from AI models",       layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🐍", category: "Python",        topic: "FastAPI dependency injection",            layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "AI agents vs chatbots: Key differences",  layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { icon: "🧮", category: "Algorithms",    topic: "Dynamic programming tabulation",          layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+];
+
+export function getOneDailyTopic(date?: Date): Omit<HotSuggestion, "idx"> {
+  const d = date ?? new Date();
+  const day = dayOfYear(d);
+  return DAILY_ROTATION[day % DAILY_ROTATION.length];
+}
+
 export interface DailyTopic {
   category: string;
   topic: string;
