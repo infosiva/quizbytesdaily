@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       "./node_modules/@ffmpeg-installer/**",
       "./node_modules/sharp/**",
       "./fonts/**",
+      "./node_modules/dejavu-fonts-ttf/ttf/**",
     ],
   },
   images: {

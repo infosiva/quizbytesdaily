@@ -21,12 +21,45 @@ const CARD_COLORS: Record<string, { text: string; border: string; bg: string }> 
   amber:  { text: "#fbbf24", border: "#fbbf2466", bg: "#fbbf2418" },
 };
 
-// ── Font: use file:// URI so librsvg can load it (data: URIs not supported) ────
+// ── Font: copy to /tmp so librsvg can always find it via file:// URI ──────────
+// librsvg does NOT support data: URI fonts. We copy the font to /tmp because:
+//   1. /tmp is writable and accessible in all environments (local, Vercel Lambda)
+//   2. process.cwd()/fonts/ may not be bundled by Vercel's output tracing
+//   3. node_modules (npm package) is reliably bundled by Vercel
 let _fontPath: string | null = null;
 function getFontPath(): string {
   if (_fontPath !== null) return _fontPath;
-  const p = path.join(process.cwd(), "fonts", "DejaVuSans-Bold.ttf");
-  _fontPath = fs.existsSync(p) ? p : "";
+
+  const TMP = "/tmp/DVB.ttf";
+
+  // Return cached /tmp copy if already written (warm Lambda / dev server)
+  if (fs.existsSync(TMP)) {
+    _fontPath = TMP;
+    return _fontPath;
+  }
+
+  // Locate the source font: project fonts/ dir first, then npm package
+  const candidates: string[] = [
+    path.join(process.cwd(), "fonts", "DejaVuSans-Bold.ttf"),
+  ];
+  try {
+    const pkg = require.resolve("dejavu-fonts-ttf/package.json") as string;
+    candidates.push(path.join(path.dirname(pkg), "ttf", "DejaVuSans-Bold.ttf"));
+  } catch { /* package not installed */ }
+
+  for (const src of candidates) {
+    if (fs.existsSync(src)) {
+      try {
+        fs.copyFileSync(src, TMP);
+        _fontPath = TMP;
+      } catch {
+        _fontPath = src; // fallback: use source path directly
+      }
+      return _fontPath;
+    }
+  }
+
+  _fontPath = ""; // no font found — text will use system fallback
   return _fontPath;
 }
 
