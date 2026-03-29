@@ -6,9 +6,10 @@
 // 4. Sends a Telegram message with ✅ Approve / ❌ Decline buttons
 
 import { NextRequest, NextResponse } from "next/server";
-import { generateQuizSeries } from "@/lib/quiz-generator";
+import { generateQuizSeries, type LayoutId } from "@/lib/quiz-generator";
 import { createSeries, insertSlides, getSeriesBySlug, scheduleSeriesForDate } from "@/lib/db";
 import { getOneDailyTopic, getScheduledAt, LAYOUT_LABELS } from "@/lib/daily-topics";
+import { fetchOneLiveTopic } from "@/lib/trending-fetcher";
 import { sendMessage } from "@/lib/telegram";
 
 export const runtime    = "nodejs";
@@ -29,9 +30,18 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
-  const t = getOneDailyTopic(now);
   // Schedule for next-day 10 AM UTC
   const scheduledAt = getScheduledAt(now, 10);
+
+  // Try live trending first; fall back to static rotation if fetch fails
+  let t: { topic: string; category: string; layout: LayoutId; difficulty: string; icon: string };
+  try {
+    t = await fetchOneLiveTopic();
+    console.log(`[daily-generate] Live trending: "${t.topic}" from ${(t as { source?: string }).source ?? "live"}`);
+  } catch {
+    t = getOneDailyTopic(now);
+    console.log(`[daily-generate] Static fallback topic: "${t.topic}"`);
+  }
 
   try {
     console.log(`[daily-generate] Generating: ${t.category} — ${t.topic} (${t.layout})`);

@@ -298,6 +298,9 @@ export default function AdminPage() {
   const [genLayout, setGenLayout] = useState<LayoutId>("quiz-reveal");
   const [catSuggestOpen, setCatSuggestOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState<string[]>([]);
+  // Live trending topics from HN / GitHub / ArXiv
+  const [liveTrending, setLiveTrending] = useState<{ topic: string; category: string; source: string }[]>([]);
+  const [loadingLive, setLoadingLive] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState("");
   const [preview, setPreview] = useState<SlideData[] | null>(null);
@@ -404,6 +407,23 @@ export default function AdminPage() {
     const first = TRENDING_TOPICS[genCategory]?.[0];
     if (first) setTopic(first);
   }, [genCategory]);
+
+  // Fetch live trending topics on mount (from HN / GitHub / ArXiv)
+  useEffect(() => {
+    setLoadingLive(true);
+    fetch("/api/trending")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.topics) && d.topics.length > 0) {
+          setLiveTrending(d.topics);
+          // Auto-fill topic with the first live AI/ML trending topic
+          const first = d.topics.find((t: { category: string }) => t.category === "AI/ML");
+          if (first) setTopic(first.topic);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingLive(false));
+  }, []);
 
   // Draw thumbnail when upload tab loads
   useEffect(() => {
@@ -695,11 +715,52 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* ── Trending topics for selected category ── */}
+            {/* ── Live trending topics (HN / GitHub / ArXiv) ── */}
+            {(liveTrending.length > 0 || loadingLive) && (
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
+                  🔥 Live Trending Now
+                  {loadingLive && <span style={{ fontSize: "0.65rem", color: "#374151", fontWeight: 400, textTransform: "none" }}>fetching…</span>}
+                  {!loadingLive && liveTrending.length > 0 && (
+                    <span style={{ fontSize: "0.6rem", color: "#374151", fontWeight: 400, textTransform: "none" }}>
+                      HN · GitHub · ArXiv — click to fill
+                    </span>
+                  )}
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                  {liveTrending.filter((t) => t.category === genCategory || genCategory === "AI/ML").slice(0, 12).map((t) => {
+                    const sourceColor = t.source === "hn" ? "#f97316" : t.source === "github" ? "#4ade80" : "#a855f7";
+                    const sourceLabel = t.source === "hn" ? "HN" : t.source === "github" ? "GH" : "arXiv";
+                    return (
+                      <button
+                        key={t.topic}
+                        onClick={() => { setTopic(t.topic); setGenCategory(t.category); }}
+                        title={`Source: ${t.source}`}
+                        style={{
+                          padding: "3px 10px", borderRadius: 999,
+                          border: `1px solid ${topic === t.topic ? sourceColor : "#2a2a3e"}`,
+                          background: topic === t.topic ? `${sourceColor}20` : "#111118",
+                          color: topic === t.topic ? sourceColor : "#94a3b8",
+                          fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s",
+                          display: "flex", alignItems: "center", gap: 5,
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = sourceColor; e.currentTarget.style.color = sourceColor; }}
+                        onMouseLeave={(e) => { if (topic !== t.topic) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
+                      >
+                        {t.topic.slice(0, 50)}{t.topic.length > 50 ? "…" : ""}
+                        <span style={{ fontSize: "0.58rem", color: sourceColor, opacity: 0.7 }}>{sourceLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Curated trending topics for selected category ── */}
             {TRENDING_TOPICS[genCategory] && (
               <div style={{ marginBottom: "1.25rem" }}>
                 <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
-                  Trending in {genCategory} — click to fill
+                  Curated: {genCategory} — click to fill
                 </label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                   {TRENDING_TOPICS[genCategory].map((t) => (
