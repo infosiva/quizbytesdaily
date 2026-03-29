@@ -1157,16 +1157,23 @@ export default function AdminPage() {
                           ))}
                         </div>
                       )}
-                      <button onClick={() => handleRegen(s)} disabled={regenning} style={{
-                        padding: "0.5rem 1.25rem", background: regenning ? "#333" : "#a855f7",
-                        border: "none", borderRadius: 8, color: "#fff", fontWeight: 700,
-                        cursor: regenning ? "not-allowed" : "pointer", fontSize: "0.85rem",
-                      }}>
-                        {regenning ? "⏳ Regenerating…" : `↻ Regenerate as ${LAYOUTS.find(l => l.id === regenLayout)?.name}`}
-                      </button>
-                      <span style={{ marginLeft: 12, fontSize: "0.72rem", color: "#4a4a5a" }}>
-                        Topic: &ldquo;{s.topic}&rdquo; · {s.category} · {s.difficulty}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
+                        <button onClick={() => handleRegen(s)} disabled={regenning} style={{
+                          padding: "0.5rem 1.25rem", background: regenning ? "#333" : "#a855f7",
+                          border: "none", borderRadius: 8, color: "#fff", fontWeight: 700,
+                          cursor: regenning ? "not-allowed" : "pointer", fontSize: "0.85rem",
+                        }}>
+                          {regenning ? "⏳ Regenerating…" : `↻ Regenerate as ${LAYOUTS.find(l => l.id === regenLayout)?.name}`}
+                        </button>
+                        <span style={{ fontSize: "0.72rem", color: "#4a4a5a" }}>
+                          Topic: &ldquo;{s.topic}&rdquo; · {s.category} · {s.difficulty}
+                        </span>
+                      </div>
+                      {regenError && (
+                        <div style={{ marginTop: 8, padding: "0.5rem 0.75rem", background: "rgba(248,113,113,0.1)", border: "1px solid #f8717150", borderRadius: 6, color: "#f87171", fontSize: "0.75rem" }}>
+                          {regenError}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

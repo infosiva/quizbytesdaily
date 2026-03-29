@@ -355,9 +355,12 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const total    = (hasDef ? 1 : 0) + numCards;
 
   if (total > 0 && CONTENT_H > 0) {
-    const GAP      = total <= 2 ? 36 : total <= 3 ? 28 : total <= 4 ? 22 : 16;
+    const GAP      = total <= 2 ? 28 : total <= 3 ? 22 : total <= 4 ? 18 : 14;
     const totalGap = Math.max(0, total - 1) * GAP;
-    const itemH    = Math.floor((CONTENT_H - totalGap) / total);
+    // Cap item height so boxes don't become enormous on sparse slides
+    const MAX_ITEM_H = total <= 2 ? 320 : total <= 3 ? 260 : total <= 4 ? 220 : 180;
+    const itemH    = Math.min(MAX_ITEM_H, Math.floor((CONTENT_H - totalGap) / total));
+    // Start items at CONTENT_START — don't center vertically (avoids empty gap at top)
     let cy         = CONTENT_START;
 
     if (hasDef && data.definition) {
@@ -405,18 +408,19 @@ function buildPipelineSvg(data: PipelineData): string {
 
   const cards = data.cards ?? [];
   if (cards.length > 0) {
-    const ARROW_H  = 46;
+    const ARROW_H   = 40;
     const numArrows = cards.length - 1;
-    const GAP      = 10;
-    const itemH    = Math.floor(
+    const GAP       = 8;
+    const MAX_CARD_H = cards.length <= 3 ? 280 : 220;
+    const itemH     = Math.min(MAX_CARD_H, Math.floor(
       (CONTENT_H - numArrows * ARROW_H - numArrows * GAP) / cards.length
-    );
-
+    ));
     let cy = CONTENT_START;
+
     for (let i = 0; i < cards.length; i++) {
       if (i > 0) {
         const prevCol = CARD_COLORS[cards[i - 1].color] ?? CARD_COLORS.cyan;
-        parts.push(`<text x="${W / 2}" y="${(cy + ARROW_H * 0.72).toFixed(0)}" font-size="28" fill="${prevCol.text}" text-anchor="middle" opacity="0.7">▼</text>`);
+        parts.push(`<text x="${W / 2}" y="${(cy + ARROW_H * 0.72).toFixed(0)}" font-size="26" fill="${prevCol.text}" text-anchor="middle" opacity="0.7">▼</text>`);
         cy += ARROW_H + GAP;
       }
       parts.push(renderCardAtHeight(cards[i], PADX, cy, AVAIL, itemH));
