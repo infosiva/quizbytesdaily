@@ -5,8 +5,6 @@
  * converts to PNG via Sharp — same quality as the browser preview.
  */
 
-import fs from "fs";
-import path from "path";
 import { POPPINS_BOLD_B64 } from "./font-poppins";
 
 // ── Canvas size ────────────────────────────────────────────────────────────────
@@ -22,30 +20,13 @@ const CARD_COLORS: Record<string, { text: string; border: string; bg: string }> 
   amber:  { text: "#fbbf24", border: "#fbbf2466", bg: "#fbbf2418" },
 };
 
-// ── Font: Poppins Bold embedded as base64 → written to /tmp on first call ─────
-// This is the ONLY reliable approach across local dev, Vercel Lambda, and VPS:
-//   - base64 bytes are bundled inside the JS module (always present)
-//   - /tmp is always writable; file:// URI to /tmp works in all environments
-//   - Warm Lambda invocations reuse the already-written /tmp file
-let _fontPath: string | null = null;
-function getFontPath(): string {
-  if (_fontPath !== null) return _fontPath;
-
-  const TMP = "/tmp/POP.ttf";
-  // Always write (overwrite) so stale or corrupt files from a previous bad
-  // base64 are replaced immediately. The module-level guard (_fontPath) ensures
-  // we only pay the cost once per process lifetime.
-  try {
-    fs.writeFileSync(TMP, Buffer.from(POPPINS_BOLD_B64, "base64"));
-    _fontPath = TMP;
-  } catch {
-    // /tmp not writable — fall back to project fonts/ directory
-    const local = path.join(process.cwd(), "fonts", "Poppins-Bold.ttf");
-    _fontPath = fs.existsSync(local) ? local : "";
-  }
-
-  return _fontPath;
-}
+// ── Font: Poppins Bold embedded as a data: URI ────────────────────────────────
+// data: URI is the ONLY approach that works in ALL environments:
+//   - Vercel Lambda: file:// fails (librsvg sandbox), system fonts absent
+//   - Local macOS: file:// works but data: also works
+//   - VPS: same as local
+// The base64 bytes are part of the JS bundle so they're always present.
+const FONT_DATA_URI = `data:font/truetype;base64,${POPPINS_BOLD_B64}`;
 
 // ── Sharp (lazy require — prevents Next.js bundling this native module) ────────
 async function getSharp() {
@@ -259,11 +240,7 @@ function renderDefBoxAtHeight(
 
 // ── SVG wrapper with shared defs ───────────────────────────────────────────────
 function svgWrapper(content: string): string {
-  const fontPath  = getFontPath();
-  // librsvg (used by Sharp) does NOT support data: URI fonts — must use file://
-  const fontStyle = fontPath
-    ? `<style>@font-face{font-family:'POP';src:url('file://${fontPath}') format('truetype');}</style>`
-    : "";
+  const fontStyle = `<style>@font-face{font-family:'POP';src:url('${FONT_DATA_URI}') format('truetype');font-weight:bold;}</style>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs>

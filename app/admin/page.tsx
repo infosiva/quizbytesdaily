@@ -36,41 +36,6 @@ const difficultyColor = (d: string) =>
 const statusColor = (s: string) =>
   s === "published" ? "#4ade80" : "#94a3b8";
 
-// ── Typewriter text effect ────────────────────────────────────────────────────
-// Animates text character-by-character on mount (or when `text` changes).
-// `delay` staggers the start so multiple slides animate in sequence.
-
-function TypedText({ text, speed = 14, delay = 0 }: { text: string; speed?: number; delay?: number }) {
-  const [count, setCount] = useState(delay > 0 ? 0 : text.length); // skip if already shown
-  const [started, setStarted] = useState(delay === 0);
-
-  useEffect(() => {
-    setCount(0);
-    setStarted(false);
-    const start = setTimeout(() => {
-      setStarted(true);
-    }, delay);
-    return () => clearTimeout(start);
-  }, [text, delay]);
-
-  useEffect(() => {
-    if (!started) return;
-    if (count >= text.length) return;
-    const id = setTimeout(() => setCount((c) => Math.min(c + 1, text.length)), speed);
-    return () => clearTimeout(id);
-  }, [started, count, text, speed]);
-
-  const done = count >= text.length;
-  return (
-    <>
-      {text.slice(0, count)}
-      {!done && (
-        <span style={{ display: "inline-block", width: 1, height: "0.9em", background: "currentColor", marginLeft: 2, verticalAlign: "text-bottom", opacity: 0.8, animation: "blink-cursor 0.55s step-end infinite" }} />
-      )}
-    </>
-  );
-}
-
 // ── Slide mini-preview ────────────────────────────────────────────────────────
 
 const SLIDE_COLORS: Record<string, string> = {
@@ -80,7 +45,7 @@ const SLIDE_COLORS: Record<string, string> = {
 interface CardItem { color: string; title: string; body?: string }
 interface DefItem  { color: string; title: string; body: string }
 
-function SlidePreview({ slide, delay = 0 }: { slide: SlideData; delay?: number }) {
+function SlidePreview({ slide }: { slide: SlideData }) {
   const template = slide.template;
   // Generate API returns flat objects (no `data` wrapper); DB-loaded slides have a `data` wrapper
   const data = (slide.data ?? slide) as Record<string, unknown>;
@@ -98,15 +63,13 @@ function SlidePreview({ slide, delay = 0 }: { slide: SlideData; delay?: number }
             </span>
           )}
           <span style={{ fontWeight: 700, color: "#e2e8f0", fontSize: "0.67rem", lineHeight: 1.3, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <TypedText text={String(data.heading ?? "")} delay={delay} speed={12} />
+            {String(data.heading ?? "")}
           </span>
         </div>
         {/* Definition box */}
         {def && (
           <div style={{ padding: "4px 8px", borderRadius: 4, marginBottom: 4, background: `${SLIDE_COLORS[def.color] ?? "#a855f7"}18`, borderLeft: `2px solid ${SLIDE_COLORS[def.color] ?? "#a855f7"}`, overflow: "hidden" }}>
-            <div style={{ color: SLIDE_COLORS[def.color] ?? "#a855f7", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              <TypedText text={def.title} delay={delay + 100} speed={10} />
-            </div>
+            <div style={{ color: SLIDE_COLORS[def.color] ?? "#a855f7", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.title}</div>
             {def.body && <div style={{ color: "#64748b", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.body}</div>}
           </div>
         )}
@@ -117,9 +80,7 @@ function SlidePreview({ slide, delay = 0 }: { slide: SlideData; delay?: number }
             const hasBody = c.body?.trim() && c.body.trim() !== " ";
             return (
               <div key={i} style={{ padding: "3px 6px", borderRadius: 4, background: `${col}0d`, borderLeft: `2px solid ${col}`, display: "flex", gap: 4, alignItems: "flex-start", overflow: "hidden" }}>
-                <span style={{ color: col, fontWeight: 700, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: hasBody ? "45%" : "100%" }}>
-                  <TypedText text={c.title} delay={delay + 150 + i * 80} speed={10} />
-                </span>
+                <span style={{ color: col, fontWeight: 700, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: hasBody ? "45%" : "100%" }}>{c.title}</span>
                 {hasBody && (
                   <span style={{ color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{c.body}</span>
                 )}
@@ -145,7 +106,7 @@ function SlidePreview({ slide, delay = 0 }: { slide: SlideData; delay?: number }
             </span>
           )}
           <span style={{ fontWeight: 700, color: "#e2e8f0", fontSize: "0.67rem", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <TypedText text={String(data.heading ?? "")} delay={delay} speed={12} />
+            {String(data.heading ?? "")}
           </span>
         </div>
         {cards.map((c, i) => {
@@ -153,7 +114,7 @@ function SlidePreview({ slide, delay = 0 }: { slide: SlideData; delay?: number }
           return (
             <div key={i}>
               <div style={{ padding: "3px 8px", borderRadius: 4, background: `${col}12`, border: `1px solid ${col}30`, color: col, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                <TypedText text={c.title} delay={delay + 100 + i * 100} speed={10} />
+                {c.title}
               </div>
               {i < cards.length - 1 && (
                 <div style={{ textAlign: "center", color: "#374151", fontSize: "0.55rem", lineHeight: "14px" }}>▼</div>
@@ -708,7 +669,7 @@ export default function AdminPage() {
     <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#e2e8f0", fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* Header */}
       <header style={{ borderBottom: "1px solid #1e1e2e", padding: "1rem 2rem", display: "flex", alignItems: "center", gap: "1rem" }}>
-        <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#a855f7" }}>⚡ QuizBytesDaily</span>
+        <Link href="/" style={{ fontSize: "1.25rem", fontWeight: 800, color: "#a855f7", textDecoration: "none" }}>⚡ QuizBytesDaily</Link>
         <span style={{ color: "#4a4a5a" }}>/</span>
         <span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>Admin</span>
         <span style={{ marginLeft: "auto" }} />
@@ -971,7 +932,7 @@ export default function AdminPage() {
                   {preview.map((slide, i) => (
                     <div key={i}>
                       <div style={{ fontSize: "0.65rem", color: "#6366f1", marginBottom: 4 }}>Slide {i + 1} · {slide.template}</div>
-                      <SlidePreview slide={slide} delay={i * 300} />
+                      <SlidePreview slide={slide} />
                     </div>
                   ))}
                 </div>
@@ -1367,7 +1328,7 @@ export default function AdminPage() {
                         {uploadSlides.map((slide, i) => (
                           <div key={i}>
                             <div style={{ fontSize: "0.62rem", color: "#6366f1", marginBottom: 3 }}>{i + 1}. {slide.template}</div>
-                            <SlidePreview slide={slide} delay={i * 200} />
+                            <SlidePreview slide={slide} />
                           </div>
                         ))}
                       </div>
