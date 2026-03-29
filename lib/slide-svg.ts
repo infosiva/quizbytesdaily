@@ -7,6 +7,7 @@
 
 import fs from "fs";
 import path from "path";
+import { POPPINS_BOLD_B64 } from "./font-poppins";
 
 // ── Canvas size ────────────────────────────────────────────────────────────────
 const W = 1080;
@@ -21,45 +22,28 @@ const CARD_COLORS: Record<string, { text: string; border: string; bg: string }> 
   amber:  { text: "#fbbf24", border: "#fbbf2466", bg: "#fbbf2418" },
 };
 
-// ── Font: copy to /tmp so librsvg can always find it via file:// URI ──────────
-// librsvg does NOT support data: URI fonts. We copy the font to /tmp because:
-//   1. /tmp is writable and accessible in all environments (local, Vercel Lambda)
-//   2. process.cwd()/fonts/ may not be bundled by Vercel's output tracing
-//   3. node_modules (npm package) is reliably bundled by Vercel
+// ── Font: Poppins Bold embedded as base64 → written to /tmp on first call ─────
+// This is the ONLY reliable approach across local dev, Vercel Lambda, and VPS:
+//   - base64 bytes are bundled inside the JS module (always present)
+//   - /tmp is always writable; file:// URI to /tmp works in all environments
+//   - Warm Lambda invocations reuse the already-written /tmp file
 let _fontPath: string | null = null;
 function getFontPath(): string {
   if (_fontPath !== null) return _fontPath;
 
-  const TMP = "/tmp/DVB.ttf";
-
-  // Return cached /tmp copy if already written (warm Lambda / dev server)
-  if (fs.existsSync(TMP)) {
-    _fontPath = TMP;
-    return _fontPath;
-  }
-
-  // Locate the source font: project fonts/ dir first, then npm package
-  const candidates: string[] = [
-    path.join(process.cwd(), "fonts", "DejaVuSans-Bold.ttf"),
-  ];
+  const TMP = "/tmp/POP.ttf";
+  // Always write (overwrite) so stale or corrupt files from a previous bad
+  // base64 are replaced immediately. The module-level guard (_fontPath) ensures
+  // we only pay the cost once per process lifetime.
   try {
-    const pkg = require.resolve("dejavu-fonts-ttf/package.json") as string;
-    candidates.push(path.join(path.dirname(pkg), "ttf", "DejaVuSans-Bold.ttf"));
-  } catch { /* package not installed */ }
-
-  for (const src of candidates) {
-    if (fs.existsSync(src)) {
-      try {
-        fs.copyFileSync(src, TMP);
-        _fontPath = TMP;
-      } catch {
-        _fontPath = src; // fallback: use source path directly
-      }
-      return _fontPath;
-    }
+    fs.writeFileSync(TMP, Buffer.from(POPPINS_BOLD_B64, "base64"));
+    _fontPath = TMP;
+  } catch {
+    // /tmp not writable — fall back to project fonts/ directory
+    const local = path.join(process.cwd(), "fonts", "Poppins-Bold.ttf");
+    _fontPath = fs.existsSync(local) ? local : "";
   }
 
-  _fontPath = ""; // no font found — text will use system fallback
   return _fontPath;
 }
 
@@ -186,7 +170,8 @@ function progressBar(slideNum: number, totalSlides: number, color: string): stri
     const isPast    = i + 1 < slideNum;
     const fill = isCurrent ? color : isPast ? `${color}77` : "#1e1e2e";
     const w    = isCurrent ? dotW * 2.4 : dotW;
-    return `<rect x="${x.toFixed(1)}" y="30" width="${w}" height="${dotH}" rx="${dotH / 2}" fill="${fill}"/>`;
+    // Place dots in footer area: below divider (H-108), vertically centered before branding (H-54)
+    return `<rect x="${x.toFixed(1)}" y="${H - 90}" width="${w}" height="${dotH}" rx="${dotH / 2}" fill="${fill}"/>`;
   }).join("\n");
 }
 
@@ -226,10 +211,10 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
     `<circle cx="${iconCX}" cy="${iconCY}" r="${(iconSz / 2 + 7).toFixed(0)}" fill="${col.text}1e"/>`, // icon halo
     iconSvg(card.icon, col.text, iconCX, iconCY, iconSz),
     ...titleLines.map((line, i) =>
-      `<text x="${titleX}" y="${(textStartY + i * titleLH).toFixed(1)}" font-size="${titleFs}" fill="${col.text}" font-family="DVB,Arial,sans-serif" font-weight="700">${esc(line)}</text>`
+      `<text x="${titleX}" y="${(textStartY + i * titleLH).toFixed(1)}" font-size="${titleFs}" fill="${col.text}" font-family="POP,sans-serif" font-weight="700">${esc(line)}</text>`
     ),
     ...bodyLines.map((line, i) =>
-      `<text x="${titleX}" y="${(textStartY + titleH + textGap + i * bodyLH).toFixed(1)}" font-size="${bodyFs}" fill="#94a3b8" font-family="DVB,Arial,sans-serif">${esc(line)}</text>`
+      `<text x="${titleX}" y="${(textStartY + titleH + textGap + i * bodyLH).toFixed(1)}" font-size="${bodyFs}" fill="#94a3b8" font-family="POP,sans-serif">${esc(line)}</text>`
     ),
   ];
   return parts.join("\n");
@@ -261,13 +246,13 @@ function renderDefBoxAtHeight(
   return [
     roundRect(x, y, w, h, 20, defCol.bg),
     roundRect(x, y, w, h, 20, "none", defCol.border),
-    // top accent bar
-    `<rect x="${x + 20}" y="${y}" width="${w - 40}" height="5" rx="2.5" fill="${defCol.text}"/>`,
+    // left accent stripe (same as card style — no overlap with title text)
+    `<rect x="${x}" y="${y + 20}" width="8" height="${h - 40}" rx="4" fill="${defCol.text}"/>`,
     ...titleLines.map((line, i) =>
-      `<text x="${cx.toFixed(0)}" y="${(textStartY + i * titleLH).toFixed(1)}" font-size="${titleFs}" fill="${defCol.text}" text-anchor="middle" font-family="DVB,Arial,sans-serif" font-weight="700">${esc(line)}</text>`
+      `<text x="${cx.toFixed(0)}" y="${(textStartY + i * titleLH).toFixed(1)}" font-size="${titleFs}" fill="${defCol.text}" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">${esc(line)}</text>`
     ),
     ...bodyLines.map((line, i) =>
-      `<text x="${cx.toFixed(0)}" y="${(textStartY + titleH + textGap + i * bodyLH).toFixed(1)}" font-size="${bodyFs}" fill="rgba(255,255,255,0.72)" text-anchor="middle" font-family="DVB,Arial,sans-serif">${esc(line)}</text>`
+      `<text x="${cx.toFixed(0)}" y="${(textStartY + titleH + textGap + i * bodyLH).toFixed(1)}" font-size="${bodyFs}" fill="rgba(255,255,255,0.72)" text-anchor="middle" font-family="POP,sans-serif">${esc(line)}</text>`
     ),
   ].join("\n");
 }
@@ -277,7 +262,7 @@ function svgWrapper(content: string): string {
   const fontPath  = getFontPath();
   // librsvg (used by Sharp) does NOT support data: URI fonts — must use file://
   const fontStyle = fontPath
-    ? `<style>@font-face{font-family:'DVB';src:url('file://${fontPath}') format('truetype');}</style>`
+    ? `<style>@font-face{font-family:'POP';src:url('file://${fontPath}') format('truetype');}</style>`
     : "";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -344,9 +329,9 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
   const PADX    = 72;
   const dividerY = H - 108;
   parts.push(`<line x1="${PADX}" y1="${dividerY}" x2="${W - PADX}" y2="${dividerY}" stroke="#1e1e2e" stroke-width="2"/>`);
-  parts.push(`<text x="${PADX}" y="${H - 54}" font-size="34" fill="#374151" font-family="DVB,Arial,sans-serif">@QuizBytesDaily</text>`);
+  parts.push(`<text x="${PADX}" y="${H - 54}" font-size="34" fill="#374151" font-family="POP,sans-serif">@QuizBytesDaily</text>`);
   if (slideNum && totalSlides) {
-    parts.push(`<text x="${W - PADX}" y="${H - 54}" font-size="46" fill="#374151" text-anchor="end" font-family="DVB,Arial,sans-serif">${slideNum}/${totalSlides}</text>`);
+    parts.push(`<text x="${W - PADX}" y="${H - 54}" font-size="46" fill="#374151" text-anchor="end" font-family="POP,sans-serif">${slideNum}/${totalSlides}</text>`);
   }
 }
 
@@ -355,7 +340,7 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
 function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
-  const headingFs = 78;
+  const headingFs = 62;
   const accentCol = slideAccentColor(data.heading ?? "");
 
   const parts: string[] = [];
@@ -366,12 +351,12 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const headLines = wrapText(esc(data.heading ?? ""), AVAIL, headingFs);
   const headLH    = Math.round(headingFs * 1.15);
   headLines.forEach((line, i) => {
-    parts.push(`<text x="${PADX}" y="${y + i * headLH}" font-size="${headingFs}" fill="url(#hg)" font-family="DVB,Arial,sans-serif" font-weight="700">${line}</text>`);
+    parts.push(`<text x="${PADX}" y="${y + i * headLH}" font-size="${headingFs}" fill="url(#hg)" font-family="POP,sans-serif" font-weight="700">${line}</text>`);
   });
   y += headLines.length * headLH + 18;
 
   if (data.subtitle) {
-    parts.push(`<text x="${PADX}" y="${y}" font-size="38" fill="#475569" font-family="DVB,Arial,sans-serif">${esc(data.subtitle)}</text>`);
+    parts.push(`<text x="${PADX}" y="${y}" font-size="38" fill="#475569" font-family="POP,sans-serif">${esc(data.subtitle)}</text>`);
     y += 54;
   }
 
@@ -415,7 +400,7 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
 function buildPipelineSvg(data: PipelineData): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
-  const headingFs = 78;
+  const headingFs = 62;
 
   const parts: string[] = [];
   parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee"));
@@ -424,12 +409,12 @@ function buildPipelineSvg(data: PipelineData): string {
   const headLines = wrapText(esc(data.heading ?? ""), AVAIL, headingFs);
   const headLH    = Math.round(headingFs * 1.15);
   headLines.forEach((line, i) => {
-    parts.push(`<text x="${PADX}" y="${y + i * headLH}" font-size="${headingFs}" fill="url(#hg)" font-family="DVB,Arial,sans-serif" font-weight="700">${line}</text>`);
+    parts.push(`<text x="${PADX}" y="${y + i * headLH}" font-size="${headingFs}" fill="url(#hg)" font-family="POP,sans-serif" font-weight="700">${line}</text>`);
   });
   y += headLines.length * headLH + 18;
 
   if (data.subtitle) {
-    parts.push(`<text x="${PADX}" y="${y}" font-size="38" fill="#475569" font-family="DVB,Arial,sans-serif">${esc(data.subtitle)}</text>`);
+    parts.push(`<text x="${PADX}" y="${y}" font-size="38" fill="#475569" font-family="POP,sans-serif">${esc(data.subtitle)}</text>`);
     y += 54;
   }
 
@@ -481,24 +466,24 @@ function buildCtaSvg(data: CtaData): string {
   y += 250;
 
   // Heading
-  parts.push(`<text x="${CX}" y="${y + 96}" font-size="96" fill="url(#hg)" text-anchor="middle" font-family="DVB,Arial,sans-serif" font-weight="700">${esc(data.heading ?? "Enjoyed This Quiz?")}</text>`);
+  parts.push(`<text x="${CX}" y="${y + 96}" font-size="96" fill="url(#hg)" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">${esc(data.heading ?? "Enjoyed This Quiz?")}</text>`);
   y += 130;
 
   // Subtitle
-  parts.push(`<text x="${CX}" y="${y + 44}" font-size="40" fill="#64748b" text-anchor="middle" font-family="DVB,Arial,sans-serif">New quiz every day — subscribe so you never miss one</text>`);
+  parts.push(`<text x="${CX}" y="${y + 44}" font-size="40" fill="#64748b" text-anchor="middle" font-family="POP,sans-serif">New quiz every day — subscribe so you never miss one</text>`);
   y += 80;
 
   // Subscribe button
   parts.push(roundRect(CX - 340, y, 680, 120, 28, "#a855f7"));
-  parts.push(`<text x="${CX}" y="${y + 78}" font-size="48" fill="white" text-anchor="middle" font-family="DVB,Arial,sans-serif" font-weight="700">▶ Subscribe on YouTube</text>`);
+  parts.push(`<text x="${CX}" y="${y + 78}" font-size="48" fill="white" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">▶ Subscribe on YouTube</text>`);
   y += 160;
 
   // Divider + website
   parts.push(`<line x1="${CX - 200}" y1="${y}" x2="${CX + 200}" y2="${y}" stroke="#1e1e2e" stroke-width="2"/>`);
   y += 40;
-  parts.push(`<text x="${CX}" y="${y}" font-size="36" fill="#475569" text-anchor="middle" font-family="DVB,Arial,sans-serif">Browse all quizzes at</text>`);
+  parts.push(`<text x="${CX}" y="${y}" font-size="36" fill="#475569" text-anchor="middle" font-family="POP,sans-serif">Browse all quizzes at</text>`);
   y += 56;
-  parts.push(`<text x="${CX}" y="${y}" font-size="58" fill="#22d3ee" text-anchor="middle" font-family="DVB,Arial,sans-serif" font-weight="700">quizbytes.dev</text>`);
+  parts.push(`<text x="${CX}" y="${y}" font-size="58" fill="#22d3ee" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">quizbytes.dev</text>`);
 
   footer(parts, data.slideNum, data.totalSlides);
   return svgWrapper(parts.join("\n"));

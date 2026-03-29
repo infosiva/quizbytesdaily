@@ -179,3 +179,11 @@ body {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(350%); }
 }
+
+/* ──────────────────────────────────────────
+   Typewriter cursor blink
+────────────────────────────────────────── */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 0; }
+}
