@@ -209,63 +209,83 @@ function progressBar(slideNum: number, totalSlides: number, color: string): stri
   }).join("\n");
 }
 
-// ── Card at exact height ───────────────────────────────────────────────────────
+// ── Card at exact height (adaptive font — shrinks until text fits) ─────────────
 interface CardData { color: string; icon: string; title: string; body: string }
 
 function renderCardAtHeight(card: CardData, x: number, y: number, availW: number, h: number): string {
   const col    = CARD_COLORS[card.color] ?? CARD_COLORS.purple;
-  const padV   = 36;
-  const iconSz = Math.min(90, Math.max(52, Math.floor(h * 0.5)));
+  const padV   = 32;
+  const iconSz = Math.min(76, Math.max(40, Math.floor(h * 0.38)));
   const iconCX = x + padV + iconSz / 2;
   const iconCY = y + h / 2;
 
-  const titleX    = x + padV + iconSz + 28;
-  const titleMaxW = availW - padV - iconSz - 28 - padV;
+  const titleX    = x + padV + iconSz + 22;
+  const titleMaxW = availW - padV - iconSz - 22 - padV;
+  const availH    = h - 32;
 
-  const titleFs = Math.min(50, Math.max(30, Math.floor(h * 0.235)));
-  const bodyFs  = Math.min(38, Math.max(24, Math.floor(h * 0.172)));
-  const titleLH = Math.round(titleFs * 1.28);
-  const bodyLH  = Math.round(bodyFs * 1.28);
+  // Start large; shrink by 2px per iteration until text fits
+  let titleFs = Math.min(44, Math.max(20, Math.floor(h * 0.185)));
+  let bodyFs  = Math.min(32, Math.max(16, Math.floor(h * 0.135)));
+  let titleLines: string[] = [], bodyLines: string[] = [];
+  let titleLH = 0, bodyLH = 0;
+  for (let it = 0; it < 14; it++) {
+    titleLH    = Math.round(titleFs * 1.28);
+    bodyLH     = Math.round(bodyFs  * 1.28);
+    titleLines = wrapText(String(card.title ?? ""), titleMaxW, titleFs);
+    bodyLines  = card.body?.trim() ? wrapText(String(card.body), titleMaxW, bodyFs) : [];
+    const gap    = bodyLines.length > 0 ? 8 : 0;
+    const totalH = titleLines.length * titleLH + gap + bodyLines.length * bodyLH;
+    if (totalH <= availH || (titleFs <= 20 && bodyFs <= 16)) break;
+    titleFs = Math.max(20, titleFs - 2);
+    bodyFs  = Math.max(16, bodyFs  - 2);
+  }
 
-  const titleLines = wrapText(String(card.title ?? ""), titleMaxW, titleFs);
-  const bodyLines  = card.body?.trim() ? wrapText(String(card.body), titleMaxW, bodyFs) : [];
+  const textGap    = bodyLines.length > 0 ? 8 : 0;
   const titleH     = titleLines.length * titleLH;
-  const textGap    = bodyLines.length > 0 ? 10 : 0;
   const totalTextH = titleH + textGap + bodyLines.length * bodyLH;
-
   const textStartY = y + (h - totalTextH) / 2 + titleFs * 0.82;
 
   return [
     roundRect(x, y, availW, h, 20, col.bg),
     roundRect(x, y, availW, h, 20, "none", col.border),
     roundRect(x, y, 8, h, 4, col.text),
-    `<circle cx="${iconCX}" cy="${iconCY}" r="${(iconSz / 2 + 7).toFixed(0)}" fill="${col.text}1e"/>`,
+    `<circle cx="${iconCX}" cy="${iconCY}" r="${(iconSz / 2 + 6).toFixed(0)}" fill="${col.text}1e"/>`,
     iconSvg(card.icon, col.text, iconCX, iconCY, iconSz),
     ...titleLines.map((line, i) => svgPath(line, titleX, textStartY + i * titleLH, titleFs, col.text)),
     ...bodyLines.map((line, i)  => svgPath(line, titleX, textStartY + titleH + textGap + i * bodyLH, bodyFs, "#94a3b8")),
   ].join("\n");
 }
 
-// ── Definition box at exact height ────────────────────────────────────────────
+// ── Definition box at exact height (adaptive font — shrinks until text fits) ───
 function renderDefBoxAtHeight(
   def: { color: string; title: string; body: string },
   x: number, y: number, w: number, h: number
 ): string {
   const defCol = CARD_COLORS[def.color] ?? CARD_COLORS.cyan;
   const padX   = 48;
+  const innerW = w - padX * 2 - 16; // 16 = left stripe
+  const availH = h - 44;
 
-  const titleFs = Math.min(52, Math.max(34, Math.floor(h * 0.22)));
-  const bodyFs  = Math.min(40, Math.max(26, Math.floor(h * 0.165)));
-  const titleLH = Math.round(titleFs * 1.28);
-  const bodyLH  = Math.round(bodyFs * 1.28);
+  // Start large; shrink until text fits inside the box
+  let titleFs = Math.min(46, Math.max(22, Math.floor(h * 0.19)));
+  let bodyFs  = Math.min(34, Math.max(18, Math.floor(h * 0.135)));
+  let titleLines: string[] = [], bodyLines: string[] = [];
+  let titleLH = 0, bodyLH = 0;
+  for (let it = 0; it < 14; it++) {
+    titleLH    = Math.round(titleFs * 1.28);
+    bodyLH     = Math.round(bodyFs  * 1.28);
+    titleLines = wrapText(String(def.title ?? ""), innerW, titleFs);
+    bodyLines  = def.body?.trim() ? wrapText(String(def.body), innerW, bodyFs) : [];
+    const gap    = bodyLines.length > 0 ? 12 : 0;
+    const totalH = titleLines.length * titleLH + gap + bodyLines.length * bodyLH;
+    if (totalH <= availH || (titleFs <= 22 && bodyFs <= 18)) break;
+    titleFs = Math.max(22, titleFs - 2);
+    bodyFs  = Math.max(18, bodyFs  - 2);
+  }
 
-  const innerW     = w - padX * 2;
-  const titleLines = wrapText(String(def.title ?? ""), innerW, titleFs);
-  const bodyLines  = wrapText(String(def.body  ?? ""), innerW, bodyFs);
+  const textGap    = bodyLines.length > 0 ? 12 : 0;
   const titleH     = titleLines.length * titleLH;
-  const textGap    = bodyLines.length > 0 ? 14 : 0;
   const totalTextH = titleH + textGap + bodyLines.length * bodyLH;
-
   const textStartY = y + (h - totalTextH) / 2 + titleFs * 0.82;
   const cx = x + w / 2;
 
@@ -350,31 +370,33 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
 }
 
 // ── definition-steps slide ─────────────────────────────────────────────────────
-function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
+// revealCount = how many content items to show (Infinity = all). Used for
+// progressive reveal in video (each rendered frame shows one more item).
+function buildDefinitionStepsSvg(data: DefinitionStepsData, revealCount = Infinity): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
-  const headingFs = 62;
+  const headingFs = 58;
   const accentCol = slideAccentColor(data.heading ?? "");
 
   const parts: string[] = [];
   parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, accentCol));
 
-  let y = 108;
+  let y = 100;
   const headLines = wrapText(data.heading ?? "", AVAIL, headingFs);
   const headLH    = Math.round(headingFs * 1.15);
   headLines.forEach((line, i) => {
     parts.push(svgPath(line, PADX, y + i * headLH, headingFs, "url(#hg)"));
   });
-  y += headLines.length * headLH + 18;
+  y += headLines.length * headLH + 14;
 
   if (data.subtitle) {
-    parts.push(svgPath(data.subtitle, PADX, y, 38, "#475569"));
-    y += 54;
+    parts.push(svgPath(data.subtitle, PADX, y, 36, "#475569"));
+    y += 48;
   }
 
   parts.push(`<line x1="${PADX}" y1="${y + 8}" x2="${W - PADX}" y2="${y + 8}" stroke="#1e1e2e" stroke-width="1.5"/>`);
 
-  const CONTENT_START = y + 34;
+  const CONTENT_START = y + 28;
   const FOOTER_DIV    = H - 108;
   const CONTENT_H     = FOOTER_DIV - 20 - CONTENT_START;
 
@@ -383,19 +405,24 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const total    = (hasDef ? 1 : 0) + numCards;
 
   if (total > 0 && CONTENT_H > 0) {
-    const GAP        = total <= 2 ? 28 : total <= 3 ? 22 : total <= 4 ? 18 : 14;
+    // Larger MAX_ITEM_H fills the slide properly (adaptive fonts handle overflow)
+    const GAP        = total <= 2 ? 24 : total <= 3 ? 18 : total <= 4 ? 14 : 12;
     const totalGap   = Math.max(0, total - 1) * GAP;
-    const MAX_ITEM_H = total <= 2 ? 320 : total <= 3 ? 260 : total <= 4 ? 220 : 180;
+    const MAX_ITEM_H = total <= 1 ? 900 : total <= 2 ? 620 : total <= 3 ? 480 : total <= 4 ? 370 : 290;
     const itemH      = Math.min(MAX_ITEM_H, Math.floor((CONTENT_H - totalGap) / total));
-    let cy           = CONTENT_START;
+
+    let shown = 0;
+    let cy    = CONTENT_START;
 
     if (hasDef && data.definition) {
-      parts.push(renderDefBoxAtHeight(data.definition, PADX, cy, AVAIL, itemH));
+      if (shown < revealCount) parts.push(renderDefBoxAtHeight(data.definition, PADX, cy, AVAIL, itemH));
       cy += itemH + GAP;
+      shown++;
     }
     for (const card of data.cards ?? []) {
-      parts.push(renderCardAtHeight(card, PADX, cy, AVAIL, itemH));
+      if (shown < revealCount) parts.push(renderCardAtHeight(card, PADX, cy, AVAIL, itemH));
       cy += itemH + GAP;
+      shown++;
     }
   }
 
@@ -404,39 +431,39 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
 }
 
 // ── pipeline slide ─────────────────────────────────────────────────────────────
-function buildPipelineSvg(data: PipelineData): string {
+function buildPipelineSvg(data: PipelineData, revealCount = Infinity): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
-  const headingFs = 62;
+  const headingFs = 58;
 
   const parts: string[] = [];
   parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee"));
 
-  let y = 108;
+  let y = 100;
   const headLines = wrapText(data.heading ?? "", AVAIL, headingFs);
   const headLH    = Math.round(headingFs * 1.15);
   headLines.forEach((line, i) => {
     parts.push(svgPath(line, PADX, y + i * headLH, headingFs, "url(#hg)"));
   });
-  y += headLines.length * headLH + 18;
+  y += headLines.length * headLH + 14;
 
   if (data.subtitle) {
-    parts.push(svgPath(data.subtitle, PADX, y, 38, "#475569"));
-    y += 54;
+    parts.push(svgPath(data.subtitle, PADX, y, 36, "#475569"));
+    y += 48;
   }
 
   parts.push(`<line x1="${PADX}" y1="${y + 8}" x2="${W - PADX}" y2="${y + 8}" stroke="#1e1e2e" stroke-width="1.5"/>`);
 
-  const CONTENT_START = y + 34;
+  const CONTENT_START = y + 28;
   const FOOTER_DIV    = H - 108;
   const CONTENT_H     = FOOTER_DIV - 20 - CONTENT_START;
 
   const cards = data.cards ?? [];
   if (cards.length > 0) {
-    const ARROW_H    = 40;
+    const ARROW_H    = 36;
     const numArrows  = cards.length - 1;
     const GAP        = 8;
-    const MAX_CARD_H = cards.length <= 3 ? 280 : 220;
+    const MAX_CARD_H = cards.length <= 2 ? 600 : cards.length <= 3 ? 440 : cards.length <= 4 ? 330 : 260;
     const itemH      = Math.min(MAX_CARD_H, Math.floor(
       (CONTENT_H - numArrows * ARROW_H - numArrows * GAP) / cards.length
     ));
@@ -444,14 +471,16 @@ function buildPipelineSvg(data: PipelineData): string {
 
     for (let i = 0; i < cards.length; i++) {
       if (i > 0) {
-        const prevCol = CARD_COLORS[cards[i - 1].color] ?? CARD_COLORS.cyan;
-        const ax = W / 2;
-        const ay = cy + ARROW_H * 0.35;
-        // Downward triangle (no font needed)
-        parts.push(`<polygon points="${(ax-12).toFixed(1)},${ay.toFixed(1)} ${(ax+12).toFixed(1)},${ay.toFixed(1)} ${ax.toFixed(1)},${(ay+20).toFixed(1)}" fill="${prevCol.text}" opacity="0.7"/>`);
+        // Arrow visible when card[i] is revealed
+        if (i < revealCount) {
+          const prevCol = CARD_COLORS[cards[i - 1].color] ?? CARD_COLORS.cyan;
+          const ax = W / 2;
+          const ay = cy + ARROW_H * 0.35;
+          parts.push(`<polygon points="${(ax-12).toFixed(1)},${ay.toFixed(1)} ${(ax+12).toFixed(1)},${ay.toFixed(1)} ${ax.toFixed(1)},${(ay+20).toFixed(1)}" fill="${prevCol.text}" opacity="0.7"/>`);
+        }
         cy += ARROW_H + GAP;
       }
-      parts.push(renderCardAtHeight(cards[i], PADX, cy, AVAIL, itemH));
+      if (i < revealCount) parts.push(renderCardAtHeight(cards[i], PADX, cy, AVAIL, itemH));
       cy += itemH;
     }
   }
@@ -535,6 +564,27 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
   }
 }
 
+/**
+ * Return a sequence of SVGs for a slide, each revealing one more content item.
+ * Frame 0 = heading only. Frame N = all items revealed.
+ * Used by video-renderer to produce a "typing / pop-in" reveal effect.
+ */
+export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
+  if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
+
+  if (template === "pipeline") {
+    const d = data as unknown as PipelineData;
+    const total = d.cards?.length ?? 0;
+    return Array.from({ length: total + 1 }, (_, i) => buildPipelineSvg(d, i));
+  }
+
+  // definition-steps (and default fallback)
+  const d      = data as unknown as DefinitionStepsData;
+  const hasDef = !!d.definition;
+  const total  = (hasDef ? 1 : 0) + (d.cards?.length ?? 0);
+  return Array.from({ length: total + 1 }, (_, i) => buildDefinitionStepsSvg(d, i));
+}
+
 /** Convert a slide template + data to a PNG Buffer using Sharp (lazy-loaded). */
 export async function slideToPng(
   template: string,
@@ -543,4 +593,17 @@ export async function slideToPng(
   const svg   = slideToSvg(template, data);
   const sharp = await getSharp();
   return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+/**
+ * Render all reveal frames for a slide to PNG buffers.
+ * The video renderer uses these to create a progressive pop-in effect.
+ */
+export async function slideToPngFrames(
+  template: string,
+  data: Record<string, unknown>
+): Promise<Buffer[]> {
+  const frames = slideToRevealFrames(template, data);
+  const sharp  = await getSharp();
+  return Promise.all(frames.map(svg => sharp(Buffer.from(svg)).png().toBuffer()));
 }

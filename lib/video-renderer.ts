@@ -3,12 +3,12 @@
  * Renders a quiz series as an MP4 Short (1080×1920).
  *
  * Pipeline:
- *   DB slides  →  slide-svg.ts (SVG → PNG per slide via Sharp)
+ *   DB slides  →  slide-svg.ts (SVG → reveal frames → PNG per frame)
  *             →  FFmpeg (PNG inputs → concat → ambient music → H.264 MP4)
  *
- * Using PNG frames instead of FFmpeg drawtext gives us gradient headings,
- * real SVG icons, coloured card borders, and a progress bar — matching the
- * browser preview quality.
+ * Progressive reveal: each slide generates N frames (heading → +item1 → +item2…)
+ * creating a "pop-in" engagement effect in the video.
+ * CTA slides are skipped — the video ends on the last quiz slide.
  */
 
 import { spawnSync } from "child_process";
@@ -16,7 +16,7 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { getSlides, getSeriesById } from "./db";
-import { slideToPng } from "./slide-svg";
+import { slideToPngFrames } from "./slide-svg";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -27,7 +27,6 @@ const FPS = 30;
 // Slide durations (seconds)
 const DEF_STEPS_DUR = 9;
 const PIPELINE_DUR  = 9;
-const CTA_DUR       = 7;
 
 // Output directory — always /tmp so it works on Vercel's read-only filesystem
 const RENDERS_DIR = path.join(os.tmpdir(), "qbd-renders");
@@ -49,7 +48,6 @@ function getFFmpegPath(): string {
 // ── Slide duration helper ─────────────────────────────────────────────────────
 
 function dur(template: string): number {
-  if (template === "cta")      return CTA_DUR;
   if (template === "pipeline") return PIPELINE_DUR;
   return DEF_STEPS_DUR;
 }
@@ -72,46 +70,58 @@ export async function renderSeries(
   const tmpDir  = path.join(os.tmpdir(), `qbd-render-${seriesId}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  const totalSlides = slideRows.length;
-  const totalDur    = slideRows.reduce((s, r) => s + dur(r.template), 0);
+  // Skip CTA slides — video ends on the last content slide
+  const renderRows  = slideRows.filter(r => r.template !== "cta");
+  const totalSlides = renderRows.length;
 
-  onLog?.(`[render] "${series.title}" — ${totalSlides} slides, ~${totalDur}s`);
+  if (totalSlides === 0) throw new Error("No renderable slides (all were CTA)");
+  onLog?.(`[render] "${series.title}" — ${totalSlides} slides (CTA skipped)`);
 
   try {
-    // ── Step 1: render each slide to a PNG file ─────────────────────────────
+    // ── Step 1: render each slide as progressive reveal frames ─────────────
+    // Each slide becomes N PNGs: frame 0 = heading only, frame N = all items.
+    // This creates a pop-in engagement effect without requiring video editing.
     onLog?.("[render] Generating slide PNGs…");
-    const pngPaths: string[] = [];
 
-    for (let i = 0; i < slideRows.length; i++) {
-      const row  = slideRows[i];
+    interface FrameEntry { path: string; dur: number }
+    const frames: FrameEntry[] = [];
+
+    for (let i = 0; i < renderRows.length; i++) {
+      const row  = renderRows[i];
       const data = JSON.parse(row.data) as Record<string, unknown>;
-      // Inject slide position for the progress bar and counter
       data.slideNum    = i + 1;
       data.totalSlides = totalSlides;
 
-      const pngBuf  = await slideToPng(row.template, data);
-      const pngPath = path.join(tmpDir, `slide_${i}.png`);
-      fs.writeFileSync(pngPath, pngBuf);
-      pngPaths.push(pngPath);
+      const slideDur = dur(row.template);
+      const bufs     = await slideToPngFrames(row.template, data);
+      const frameDur = slideDur / bufs.length;
+
+      for (let f = 0; f < bufs.length; f++) {
+        const fPath = path.join(tmpDir, `slide_${i}_f${f}.png`);
+        fs.writeFileSync(fPath, bufs[f]);
+        frames.push({ path: fPath, dur: frameDur });
+      }
     }
 
+    if (frames.length === 0) throw new Error("No frames generated");
+    const totalDur = frames.reduce((s, f) => s + f.dur, 0);
+    onLog?.(`[render] ${frames.length} frames, ~${totalDur.toFixed(1)}s total`);
+
     // ── Step 2: build FFmpeg args ───────────────────────────────────────────
-    // Use one static-image input per slide (looped for the slide's duration),
-    // concat them, then mix with generated ambient music.
     const args: string[] = ["-y"];
 
-    // PNG inputs (one per slide) — each looped for its duration
-    slideRows.forEach((row, i) => {
+    // One PNG input per reveal frame, each held for frameDur seconds
+    frames.forEach((f) => {
       args.push(
-        "-loop", "1",
-        "-t",    String(dur(row.template)),
+        "-loop",      "1",
+        "-t",         f.dur.toFixed(2),
         "-framerate", String(FPS),
-        "-i",    pngPaths[i]
+        "-i",         f.path
       );
     });
 
-    // Ambient music input (C minor chord with slow tremolo)
-    const musicIdx = slideRows.length;
+    // Ambient music (C minor chord with slow tremolo)
+    const musicIdx = frames.length;
     args.push("-f", "lavfi", "-i",
       `aevalsrc=0.04*sin(2*PI*t*130.81)*(0.85+0.15*sin(2*PI*t*0.3))` +
       `+0.035*sin(2*PI*t*155.56)*(0.85+0.15*sin(2*PI*t*0.4))` +
@@ -119,17 +129,15 @@ export async function renderSeries(
       `:s=44100:c=mono:d=${totalDur}`
     );
 
-    // filter_complex: scale each PNG to exact video size, concat, fade music
+    // filter_complex: scale + concat all frames, add progress bar, fade music
     const labels: string[] = [];
     let filterComplex = "";
 
-    slideRows.forEach((_row, i) => {
-      // Scale PNG to exact video dimensions (handles any rounding in sharp output)
+    frames.forEach((_f, i) => {
       filterComplex += `[${i}:v]scale=${W}:${H}:flags=lanczos,format=yuv420p[s${i}];`;
       labels.push(`[s${i}]`);
     });
 
-    // Concat all slides, then draw a horizontal progress bar at the bottom
     filterComplex += `${labels.join("")}concat=n=${labels.length}:v=1:a=0[vconcat];`;
     filterComplex += `[vconcat]drawbox=x=0:y=${H - 10}:w='min(iw\\,(t/${totalDur})*iw)':h=10:color=0xa855f7@0.9:t=fill[vout]`;
 
@@ -146,7 +154,7 @@ export async function renderSeries(
       "-map",    "[aout]",
       "-c:v",    "libx264",
       "-preset", "ultrafast",   // fastest encode — critical for Vercel 120s limit
-      "-crf",    "23",
+      "-crf",    "26",          // slightly higher CRF = smaller file, still good quality
       "-c:a",    "aac",
       "-b:a",    "96k",
       "-pix_fmt", "yuv420p",
