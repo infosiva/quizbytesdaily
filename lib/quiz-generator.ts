@@ -147,24 +147,22 @@ function buildQuizRevealPrompt(topic: string, category: string, difficulty: stri
 Difficulty: ${difficulty} (${diffNote})
 
 DECIDE HOW MANY SLIDES to generate based on topic depth:
-- 8 slides: simple/focused topics with one clear concept
-- 9–10 slides: moderate depth with multiple aspects worth covering
-- 11–12 slides: complex/multi-faceted topics that need deeper explanation
+- 6 slides: simple/focused topics with one clear concept
+- 7–8 slides: moderate depth with multiple aspects worth covering
+- 9–10 slides: complex/multi-faceted topics that need deeper explanation
 
-Set "totalSlides" to the actual count you generate (between 8 and 12).
+Set "totalSlides" to the actual count you generate (between 6 and 10).
 IMPORTANT: slideNum must go 1, 2, 3 … totalSlides without gaps or repeats.
 
 REQUIRED SLIDE ORDER (always include these):
 1. Introduction — definition + 3 key aspects
 2. How It Works — step-by-step pipeline
 3. Why It Matters — benefits + real use cases
-[INSERT 2–5 optional deep-dive slides here for complex topics]
-N-3. Resources & Learn More — official docs and links
-N-2. Quick Quiz! — one meaningful knowledge-testing question
-N-1. Answer — correct answer + 3 reinforcing takeaways
-N. CTA
+[INSERT 1–5 optional deep-dive slides here for complex topics]
+N-1. Quick Quiz! — one meaningful knowledge-testing question
+N. Answer — correct answer + 3 reinforcing takeaways
 
-OPTIONAL SLIDES to insert between slide 3 and Resources (include based on topic depth):
+OPTIONAL SLIDES to insert between slide 3 and Quick Quiz (include based on topic depth):
 - "Key Concepts" — core terminology and distinctions (definition-steps)
 - "Advanced Details" — inner workings, technical depth (definition-steps)
 - "Real-World Scenario" — concrete production example (definition-steps or pipeline)
@@ -218,7 +216,7 @@ Copy and expand this structure for "${topic}":
       },
       "cards": [
         { "color": "cyan",   "icon": "lightning", "title": "Use case 1 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" },
-        { "color": "purple", "icon": "book",      "title": "Use case 2 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" },
+        { "color": "purple", "icon": "layers",    "title": "Use case 2 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" },
         { "color": "green",  "icon": "check",     "title": "Use case 3 (max 22 chars)", "body": "Real scenario with specifics (max 60 chars)" }
       ]
     },
@@ -272,25 +270,9 @@ Copy and expand this structure for "${topic}":
     },
     {
       "template": "definition-steps",
-      "heading": "Resources & Learn More 📚",
-      "slideNum": 7,
-      "totalSlides": 10,
-      "definition": {
-        "color": "cyan",
-        "title": "Official docs and resources",
-        "body": "Where to go to master ${topic} — start with the official docs (max 160 chars)"
-      },
-      "cards": [
-        { "color": "cyan",   "icon": "book", "title": "Official Docs",    "body": "e.g. docs.python.org or official site URL (max 60 chars)" },
-        { "color": "purple", "icon": "book", "title": "GitHub / Source",  "body": "e.g. github.com/org/repo or main repo (max 60 chars)" },
-        { "color": "green",  "icon": "book", "title": "Best Tutorial",    "body": "e.g. realpython.com, roadmap.sh, or MDN (max 60 chars)" }
-      ]
-    },
-    {
-      "template": "definition-steps",
       "heading": "Quick Quiz! 🎯",
-      "slideNum": 8,
-      "totalSlides": 10,
+      "slideNum": 7,
+      "totalSlides": 8,
       "definition": {
         "color": "amber",
         "title": "Write a real knowledge-testing question here?",
@@ -306,8 +288,8 @@ Copy and expand this structure for "${topic}":
     {
       "template": "definition-steps",
       "heading": "Answer ✅",
-      "slideNum": 9,
-      "totalSlides": 10,
+      "slideNum": 8,
+      "totalSlides": 8,
       "definition": {
         "color": "green",
         "title": "X)  Correct answer text here",
@@ -318,29 +300,20 @@ Copy and expand this structure for "${topic}":
         { "color": "cyan",   "icon": "check", "title": "Key takeaway 2 (max 24 chars)", "body": "Reinforcing fact with detail (max 60 chars)" },
         { "color": "purple", "icon": "check", "title": "Key takeaway 3 (max 24 chars)", "body": "Reinforcing fact with detail (max 60 chars)" }
       ]
-    },
-    {
-      "template": "cta",
-      "heading": "Enjoyed This Quiz?",
-      "slideNum": 10,
-      "totalSlides": 10,
-      "cards": []
     }
   ]
 }
 
 STRICT RULES:
-- Decide totalSlides (8–12) based on topic complexity. Set it consistently on every slide.
+- Decide totalSlides (6–10) based on topic complexity. Set it consistently on every slide.
 - slideNum MUST be sequential: 1, 2, 3, … totalSlides — no gaps, no repeats
 - For simpler topics: omit slides 4 and/or 6 (Key Concepts, Advanced Details). Adjust all slideNum/totalSlides accordingly.
 - For complex topics: keep all optional slides or add extra ones (Comparison, Real-World Scenario)
-- The Resources slide MUST always appear two slides before the CTA (at slideNum = totalSlides - 3)
 - Quiz Question: definition.title IS the question (end with ?), definition.body = "Pick the best answer ↓"
   — cards MUST use icons opt_a, opt_b, opt_c, opt_d — body MUST be a single space " "
   — exactly one option should be clearly correct
 - Answer slide: definition.title MUST start with the correct letter: "A)  " or "B)  " or "C)  " or "D)  "
   — cards: 3 reinforcing takeaways with "check" icon in green/cyan/purple
-- CTA slide: only heading and slideNum/totalSlides, cards: []
 - colors MUST be one of: "cyan", "purple", "green", "pink", "amber"
 - icons MUST be one of: "search", "gear", "database", "book", "brain", "robot", "plus", "lock", "lightning", "check", "warning", "clock", "code", "layers", "opt_a", "opt_b", "opt_c", "opt_d"
 - Return ONLY raw JSON`;
@@ -352,10 +325,10 @@ function buildExplainerPrompt(topic: string, category: string, difficulty: strin
   return `Create an educational ${category} explainer series about: "${topic}"
 Difficulty: ${difficulty} (${diffNote})
 
-DECIDE HOW MANY SLIDES (7–10) based on topic depth:
-- 7 slides: simple/focused topics
-- 8–9 slides: moderate depth with multiple aspects
-- 10 slides: complex topics needing thorough coverage
+DECIDE HOW MANY SLIDES (5–8) based on topic depth:
+- 5 slides: simple/focused topics
+- 6–7 slides: moderate depth with multiple aspects
+- 8 slides: complex topics needing thorough coverage
 
 Set "totalSlides" to the actual count you generate.
 IMPORTANT: slideNum must be sequential 1 … totalSlides with no gaps.
@@ -364,10 +337,9 @@ REQUIRED SLIDE ORDER:
 1. What is it? [definition-steps]
 2. How It Works [pipeline]
 3. Why It Matters [definition-steps]
-[2–4 optional deep-dive slides for complex topics]
-N-2. Common Pitfalls [definition-steps]
-N-1. Resources & Learn More [definition-steps, book icons]
-N. CTA
+[1–3 optional deep-dive slides for complex topics]
+N-1. Common Pitfalls [definition-steps]
+N. Advanced Patterns or Real-World Example [definition-steps]
 
 OPTIONAL SLIDES between slide 3 and Common Pitfalls:
 - Key Concepts / Architecture — technical depth (definition-steps)
@@ -410,7 +382,7 @@ Return ONLY raw JSON — no markdown fences, no extra text.
       "definition": { "color": "purple", "title": "Core benefit (max 7 words)", "body": "Why engineers rely on this in production — specific impact (max 200 chars)" },
       "cards": [
         { "color": "cyan",   "icon": "lightning", "title": "Use case 1 (max 22 chars)", "body": "Real production scenario (max 60 chars)" },
-        { "color": "purple", "icon": "book",      "title": "Use case 2 (max 22 chars)", "body": "Real production scenario (max 60 chars)" },
+        { "color": "purple", "icon": "layers",    "title": "Use case 2 (max 22 chars)", "body": "Real production scenario (max 60 chars)" },
         { "color": "green",  "icon": "check",     "title": "Use case 3 (max 22 chars)", "body": "Real production scenario (max 60 chars)" }
       ]
     },
@@ -450,7 +422,7 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     {
       "template": "definition-steps",
       "heading": "Common Pitfalls",
-      "slideNum": 7, "totalSlides": 9,
+      "slideNum": 7, "totalSlides": 8,
       "definition": { "color": "pink", "title": "The #1 mistake (max 7 words)", "body": "What trips developers up most — and how to catch it early (max 200 chars)" },
       "cards": [
         { "color": "pink",   "icon": "warning", "title": "Mistake 1 (max 22 chars)",       "body": "What to avoid and why (max 60 chars)" },
@@ -460,23 +432,21 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     },
     {
       "template": "definition-steps",
-      "heading": "Resources & Learn More 📚",
-      "slideNum": 8, "totalSlides": 9,
-      "definition": { "color": "cyan", "title": "Official docs and top resources", "body": "Where to go to master ${topic} — these are the best starting points (max 160 chars)" },
+      "heading": "Advanced Patterns",
+      "slideNum": 8, "totalSlides": 8,
+      "definition": { "color": "cyan", "title": "How experts level up their usage (max 7 words)", "body": "The patterns and techniques that separate good code from great code (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "book", "title": "Official Docs",   "body": "e.g. docs.python.org or official site (max 60 chars)" },
-        { "color": "purple", "icon": "book", "title": "GitHub / Source", "body": "e.g. github.com/org/repo (max 60 chars)" },
-        { "color": "green",  "icon": "book", "title": "Best Tutorial",   "body": "e.g. realpython.com or roadmap.sh (max 60 chars)" }
+        { "color": "cyan",   "icon": "brain",     "title": "Pattern 1 (max 22 chars)", "body": "When and how to apply it (max 60 chars)" },
+        { "color": "purple", "icon": "lightning", "title": "Pattern 2 (max 22 chars)", "body": "When and how to apply it (max 60 chars)" },
+        { "color": "green",  "icon": "code",      "title": "Pattern 3 (max 22 chars)", "body": "When and how to apply it (max 60 chars)" }
       ]
-    },
-    { "template": "cta", "heading": "Enjoyed This?", "slideNum": 9, "totalSlides": 9, "cards": [] }
+    }
   ]
 }
 STRICT RULES:
-- Decide totalSlides (7–10) based on complexity. Set it consistently on every slide.
+- Decide totalSlides (5–8) based on complexity. Set it consistently on every slide.
 - slideNum MUST be sequential 1 … totalSlides — no gaps.
 - For simpler topics: omit optional slides (4, 5, 6). Adjust all slideNum/totalSlides.
-- Resources slide MUST always appear as slide N-1 (one before CTA).
 - colors: "cyan","purple","green","pink","amber" only
 - icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
 - Return ONLY raw JSON`;
@@ -488,10 +458,10 @@ function buildCodeExamplePrompt(topic: string, category: string, difficulty: str
   return `Create a code-focused ${category} series about: "${topic}"
 Difficulty: ${difficulty} (${diffNote})
 
-DECIDE HOW MANY SLIDES (7–10) based on topic depth:
-- 7 slides: focused single pattern or function
-- 8–9 slides: moderate depth with multiple patterns
-- 10 slides: complex API or system with many aspects
+DECIDE HOW MANY SLIDES (5–8) based on topic depth:
+- 5 slides: focused single pattern or function
+- 6–7 slides: moderate depth with multiple patterns
+- 8 slides: complex API or system with many aspects
 
 Set "totalSlides" to the actual count you generate.
 IMPORTANT: slideNum must be sequential 1 … totalSlides with no gaps.
@@ -501,10 +471,8 @@ REQUIRED SLIDE ORDER:
 2. The Solution [definition-steps]
 3. Code Walkthrough [pipeline]
 [1–3 optional deep-dive slides for complex topics]
-N-3. Real Project Usage [definition-steps]
-N-2. Common Mistakes [definition-steps]
-N-1. Resources & Learn More [definition-steps, book icons]
-N. CTA
+N-1. Real Project Usage [definition-steps]
+N. Common Mistakes [definition-steps]
 
 OPTIONAL SLIDES between slide 3 and Real Project Usage:
 - Advanced Pattern — a more powerful usage variant (definition-steps or pipeline)
@@ -586,7 +554,7 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     {
       "template": "definition-steps",
       "heading": "Common Mistakes",
-      "slideNum": 7, "totalSlides": 9,
+      "slideNum": 7, "totalSlides": 8,
       "definition": { "color": "pink", "title": "The bug most developers write (max 7 words)", "body": "The mistake causing silent bugs or bad performance — with the correct fix (max 200 chars)" },
       "cards": [
         { "color": "pink",   "icon": "warning",   "title": "Wrong way (max 22 chars)",   "body": "What not to write — why it fails (max 60 chars)" },
@@ -596,23 +564,21 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     },
     {
       "template": "definition-steps",
-      "heading": "Resources & Learn More 📚",
-      "slideNum": 8, "totalSlides": 9,
-      "definition": { "color": "cyan", "title": "Official docs and top resources", "body": "Where to go to master ${topic} and see real-world examples (max 160 chars)" },
+      "heading": "Real Project Usage",
+      "slideNum": 8, "totalSlides": 8,
+      "definition": { "color": "green", "title": "Where you'd use this in production (max 7 words)", "body": "A realistic scenario from a real project — be specific about the context (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "book", "title": "Official Docs",   "body": "e.g. docs.python.org/3/library/topic (max 60 chars)" },
-        { "color": "purple", "icon": "book", "title": "GitHub / Source", "body": "e.g. github.com/org/repo (max 60 chars)" },
-        { "color": "green",  "icon": "book", "title": "Tutorial / Guide","body": "e.g. realpython.com or MDN Web Docs (max 60 chars)" }
+        { "color": "cyan",   "icon": "layers", "title": "Project type 1 (max 22 chars)", "body": "How it's used there (max 60 chars)" },
+        { "color": "purple", "icon": "code",   "title": "Project type 2 (max 22 chars)", "body": "How it's used there (max 60 chars)" },
+        { "color": "green",  "icon": "check",  "title": "Best practice (max 22 chars)",  "body": "The pattern to follow (max 60 chars)" }
       ]
-    },
-    { "template": "cta", "heading": "Code Every Day", "slideNum": 9, "totalSlides": 9, "cards": [] }
+    }
   ]
 }
 STRICT RULES:
-- Decide totalSlides (7–10) based on complexity. Set it consistently on every slide.
+- Decide totalSlides (5–8) based on complexity. Set it consistently on every slide.
 - slideNum MUST be sequential 1 … totalSlides — no gaps.
 - For simpler topics: omit optional slides 4 and/or 5. Adjust all slideNum/totalSlides.
-- Resources slide MUST always appear as slide N-1 (one before CTA).
 - colors: "cyan","purple","green","pink","amber" only
 - icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
 - Return ONLY raw JSON`;
@@ -629,12 +595,11 @@ DECIDE HOW MANY TIP SLIDES (4–7 tips) based on topic richness:
 - 5–6 tips: moderate depth
 - 7 tips: rich topic with many distinct actionable tips
 
-Total slides = tip count + 2 (Resources slide + CTA slide at the end).
+Total slides = tip count (no Resources or CTA at the end).
 Set "totalSlides" to the actual count you generate.
 IMPORTANT: slideNum must be sequential 1 … totalSlides with no gaps.
 
 Each tip slide: one concrete, actionable insight with a clear "Do this / Because / Pro move" structure.
-Last 2 slides are always: Resources & Learn More, then CTA.
 
 Return ONLY raw JSON — no markdown fences, no extra text.
 
@@ -698,23 +663,32 @@ Return ONLY raw JSON — no markdown fences, no extra text.
     },
     {
       "template": "definition-steps",
-      "heading": "Resources & Learn More 📚",
+      "heading": "Tip #6: [one-line punchy tip title]",
       "slideNum": 6, "totalSlides": 7,
-      "definition": { "color": "cyan", "title": "Best places to go deeper", "body": "Master ${topic} with these official and community resources (max 160 chars)" },
+      "definition": { "color": "cyan", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
       "cards": [
-        { "color": "cyan",   "icon": "book", "title": "Official Docs",   "body": "e.g. docs.python.org or official site (max 60 chars)" },
-        { "color": "purple", "icon": "book", "title": "GitHub / Source", "body": "e.g. github.com/org/repo (max 60 chars)" },
-        { "color": "green",  "icon": "book", "title": "Best Tutorial",   "body": "e.g. realpython.com or roadmap.sh (max 60 chars)" }
+        { "color": "cyan",   "icon": "check",     "title": "Do this (max 22 chars)",  "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "green",  "icon": "check",     "title": "Because (max 22 chars)",   "body": "The real reason it works (max 60 chars)" },
+        { "color": "purple", "icon": "lightning", "title": "Pro move (max 22 chars)",  "body": "Advanced application or variation (max 60 chars)" }
       ]
     },
-    { "template": "cta", "heading": "More Tips Every Day!", "slideNum": 7, "totalSlides": 7, "cards": [] }
+    {
+      "template": "definition-steps",
+      "heading": "Tip #7: [one-line punchy tip title]",
+      "slideNum": 7, "totalSlides": 7,
+      "definition": { "color": "amber", "title": "The key insight in 6–8 words", "body": "Why this tip matters and the full context to apply it correctly (max 200 chars)" },
+      "cards": [
+        { "color": "amber",  "icon": "check",     "title": "Do this (max 22 chars)",  "body": "Specific, concrete action to take (max 60 chars)" },
+        { "color": "cyan",   "icon": "check",     "title": "Because (max 22 chars)",   "body": "The real reason it works (max 60 chars)" },
+        { "color": "purple", "icon": "lightning", "title": "Pro move (max 22 chars)",  "body": "Advanced application or variation (max 60 chars)" }
+      ]
+    }
   ]
 }
 STRICT RULES:
 - heading for each tip slide MUST start with "Tip #N: " followed by a concrete one-line title
-- Decide totalSlides (6–9) based on topic richness. Last 2 slides are always Resources + CTA.
+- Decide totalSlides (4–7) based on topic richness. All slides are tip slides only.
 - slideNum MUST be sequential 1 … totalSlides — no gaps.
-- Resources slide MUST always appear as slide N-1 (one before CTA).
 - colors: "cyan","purple","green","pink","amber" only
 - icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
 - Return ONLY raw JSON`;

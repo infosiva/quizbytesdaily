@@ -114,6 +114,12 @@ function wrapText(text: string, maxW: number, fontSize: number): string[] {
   return lines;
 }
 
+// ── Word counting helper ───────────────────────────────────────────────────────
+function countWords(text: string): number {
+  if (!text?.trim()) return 0;
+  return text.trim().split(/\s+/).length;
+}
+
 // ── SVG icons (24×24 viewBox, centered at cx,cy, scaled to `size`) ────────────
 function iconSvg(name: string, color: string, cx: number, cy: number, size: number): string {
   const s = size / 24;
@@ -212,7 +218,8 @@ function progressBar(slideNum: number, totalSlides: number, color: string): stri
 // ── Card at exact height (adaptive font — shrinks until text fits) ─────────────
 interface CardData { color: string; icon: string; title: string; body: string }
 
-function renderCardAtHeight(card: CardData, x: number, y: number, availW: number, h: number): string {
+// revealedWords: undefined = show all; 0 = box only (no text); N = first N words
+function renderCardAtHeight(card: CardData, x: number, y: number, availW: number, h: number, revealedWords?: number): string {
   const col    = CARD_COLORS[card.color] ?? CARD_COLORS.purple;
   const padV   = 32;
   const iconSz = Math.min(76, Math.max(40, Math.floor(h * 0.38)));
@@ -223,27 +230,52 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
   const titleMaxW = availW - padV - iconSz - 22 - padV;
   const availH    = h - 32;
 
-  // Start large; shrink by 2px per iteration until text fits
+  const fullTitle = String(card.title ?? "");
+  const fullBody  = card.body?.trim() ? String(card.body) : "";
+
+  // Font sizing uses FULL text for layout stability across all reveal frames
   let titleFs = Math.min(44, Math.max(20, Math.floor(h * 0.185)));
   let bodyFs  = Math.min(32, Math.max(16, Math.floor(h * 0.135)));
-  let titleLines: string[] = [], bodyLines: string[] = [];
   let titleLH = 0, bodyLH = 0;
   for (let it = 0; it < 14; it++) {
-    titleLH    = Math.round(titleFs * 1.28);
-    bodyLH     = Math.round(bodyFs  * 1.28);
-    titleLines = wrapText(String(card.title ?? ""), titleMaxW, titleFs);
-    bodyLines  = card.body?.trim() ? wrapText(String(card.body), titleMaxW, bodyFs) : [];
-    const gap    = bodyLines.length > 0 ? 8 : 0;
-    const totalH = titleLines.length * titleLH + gap + bodyLines.length * bodyLH;
+    titleLH = Math.round(titleFs * 1.28);
+    bodyLH  = Math.round(bodyFs  * 1.28);
+    const tl = wrapText(fullTitle, titleMaxW, titleFs);
+    const bl = fullBody ? wrapText(fullBody, titleMaxW, bodyFs) : [];
+    const gap    = bl.length > 0 ? 8 : 0;
+    const totalH = tl.length * titleLH + gap + bl.length * bodyLH;
     if (totalH <= availH || (titleFs <= 20 && bodyFs <= 16)) break;
     titleFs = Math.max(20, titleFs - 2);
     bodyFs  = Math.max(16, bodyFs  - 2);
   }
 
-  const textGap    = bodyLines.length > 0 ? 8 : 0;
-  const titleH     = titleLines.length * titleLH;
-  const totalTextH = titleH + textGap + bodyLines.length * bodyLH;
+  // Layout anchor from full text (stable position regardless of reveal state)
+  titleLH = Math.round(titleFs * 1.28);
+  bodyLH  = Math.round(bodyFs  * 1.28);
+  const fullTitleLines = wrapText(fullTitle, titleMaxW, titleFs);
+  const fullBodyLines  = fullBody ? wrapText(fullBody, titleMaxW, bodyFs) : [];
+  const textGap    = fullBodyLines.length > 0 ? 8 : 0;
+  const titleH     = fullTitleLines.length * titleLH;
+  const totalTextH = titleH + textGap + fullBodyLines.length * bodyLH;
   const textStartY = y + (h - totalTextH) / 2 + titleFs * 0.82;
+
+  // Partial text reveal based on word budget
+  let titleLines = fullTitleLines;
+  let bodyLines  = fullBodyLines;
+  if (revealedWords !== undefined) {
+    const tw = fullTitle.split(/\s+/).filter(Boolean);
+    const bw = fullBody ? fullBody.split(/\s+/).filter(Boolean) : [];
+    if (revealedWords <= 0) {
+      titleLines = [];
+      bodyLines  = [];
+    } else if (revealedWords < tw.length) {
+      titleLines = wrapText(tw.slice(0, revealedWords).join(" "), titleMaxW, titleFs);
+      bodyLines  = [];
+    } else {
+      const bodyBudget = revealedWords - tw.length;
+      bodyLines = bodyBudget <= 0 ? [] : wrapText(bw.slice(0, bodyBudget).join(" "), titleMaxW, bodyFs);
+    }
+  }
 
   return [
     roundRect(x, y, availW, h, 20, col.bg),
@@ -257,37 +289,64 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
 }
 
 // ── Definition box at exact height (adaptive font — shrinks until text fits) ───
+// revealedWords: undefined = show all; 0 = box only (no text); N = first N words
 function renderDefBoxAtHeight(
   def: { color: string; title: string; body: string },
-  x: number, y: number, w: number, h: number
+  x: number, y: number, w: number, h: number,
+  revealedWords?: number
 ): string {
   const defCol = CARD_COLORS[def.color] ?? CARD_COLORS.cyan;
   const padX   = 48;
   const innerW = w - padX * 2 - 16; // 16 = left stripe
   const availH = h - 44;
 
-  // Start large; shrink until text fits inside the box
+  const fullTitle = String(def.title ?? "");
+  const fullBody  = def.body?.trim() ? String(def.body) : "";
+
+  // Font sizing uses FULL text for layout stability
   let titleFs = Math.min(46, Math.max(22, Math.floor(h * 0.19)));
   let bodyFs  = Math.min(34, Math.max(18, Math.floor(h * 0.135)));
-  let titleLines: string[] = [], bodyLines: string[] = [];
   let titleLH = 0, bodyLH = 0;
   for (let it = 0; it < 14; it++) {
-    titleLH    = Math.round(titleFs * 1.28);
-    bodyLH     = Math.round(bodyFs  * 1.28);
-    titleLines = wrapText(String(def.title ?? ""), innerW, titleFs);
-    bodyLines  = def.body?.trim() ? wrapText(String(def.body), innerW, bodyFs) : [];
-    const gap    = bodyLines.length > 0 ? 12 : 0;
-    const totalH = titleLines.length * titleLH + gap + bodyLines.length * bodyLH;
+    titleLH = Math.round(titleFs * 1.28);
+    bodyLH  = Math.round(bodyFs  * 1.28);
+    const tl = wrapText(fullTitle, innerW, titleFs);
+    const bl = fullBody ? wrapText(fullBody, innerW, bodyFs) : [];
+    const gap    = bl.length > 0 ? 12 : 0;
+    const totalH = tl.length * titleLH + gap + bl.length * bodyLH;
     if (totalH <= availH || (titleFs <= 22 && bodyFs <= 18)) break;
     titleFs = Math.max(22, titleFs - 2);
     bodyFs  = Math.max(18, bodyFs  - 2);
   }
 
-  const textGap    = bodyLines.length > 0 ? 12 : 0;
-  const titleH     = titleLines.length * titleLH;
-  const totalTextH = titleH + textGap + bodyLines.length * bodyLH;
+  // Layout anchor from full text
+  titleLH = Math.round(titleFs * 1.28);
+  bodyLH  = Math.round(bodyFs  * 1.28);
+  const fullTitleLines = wrapText(fullTitle, innerW, titleFs);
+  const fullBodyLines  = fullBody ? wrapText(fullBody, innerW, bodyFs) : [];
+  const textGap    = fullBodyLines.length > 0 ? 12 : 0;
+  const titleH     = fullTitleLines.length * titleLH;
+  const totalTextH = titleH + textGap + fullBodyLines.length * bodyLH;
   const textStartY = y + (h - totalTextH) / 2 + titleFs * 0.82;
   const cx = x + w / 2;
+
+  // Partial text reveal
+  let titleLines = fullTitleLines;
+  let bodyLines  = fullBodyLines;
+  if (revealedWords !== undefined) {
+    const tw = fullTitle.split(/\s+/).filter(Boolean);
+    const bw = fullBody ? fullBody.split(/\s+/).filter(Boolean) : [];
+    if (revealedWords <= 0) {
+      titleLines = [];
+      bodyLines  = [];
+    } else if (revealedWords < tw.length) {
+      titleLines = wrapText(tw.slice(0, revealedWords).join(" "), innerW, titleFs);
+      bodyLines  = [];
+    } else {
+      const bodyBudget = revealedWords - tw.length;
+      bodyLines = bodyBudget <= 0 ? [] : wrapText(bw.slice(0, bodyBudget).join(" "), innerW, bodyFs);
+    }
+  }
 
   return [
     roundRect(x, y, w, h, 20, defCol.bg),
@@ -370,9 +429,9 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
 }
 
 // ── definition-steps slide ─────────────────────────────────────────────────────
-// revealCount = how many content items to show (Infinity = all). Used for
-// progressive reveal in video (each rendered frame shows one more item).
-function buildDefinitionStepsSvg(data: DefinitionStepsData, revealCount = Infinity): string {
+// wordBudget = total content words to reveal (Infinity = all). Word-by-word
+// typing effect: all box shapes visible from frame 0; text fills in word by word.
+function buildDefinitionStepsSvg(data: DefinitionStepsData, wordBudget = Infinity): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
   const headingFs = 58;
@@ -405,24 +464,28 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData, revealCount = Infini
   const total    = (hasDef ? 1 : 0) + numCards;
 
   if (total > 0 && CONTENT_H > 0) {
-    // Larger MAX_ITEM_H fills the slide properly (adaptive fonts handle overflow)
     const GAP        = total <= 2 ? 24 : total <= 3 ? 18 : total <= 4 ? 14 : 12;
     const totalGap   = Math.max(0, total - 1) * GAP;
     const MAX_ITEM_H = total <= 1 ? 900 : total <= 2 ? 620 : total <= 3 ? 480 : total <= 4 ? 370 : 290;
     const itemH      = Math.min(MAX_ITEM_H, Math.floor((CONTENT_H - totalGap) / total));
 
-    let shown = 0;
-    let cy    = CONTENT_START;
+    // Track remaining word budget across all content items
+    let remaining = wordBudget;
+    let cy        = CONTENT_START;
 
     if (hasDef && data.definition) {
-      if (shown < revealCount) parts.push(renderDefBoxAtHeight(data.definition, PADX, cy, AVAIL, itemH));
+      const defWords = countWords(data.definition.title) + countWords(data.definition.body ?? "");
+      const revealed = remaining === Infinity ? undefined : Math.max(0, remaining);
+      parts.push(renderDefBoxAtHeight(data.definition, PADX, cy, AVAIL, itemH, revealed));
+      if (remaining !== Infinity) remaining -= defWords;
       cy += itemH + GAP;
-      shown++;
     }
     for (const card of data.cards ?? []) {
-      if (shown < revealCount) parts.push(renderCardAtHeight(card, PADX, cy, AVAIL, itemH));
+      const cardWords = countWords(card.title) + countWords(card.body ?? "");
+      const revealed  = remaining === Infinity ? undefined : Math.max(0, remaining);
+      parts.push(renderCardAtHeight(card, PADX, cy, AVAIL, itemH, revealed));
+      if (remaining !== Infinity) remaining -= cardWords;
       cy += itemH + GAP;
-      shown++;
     }
   }
 
@@ -431,7 +494,9 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData, revealCount = Infini
 }
 
 // ── pipeline slide ─────────────────────────────────────────────────────────────
-function buildPipelineSvg(data: PipelineData, revealCount = Infinity): string {
+// wordBudget = total content words to reveal (Infinity = all). Arrows appear
+// between steps as each step's text begins typing in.
+function buildPipelineSvg(data: PipelineData, wordBudget = Infinity): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
   const headingFs = 58;
@@ -467,12 +532,15 @@ function buildPipelineSvg(data: PipelineData, revealCount = Infinity): string {
     const itemH      = Math.min(MAX_CARD_H, Math.floor(
       (CONTENT_H - numArrows * ARROW_H - numArrows * GAP) / cards.length
     ));
+
+    let remaining = wordBudget;
     let cy = CONTENT_START;
 
     for (let i = 0; i < cards.length; i++) {
       if (i > 0) {
-        // Arrow visible when card[i] is revealed
-        if (i < revealCount) {
+        // Arrow appears when this card's text has started being typed
+        const showArrow = remaining === Infinity || remaining > 0;
+        if (showArrow) {
           const prevCol = CARD_COLORS[cards[i - 1].color] ?? CARD_COLORS.cyan;
           const ax = W / 2;
           const ay = cy + ARROW_H * 0.35;
@@ -480,7 +548,10 @@ function buildPipelineSvg(data: PipelineData, revealCount = Infinity): string {
         }
         cy += ARROW_H + GAP;
       }
-      if (i < revealCount) parts.push(renderCardAtHeight(cards[i], PADX, cy, AVAIL, itemH));
+      const cardWords = countWords(cards[i].title) + countWords(cards[i].body ?? "");
+      const revealed  = remaining === Infinity ? undefined : Math.max(0, remaining);
+      parts.push(renderCardAtHeight(cards[i], PADX, cy, AVAIL, itemH, revealed));
+      if (remaining !== Infinity) remaining -= cardWords;
       cy += itemH;
     }
   }
@@ -565,24 +636,47 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
 }
 
 /**
- * Return a sequence of SVGs for a slide, each revealing one more content item.
- * Frame 0 = heading only. Frame N = all items revealed.
- * Used by video-renderer to produce a "typing / pop-in" reveal effect.
+ * Return a sequence of SVGs for a slide with word-by-word text typing.
+ * Frame 0 = all box shapes visible but no text.
+ * Each subsequent frame adds WORDS_PER_FRAME more words of content text.
+ * Heading is always fully visible.
+ * Used by video-renderer to create a natural reading-pace typing effect.
  */
 export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
   if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
 
+  const WORDS_PER_FRAME = 2;
+
   if (template === "pipeline") {
     const d = data as unknown as PipelineData;
-    const total = d.cards?.length ?? 0;
-    return Array.from({ length: total + 1 }, (_, i) => buildPipelineSvg(d, i));
+    const totalWords = (d.cards ?? []).reduce(
+      (s, c) => s + countWords(c.title) + countWords(c.body ?? ""), 0
+    );
+    const numFrames = Math.ceil(totalWords / WORDS_PER_FRAME);
+    return [
+      buildPipelineSvg(d, 0),  // structure visible, no text
+      ...Array.from({ length: numFrames }, (_, f) =>
+        buildPipelineSvg(d, (f + 1) * WORDS_PER_FRAME)
+      ),
+    ];
   }
 
   // definition-steps (and default fallback)
-  const d      = data as unknown as DefinitionStepsData;
-  const hasDef = !!d.definition;
-  const total  = (hasDef ? 1 : 0) + (d.cards?.length ?? 0);
-  return Array.from({ length: total + 1 }, (_, i) => buildDefinitionStepsSvg(d, i));
+  const d = data as unknown as DefinitionStepsData;
+  const defWords  = d.definition
+    ? countWords(d.definition.title) + countWords(d.definition.body ?? "")
+    : 0;
+  const cardWords = (d.cards ?? []).reduce(
+    (s, c) => s + countWords(c.title) + countWords(c.body ?? ""), 0
+  );
+  const totalWords = defWords + cardWords;
+  const numFrames  = Math.ceil(totalWords / WORDS_PER_FRAME);
+  return [
+    buildDefinitionStepsSvg(d, 0),  // structure visible, no text
+    ...Array.from({ length: numFrames }, (_, f) =>
+      buildDefinitionStepsSvg(d, (f + 1) * WORDS_PER_FRAME)
+    ),
+  ];
 }
 
 /** Convert a slide template + data to a PNG Buffer using Sharp (lazy-loaded). */
