@@ -324,6 +324,7 @@ export default function AdminPage() {
   const [uploadResult, setUploadResult] = useState<{ url: string } | null>(null);
   const [uploadError, setUploadError] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   // Analytics
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -346,6 +347,7 @@ export default function AdminPage() {
   const [renderFile, setRenderFile] = useState<string | null>(null);
   const [renderError, setRenderError] = useState("");
   const [renderStatus, setRenderStatus] = useState("");
+  const [uploadPhase, setUploadPhase] = useState<"rendering" | "uploading" | null>(null);
 
   // YouTube delete
   const [deletingYT, setDeletingYT] = useState(false);
@@ -470,6 +472,7 @@ export default function AdminPage() {
       if (!res.ok) { setGenError(json.error ?? "Generation failed"); return; }
       setPreview(json.slides);
       setPreviewSeries(json.series);
+      setTimeout(() => previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (e) {
       setGenError(e instanceof Error ? e.message : "Network error");
     } finally {
@@ -554,13 +557,39 @@ export default function AdminPage() {
     setTab("upload");
   }
 
-  // Upload to YouTube
+  // Upload to YouTube (auto-renders first if no video file is ready)
   async function handleUpload() {
-    if (!videoFile) { setUploadError("Please select a video file"); return; }
+    if (!uploadSeries) { setUploadError("No series selected"); return; }
     setUploading(true);
     setUploadError("");
     setUploadResult(null);
     try {
+      let fileToUpload = videoFile;
+
+      // Step 1: render if no video file yet
+      if (!fileToUpload) {
+        setUploadPhase("rendering");
+        setRenderStatus("Rendering video…");
+        const rRes = await fetch("/api/admin/render", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ seriesId: uploadSeries.id }),
+        });
+        if (!rRes.ok) {
+          const rJson = await rRes.json();
+          setUploadError(rJson.error ?? "Render failed");
+          return;
+        }
+        const blob = await rRes.blob();
+        const filename = rRes.headers.get("X-Filename") ?? `${uploadSeries.slug}.mp4`;
+        fileToUpload = new File([blob], filename, { type: "video/mp4" });
+        setVideoFile(fileToUpload);
+        setRenderFile(filename);
+        setRenderStatus(`✓ Ready (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
+      }
+
+      // Step 2: upload to YouTube
+      setUploadPhase("uploading");
       let thumbBlob: Blob | null = null;
       if (canvasRef.current) {
         thumbBlob = await new Promise<Blob | null>((resolve) =>
@@ -568,7 +597,7 @@ export default function AdminPage() {
         );
       }
       const form = new FormData();
-      form.append("video", videoFile);
+      form.append("video", fileToUpload);
       form.append("title", uploadTitle);
       form.append("description", uploadDesc);
       form.append("tags", uploadTags);
@@ -582,6 +611,7 @@ export default function AdminPage() {
       setUploadError(e instanceof Error ? e.message : "Network error");
     } finally {
       setUploading(false);
+      setUploadPhase(null);
     }
   }
 
@@ -884,7 +914,7 @@ export default function AdminPage() {
             )}
 
             {preview && previewSeries && (
-              <div style={{ marginTop: "2rem" }}>
+              <div ref={previewRef} style={{ marginTop: "2rem" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>{previewSeries.title}</div>
@@ -1207,10 +1237,15 @@ export default function AdminPage() {
                     {renderStatus && !rendering && (
                       <p style={{ fontSize: "0.75rem", color: "#4ade80", marginBottom: 6 }}>{renderStatus}</p>
                     )}
-                    {rendering && (
-                      <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: 6, fontFamily: "monospace" }}>
-                        {renderStatus || "Running FFmpeg…"}
-                      </p>
+                    {(rendering || uploadPhase === "rendering") && (
+                      <div style={{ marginBottom: 8 }}>
+                        <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4, fontFamily: "monospace" }}>
+                          {renderStatus || "Running FFmpeg…"}
+                        </p>
+                        <div style={{ height: 4, background: "#1e1e2e", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ height: "100%", background: "linear-gradient(90deg,#a855f7,#22d3ee)", borderRadius: 2, animation: "progress-indeterminate 1.8s ease-in-out infinite", width: "40%" }} />
+                        </div>
+                      </div>
                     )}
                     {renderError && (
                       <div style={{ padding: "0.5rem 0.75rem", background: "rgba(248,113,113,0.08)", border: "1px solid #f8717150", borderRadius: 6, color: "#f87171", fontSize: "0.75rem", marginBottom: 6, whiteSpace: "pre-wrap", maxHeight: 100, overflow: "auto" }}>
@@ -1248,8 +1283,8 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                  <button onClick={handleUpload} disabled={uploading || !videoFile} style={{ padding: "0.75rem 1.5rem", background: uploading ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: uploading || !videoFile ? "not-allowed" : "pointer", fontSize: "0.95rem" }}>
-                    {uploading ? "⏳ Uploading…" : "🚀 Upload to YouTube"}
+                  <button onClick={handleUpload} disabled={uploading || rendering} style={{ padding: "0.75rem 1.5rem", background: uploading ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: uploading || rendering ? "not-allowed" : "pointer", fontSize: "0.95rem", width: "100%" }}>
+                    {uploadPhase === "rendering" ? "⏳ Step 1/2: Rendering…" : uploadPhase === "uploading" ? "⏳ Step 2/2: Uploading…" : videoFile ? "🚀 Upload to YouTube" : "🎬 Render & Upload to YouTube"}
                   </button>
 
                   {/* YouTube API setup */}

@@ -129,7 +129,9 @@ export async function renderSeries(
       labels.push(`[s${i}]`);
     });
 
-    filterComplex += `${labels.join("")}concat=n=${labels.length}:v=1:a=0[vout]`;
+    // Concat all slides, then draw a horizontal progress bar at the bottom
+    filterComplex += `${labels.join("")}concat=n=${labels.length}:v=1:a=0[vconcat];`;
+    filterComplex += `[vconcat]drawbox=x=0:y=${H - 10}:w='min(iw\\,(t/${totalDur})*iw)':h=10:color=0xa855f7@0.9:t=fill[vout]`;
 
     const fadeDur = Math.min(3, totalDur * 0.1);
     filterComplex +=
