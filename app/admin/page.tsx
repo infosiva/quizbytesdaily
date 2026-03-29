@@ -576,8 +576,11 @@ export default function AdminPage() {
           body: JSON.stringify({ seriesId: uploadSeries.id }),
         });
         if (!rRes.ok) {
-          const rJson = await rRes.json();
-          setUploadError(rJson.error ?? "Render failed");
+          const text = await rRes.text();
+          let errorMsg: string;
+          try { errorMsg = (JSON.parse(text) as { error?: string }).error ?? `HTTP ${rRes.status}`; }
+          catch { errorMsg = `Render HTTP ${rRes.status} — check Vercel function logs`; }
+          setUploadError(errorMsg);
           return;
         }
         const blob = await rRes.blob();
@@ -629,8 +632,11 @@ export default function AdminPage() {
         body: JSON.stringify({ seriesId: uploadSeries.id }),
       });
       if (!res.ok) {
-        const json = await res.json();
-        setRenderError(json.error ?? "Render failed");
+        const text = await res.text();
+        let errorMsg: string;
+        try { errorMsg = (JSON.parse(text) as { error?: string }).error ?? `HTTP ${res.status}`; }
+        catch { errorMsg = `HTTP ${res.status} — check Vercel function logs`; }
+        setRenderError(errorMsg);
         return;
       }
       // Video bytes returned directly — no second round-trip needed
