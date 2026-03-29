@@ -349,6 +349,10 @@ export default function AdminPage() {
   const [deletingYT, setDeletingYT] = useState(false);
   const [deleteYTResult, setDeleteYTResult] = useState("");
 
+  // Library: bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Library: inline regenerate layout picker
   const [regenId, setRegenId] = useState<number | null>(null);
   const [regenLayout, setRegenLayout] = useState<LayoutId>("quiz-reveal");
@@ -358,6 +362,7 @@ export default function AdminPage() {
   // Load library
   const loadLibrary = useCallback(async () => {
     setLoadingLib(true);
+    setSelectedIds(new Set());
     try {
       const res = await fetch("/api/admin/series");
       const json = await res.json();
@@ -366,6 +371,20 @@ export default function AdminPage() {
       setLoadingLib(false);
     }
   }, []);
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} selected series? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all(
+        [...selectedIds].map((id) => fetch(`/api/admin/series/${id}`, { method: "DELETE" }))
+      );
+      await loadLibrary();
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
 
   useEffect(() => {
     if (tab === "library") loadLibrary();
@@ -893,8 +912,11 @@ export default function AdminPage() {
         {/* ═══════════════════════ LIBRARY ════════════════════════════════ */}
         {tab === "library" && (
           <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap" as const, gap: 8 }}>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Series Library</h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap" as const, gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Series Library</h2>
+                <span style={{ fontSize: "0.75rem", color: "#4a4a5a" }}>{library.length} series</span>
+              </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {library.some((s) => s.youtube_id) && (
                   <button
@@ -921,6 +943,60 @@ export default function AdminPage() {
                 <button onClick={loadLibrary} style={{ padding: "0.4rem 1rem", background: "transparent", border: "1px solid #1e1e2e", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: "0.8rem" }}>↺ Refresh</button>
               </div>
             </div>
+
+            {/* ── Bulk selection toolbar ── */}
+            {library.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0.6rem 1rem", background: "#0d0d18", border: "1px solid #1e1e2e", borderRadius: 8, marginBottom: "1rem" }}>
+                {/* Select all checkbox */}
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" as const }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === library.length && library.length > 0}
+                    ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < library.length; }}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(library.map((s) => s.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                    style={{ width: 16, height: 16, accentColor: "#a855f7", cursor: "pointer" }}
+                  />
+                  <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                    {selectedIds.size === 0
+                      ? "Select all"
+                      : selectedIds.size === library.length
+                      ? `All ${library.length} selected`
+                      : `${selectedIds.size} of ${library.length} selected`}
+                  </span>
+                </label>
+
+                {/* Bulk actions — only shown when something is selected */}
+                {selectedIds.size > 0 && (
+                  <>
+                    <div style={{ flex: 1 }} />
+                    <button
+                      onClick={() => setSelectedIds(new Set())}
+                      style={{ padding: "0.3rem 0.75rem", background: "transparent", border: "1px solid #2a2a3e", borderRadius: 6, color: "#64748b", cursor: "pointer", fontSize: "0.75rem" }}
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      style={{
+                        padding: "0.35rem 1rem", borderRadius: 6, border: "1px solid #f87171",
+                        background: bulkDeleting ? "#1e1e2e" : "rgba(248,113,113,0.15)",
+                        color: bulkDeleting ? "#4a4a5a" : "#f87171",
+                        cursor: bulkDeleting ? "not-allowed" : "pointer", fontSize: "0.8rem", fontWeight: 700,
+                      }}
+                    >
+                      {bulkDeleting ? "⏳ Deleting…" : `🗑 Delete ${selectedIds.size} selected`}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
             {deleteYTResult && (
               <p style={{ fontSize: "0.8rem", color: deleteYTResult.startsWith("Error") ? "#f87171" : "#4ade80", marginBottom: "1rem" }}>{deleteYTResult}</p>
             )}
@@ -939,11 +1015,28 @@ export default function AdminPage() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {library.map((s) => (
-                <div key={s.id} style={{ background: "#111118", border: `1px solid ${regenId === s.id ? "#a855f760" : "#1e1e2e"}`, borderRadius: 10, overflow: "hidden", transition: "border-color 0.15s" }}>
+              {library.map((s) => {
+                const isSelected = selectedIds.has(s.id);
+                const borderColor = regenId === s.id ? "#a855f760" : isSelected ? "#f8717160" : "#1e1e2e";
+                const bgColor = isSelected ? "rgba(248,113,113,0.04)" : "#111118";
+                return (
+                <div key={s.id} style={{ background: bgColor, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: "hidden", transition: "all 0.15s" }}>
 
                   {/* Main row */}
                   <div style={{ padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                    {/* Row checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(s.id); else next.delete(s.id);
+                          return next;
+                        });
+                      }}
+                      style={{ width: 16, height: 16, accentColor: "#f87171", cursor: "pointer", flexShrink: 0 }}
+                    />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.title}</div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
@@ -1029,7 +1122,7 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-              ))}
+              ); })}
             </div>
           </div>
         )}
