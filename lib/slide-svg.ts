@@ -1,8 +1,14 @@
 /**
  * slide-svg.ts
  * Generates 1080×1920 PNG frames for each quiz slide template.
- * Uses SVG for visual design (gradients, icons, card borders) then
- * converts to PNG via Sharp — same quality as the browser preview.
+ *
+ * TEXT RENDERING STRATEGY:
+ *   All text is converted to SVG <path> elements using opentype.js.
+ *   This is the ONLY reliable approach across all environments:
+ *   - Vercel Lambda: librsvg @font-face (file:// and data:) both fail silently
+ *   - Local macOS: works with paths
+ *   - VPS: works with paths
+ *   No @font-face, no system font dependency — just pure vector glyph outlines.
  */
 
 import { POPPINS_BOLD_B64 } from "./font-poppins";
@@ -20,13 +26,68 @@ const CARD_COLORS: Record<string, { text: string; border: string; bg: string }> 
   amber:  { text: "#fbbf24", border: "#fbbf2466", bg: "#fbbf2418" },
 };
 
-// ── Font: Poppins Bold embedded as a data: URI ────────────────────────────────
-// data: URI is the ONLY approach that works in ALL environments:
-//   - Vercel Lambda: file:// fails (librsvg sandbox), system fonts absent
-//   - Local macOS: file:// works but data: also works
-//   - VPS: same as local
-// The base64 bytes are part of the JS bundle so they're always present.
-const FONT_DATA_URI = `data:font/truetype;base64,${POPPINS_BOLD_B64}`;
+// ── opentype.js — parse font once, cache for all subsequent renders ────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _otFont: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function otFont(): any {
+  if (_otFont) return _otFont;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const opentype = require("opentype.js") as { parse: (buf: ArrayBuffer) => unknown };
+  const raw = Buffer.from(POPPINS_BOLD_B64, "base64");
+  // Slice to get a proper ArrayBuffer (Buffer's .buffer may be a shared backing store)
+  _otFont = opentype.parse(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer);
+  return _otFont;
+}
+
+/** Advance width of `text` rendered at `fontSize`. Used for line-wrapping. */
+function textW(text: string, fontSize: number): number {
+  return (otFont().getAdvanceWidth(normalizeText(text), fontSize) as number);
+}
+
+/**
+ * Render `text` as an SVG `<path>` element using Poppins Bold glyph outlines.
+ * No font loading required — the path data is pure geometry.
+ *
+ * @param anchor  "start" | "middle" | "end"  — same semantics as SVG text-anchor
+ */
+/** Replace Unicode chars absent from Poppins Bold with ASCII equivalents. */
+function normalizeText(t: string): string {
+  return t
+    .replace(/→/g, ">")
+    .replace(/←/g, "<")
+    .replace(/↑/g, "^")
+    .replace(/↓/g, "v")
+    .replace(/—/g, "-")
+    .replace(/–/g, "-")
+    .replace(/…/g, "...")
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .replace(/·/g, ".");
+}
+
+function svgPath(
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  fill: string,
+  anchor: "start" | "middle" | "end" = "start"
+): string {
+  if (!text?.trim()) return "";
+  const t    = normalizeText(text);
+  const font = otFont();
+  let ax = x;
+  if (anchor !== "start") {
+    const w = font.getAdvanceWidth(t, fontSize) as number;
+    ax = anchor === "middle" ? x - w / 2 : x - w;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const path = font.getPath(t, ax, y, fontSize) as any;
+  const d = path.toPathData(1) as string;
+  if (!d) return "";
+  return `<path d="${d}" fill="${fill}"/>`;
+}
 
 // ── Sharp (lazy require — prevents Next.js bundling this native module) ────────
 async function getSharp() {
@@ -35,25 +96,14 @@ async function getSharp() {
   return m.default ?? (m as unknown as typeof import("sharp"));
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function esc(s: string): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function charW(fontSize: number): number { return fontSize * 0.6; }
-
+// ── Text wrapping (uses actual font metrics for accurate line breaks) ──────────
 function wrapText(text: string, maxW: number, fontSize: number): string[] {
   const words = String(text).split(/\s+/);
   const lines: string[] = [];
   let cur = "";
   for (const w of words) {
     const test = cur ? `${cur} ${w}` : w;
-    if (test.length * charW(fontSize) > maxW && cur) {
+    if (textW(test, fontSize) > maxW && cur) {
       lines.push(cur);
       cur = w;
     } else {
@@ -122,12 +172,16 @@ function iconSvg(name: string, color: string, cx: number, cy: number, size: numb
         <polyline points="2,12 12,17 22,12" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`);
     case "opt_a": case "opt_b": case "opt_c": case "opt_d": {
       const letter = name.slice(-1).toUpperCase();
+      const font = otFont();
+      const lw = font.getAdvanceWidth(letter, 13) as number;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lp = font.getPath(letter, 12 - lw / 2, 17.5, 13) as any;
       return g(`<circle cx="12" cy="12" r="10" fill="${color}22" stroke="${color}" stroke-width="1.8"/>
-        <text x="12" y="17.5" text-anchor="middle" font-size="13" font-weight="700" fill="${color}" font-family="Arial,sans-serif">${letter}</text>`);
+        <path d="${lp.toPathData(1)}" fill="${color}"/>`);
     }
     default:
       return g(`<circle cx="12" cy="12" r="9" fill="none" stroke="${color}" stroke-width="2"/>
-        <text x="12" y="16" text-anchor="middle" font-size="10" fill="${color}">•</text>`);
+        <circle cx="12" cy="12" r="2.5" fill="${color}"/>`);
   }
 }
 
@@ -137,7 +191,7 @@ function roundRect(x: number, y: number, w: number, h: number, r: number, fill: 
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"${sw}/>`;
 }
 
-// ── Progress dots bar at top ───────────────────────────────────────────────────
+// ── Progress dots (placed in footer area between divider and branding) ─────────
 function progressBar(slideNum: number, totalSlides: number, color: string): string {
   if (!totalSlides || totalSlides <= 1) return "";
   const dotW = 18;
@@ -151,25 +205,23 @@ function progressBar(slideNum: number, totalSlides: number, color: string): stri
     const isPast    = i + 1 < slideNum;
     const fill = isCurrent ? color : isPast ? `${color}77` : "#1e1e2e";
     const w    = isCurrent ? dotW * 2.4 : dotW;
-    // Place dots in footer area: below divider (H-108), vertically centered before branding (H-54)
     return `<rect x="${x.toFixed(1)}" y="${H - 90}" width="${w}" height="${dotH}" rx="${dotH / 2}" fill="${fill}"/>`;
   }).join("\n");
 }
 
-// ── Card at exact height (fills allocated space, text vertically centered) ─────
+// ── Card at exact height ───────────────────────────────────────────────────────
 interface CardData { color: string; icon: string; title: string; body: string }
 
 function renderCardAtHeight(card: CardData, x: number, y: number, availW: number, h: number): string {
   const col    = CARD_COLORS[card.color] ?? CARD_COLORS.purple;
-  const padV   = 36;                                              // left/right inner padding
-  const iconSz = Math.min(90, Math.max(52, Math.floor(h * 0.5))); // icon scales with card height
+  const padV   = 36;
+  const iconSz = Math.min(90, Math.max(52, Math.floor(h * 0.5)));
   const iconCX = x + padV + iconSz / 2;
   const iconCY = y + h / 2;
 
   const titleX    = x + padV + iconSz + 28;
   const titleMaxW = availW - padV - iconSz - 28 - padV;
 
-  // Font sizes scale with available height
   const titleFs = Math.min(50, Math.max(30, Math.floor(h * 0.235)));
   const bodyFs  = Math.min(38, Math.max(24, Math.floor(h * 0.172)));
   const titleLH = Math.round(titleFs * 1.28);
@@ -178,30 +230,23 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
   const titleLines = wrapText(String(card.title ?? ""), titleMaxW, titleFs);
   const bodyLines  = card.body?.trim() ? wrapText(String(card.body), titleMaxW, bodyFs) : [];
   const titleH     = titleLines.length * titleLH;
-  const bodyH      = bodyLines.length * bodyLH;
   const textGap    = bodyLines.length > 0 ? 10 : 0;
-  const totalTextH = titleH + textGap + bodyH;
+  const totalTextH = titleH + textGap + bodyLines.length * bodyLH;
 
-  // Center text block vertically within the card
   const textStartY = y + (h - totalTextH) / 2 + titleFs * 0.82;
 
-  const parts = [
+  return [
     roundRect(x, y, availW, h, 20, col.bg),
     roundRect(x, y, availW, h, 20, "none", col.border),
-    roundRect(x, y, 8, h, 4, col.text),                                  // left accent stripe
-    `<circle cx="${iconCX}" cy="${iconCY}" r="${(iconSz / 2 + 7).toFixed(0)}" fill="${col.text}1e"/>`, // icon halo
+    roundRect(x, y, 8, h, 4, col.text),
+    `<circle cx="${iconCX}" cy="${iconCY}" r="${(iconSz / 2 + 7).toFixed(0)}" fill="${col.text}1e"/>`,
     iconSvg(card.icon, col.text, iconCX, iconCY, iconSz),
-    ...titleLines.map((line, i) =>
-      `<text x="${titleX}" y="${(textStartY + i * titleLH).toFixed(1)}" font-size="${titleFs}" fill="${col.text}" font-family="POP,sans-serif" font-weight="700">${esc(line)}</text>`
-    ),
-    ...bodyLines.map((line, i) =>
-      `<text x="${titleX}" y="${(textStartY + titleH + textGap + i * bodyLH).toFixed(1)}" font-size="${bodyFs}" fill="#94a3b8" font-family="POP,sans-serif">${esc(line)}</text>`
-    ),
-  ];
-  return parts.join("\n");
+    ...titleLines.map((line, i) => svgPath(line, titleX, textStartY + i * titleLH, titleFs, col.text)),
+    ...bodyLines.map((line, i)  => svgPath(line, titleX, textStartY + titleH + textGap + i * bodyLH, bodyFs, "#94a3b8")),
+  ].join("\n");
 }
 
-// ── Definition box at exact height (text/title centered inside) ────────────────
+// ── Definition box at exact height ────────────────────────────────────────────
 function renderDefBoxAtHeight(
   def: { color: string; title: string; body: string },
   x: number, y: number, w: number, h: number
@@ -214,12 +259,12 @@ function renderDefBoxAtHeight(
   const titleLH = Math.round(titleFs * 1.28);
   const bodyLH  = Math.round(bodyFs * 1.28);
 
-  const titleLines = wrapText(String(def.title ?? ""), w - padX * 2, titleFs);
-  const bodyLines  = wrapText(String(def.body  ?? ""), w - padX * 2, bodyFs);
+  const innerW     = w - padX * 2;
+  const titleLines = wrapText(String(def.title ?? ""), innerW, titleFs);
+  const bodyLines  = wrapText(String(def.body  ?? ""), innerW, bodyFs);
   const titleH     = titleLines.length * titleLH;
-  const bodyH      = bodyLines.length * bodyLH;
   const textGap    = bodyLines.length > 0 ? 14 : 0;
-  const totalTextH = titleH + textGap + bodyH;
+  const totalTextH = titleH + textGap + bodyLines.length * bodyLH;
 
   const textStartY = y + (h - totalTextH) / 2 + titleFs * 0.82;
   const cx = x + w / 2;
@@ -227,24 +272,16 @@ function renderDefBoxAtHeight(
   return [
     roundRect(x, y, w, h, 20, defCol.bg),
     roundRect(x, y, w, h, 20, "none", defCol.border),
-    // left accent stripe (same as card style — no overlap with title text)
     `<rect x="${x}" y="${y + 20}" width="8" height="${h - 40}" rx="4" fill="${defCol.text}"/>`,
-    ...titleLines.map((line, i) =>
-      `<text x="${cx.toFixed(0)}" y="${(textStartY + i * titleLH).toFixed(1)}" font-size="${titleFs}" fill="${defCol.text}" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">${esc(line)}</text>`
-    ),
-    ...bodyLines.map((line, i) =>
-      `<text x="${cx.toFixed(0)}" y="${(textStartY + titleH + textGap + i * bodyLH).toFixed(1)}" font-size="${bodyFs}" fill="rgba(255,255,255,0.72)" text-anchor="middle" font-family="POP,sans-serif">${esc(line)}</text>`
-    ),
+    ...titleLines.map((line, i) => svgPath(line, cx, textStartY + i * titleLH, titleFs, defCol.text, "middle")),
+    ...bodyLines.map((line, i)  => svgPath(line, cx, textStartY + titleH + textGap + i * bodyLH, bodyFs, "rgba(255,255,255,0.72)", "middle")),
   ].join("\n");
 }
 
-// ── SVG wrapper with shared defs ───────────────────────────────────────────────
+// ── SVG wrapper — no @font-face needed (all text is paths) ────────────────────
 function svgWrapper(content: string): string {
-  const fontStyle = `<style>@font-face{font-family:'POP';src:url('${FONT_DATA_URI}') format('truetype');font-weight:bold;}</style>`;
-
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs>
-  ${fontStyle}
   <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#0d0d20"/>
     <stop offset="100%" stop-color="#09091a"/>
@@ -306,14 +343,13 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
   const PADX    = 72;
   const dividerY = H - 108;
   parts.push(`<line x1="${PADX}" y1="${dividerY}" x2="${W - PADX}" y2="${dividerY}" stroke="#1e1e2e" stroke-width="2"/>`);
-  parts.push(`<text x="${PADX}" y="${H - 54}" font-size="34" fill="#374151" font-family="POP,sans-serif">@QuizBytesDaily</text>`);
+  parts.push(svgPath("@QuizBytesDaily", PADX, H - 54, 34, "#374151"));
   if (slideNum && totalSlides) {
-    parts.push(`<text x="${W - PADX}" y="${H - 54}" font-size="46" fill="#374151" text-anchor="end" font-family="POP,sans-serif">${slideNum}/${totalSlides}</text>`);
+    parts.push(svgPath(`${slideNum}/${totalSlides}`, W - PADX, H - 54, 46, "#374151", "end"));
   }
 }
 
 // ── definition-steps slide ─────────────────────────────────────────────────────
-// Content items (def box + cards) are distributed evenly to fill 1080×1920.
 function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
@@ -323,26 +359,23 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const parts: string[] = [];
   parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, accentCol));
 
-  // Heading
   let y = 108;
-  const headLines = wrapText(esc(data.heading ?? ""), AVAIL, headingFs);
+  const headLines = wrapText(data.heading ?? "", AVAIL, headingFs);
   const headLH    = Math.round(headingFs * 1.15);
   headLines.forEach((line, i) => {
-    parts.push(`<text x="${PADX}" y="${y + i * headLH}" font-size="${headingFs}" fill="url(#hg)" font-family="POP,sans-serif" font-weight="700">${line}</text>`);
+    parts.push(svgPath(line, PADX, y + i * headLH, headingFs, "url(#hg)"));
   });
   y += headLines.length * headLH + 18;
 
   if (data.subtitle) {
-    parts.push(`<text x="${PADX}" y="${y}" font-size="38" fill="#475569" font-family="POP,sans-serif">${esc(data.subtitle)}</text>`);
+    parts.push(svgPath(data.subtitle, PADX, y, 38, "#475569"));
     y += 54;
   }
 
-  // Thin separator below heading
   parts.push(`<line x1="${PADX}" y1="${y + 8}" x2="${W - PADX}" y2="${y + 8}" stroke="#1e1e2e" stroke-width="1.5"/>`);
 
-  // Distribute content items evenly in available vertical space
   const CONTENT_START = y + 34;
-  const FOOTER_DIV    = H - 108;          // top of footer divider line
+  const FOOTER_DIV    = H - 108;
   const CONTENT_H     = FOOTER_DIV - 20 - CONTENT_START;
 
   const hasDef   = !!data.definition;
@@ -350,13 +383,11 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
   const total    = (hasDef ? 1 : 0) + numCards;
 
   if (total > 0 && CONTENT_H > 0) {
-    const GAP      = total <= 2 ? 28 : total <= 3 ? 22 : total <= 4 ? 18 : 14;
-    const totalGap = Math.max(0, total - 1) * GAP;
-    // Cap item height so boxes don't become enormous on sparse slides
+    const GAP        = total <= 2 ? 28 : total <= 3 ? 22 : total <= 4 ? 18 : 14;
+    const totalGap   = Math.max(0, total - 1) * GAP;
     const MAX_ITEM_H = total <= 2 ? 320 : total <= 3 ? 260 : total <= 4 ? 220 : 180;
-    const itemH    = Math.min(MAX_ITEM_H, Math.floor((CONTENT_H - totalGap) / total));
-    // Start items at CONTENT_START — don't center vertically (avoids empty gap at top)
-    let cy         = CONTENT_START;
+    const itemH      = Math.min(MAX_ITEM_H, Math.floor((CONTENT_H - totalGap) / total));
+    let cy           = CONTENT_START;
 
     if (hasDef && data.definition) {
       parts.push(renderDefBoxAtHeight(data.definition, PADX, cy, AVAIL, itemH));
@@ -373,7 +404,6 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData): string {
 }
 
 // ── pipeline slide ─────────────────────────────────────────────────────────────
-// Pipeline cards fill available height; arrows between them use a fixed allocation.
 function buildPipelineSvg(data: PipelineData): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
@@ -383,15 +413,15 @@ function buildPipelineSvg(data: PipelineData): string {
   parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee"));
 
   let y = 108;
-  const headLines = wrapText(esc(data.heading ?? ""), AVAIL, headingFs);
+  const headLines = wrapText(data.heading ?? "", AVAIL, headingFs);
   const headLH    = Math.round(headingFs * 1.15);
   headLines.forEach((line, i) => {
-    parts.push(`<text x="${PADX}" y="${y + i * headLH}" font-size="${headingFs}" fill="url(#hg)" font-family="POP,sans-serif" font-weight="700">${line}</text>`);
+    parts.push(svgPath(line, PADX, y + i * headLH, headingFs, "url(#hg)"));
   });
   y += headLines.length * headLH + 18;
 
   if (data.subtitle) {
-    parts.push(`<text x="${PADX}" y="${y}" font-size="38" fill="#475569" font-family="POP,sans-serif">${esc(data.subtitle)}</text>`);
+    parts.push(svgPath(data.subtitle, PADX, y, 38, "#475569"));
     y += 54;
   }
 
@@ -403,11 +433,11 @@ function buildPipelineSvg(data: PipelineData): string {
 
   const cards = data.cards ?? [];
   if (cards.length > 0) {
-    const ARROW_H   = 40;
-    const numArrows = cards.length - 1;
-    const GAP       = 8;
+    const ARROW_H    = 40;
+    const numArrows  = cards.length - 1;
+    const GAP        = 8;
     const MAX_CARD_H = cards.length <= 3 ? 280 : 220;
-    const itemH     = Math.min(MAX_CARD_H, Math.floor(
+    const itemH      = Math.min(MAX_CARD_H, Math.floor(
       (CONTENT_H - numArrows * ARROW_H - numArrows * GAP) / cards.length
     ));
     let cy = CONTENT_START;
@@ -415,7 +445,10 @@ function buildPipelineSvg(data: PipelineData): string {
     for (let i = 0; i < cards.length; i++) {
       if (i > 0) {
         const prevCol = CARD_COLORS[cards[i - 1].color] ?? CARD_COLORS.cyan;
-        parts.push(`<text x="${W / 2}" y="${(cy + ARROW_H * 0.72).toFixed(0)}" font-size="26" fill="${prevCol.text}" text-anchor="middle" opacity="0.7">▼</text>`);
+        const ax = W / 2;
+        const ay = cy + ARROW_H * 0.35;
+        // Downward triangle (no font needed)
+        parts.push(`<polygon points="${(ax-12).toFixed(1)},${ay.toFixed(1)} ${(ax+12).toFixed(1)},${ay.toFixed(1)} ${ax.toFixed(1)},${(ay+20).toFixed(1)}" fill="${prevCol.text}" opacity="0.7"/>`);
         cy += ARROW_H + GAP;
       }
       parts.push(renderCardAtHeight(cards[i], PADX, cy, AVAIL, itemH));
@@ -427,40 +460,57 @@ function buildPipelineSvg(data: PipelineData): string {
   return svgWrapper(parts.join("\n"));
 }
 
-// ── CTA slide (vertically centered) ───────────────────────────────────────────
+// ── CTA slide ─────────────────────────────────────────────────────────────────
 function buildCtaSvg(data: CtaData): string {
   const CX   = W / 2;
-  const parts: string[] = [
-    progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee"),
-  ];
+  const parts: string[] = [progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee")];
 
-  // Estimate total content height and center it
-  // emoji≈200 + gap40 + heading≈115 + gap20 + subtitle≈52 + gap36 + button120 + gap44 + divider + gap32 + browse52 + gap12 + site64 ≈ 787px
-  let y = Math.round((H - 790) / 2);
+  let y = Math.round((H - 820) / 2);
 
-  // Big emoji
-  parts.push(`<text x="${CX}" y="${y + 190}" font-size="200" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">🎉</text>`);
+  // Decorative star-burst (replaces emoji — renders anywhere, no font needed)
+  const sx = CX, sy = y + 110;
+  const starPts = Array.from({ length: 10 }, (_, i) => {
+    const angle = (i * Math.PI) / 5 - Math.PI / 2;
+    const r = i % 2 === 0 ? 90 : 38;
+    return `${(sx + r * Math.cos(angle)).toFixed(1)},${(sy + r * Math.sin(angle)).toFixed(1)}`;
+  }).join(" ");
+  parts.push(`<polygon points="${starPts}" fill="#a855f7" opacity="0.9"/>`);
+  // Inner glow ring
+  parts.push(`<circle cx="${sx}" cy="${sy}" r="36" fill="#22d3ee" opacity="0.8"/>`);
+  // Check mark inside
+  parts.push(`<polyline points="${(sx-16).toFixed(0)},${sy.toFixed(0)} ${(sx-4).toFixed(0)},${(sy+14).toFixed(0)} ${(sx+18).toFixed(0)},${(sy-14).toFixed(0)}" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`);
   y += 250;
 
-  // Heading
-  parts.push(`<text x="${CX}" y="${y + 96}" font-size="96" fill="url(#hg)" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">${esc(data.heading ?? "Enjoyed This Quiz?")}</text>`);
-  y += 130;
+  // Heading (path)
+  const headText = data.heading ?? "Enjoyed This Quiz?";
+  const headW = textW(headText, 86);
+  parts.push(svgPath(headText, CX - headW / 2, y + 86, 86, "url(#hg)"));
+  y += 120;
 
-  // Subtitle
-  parts.push(`<text x="${CX}" y="${y + 44}" font-size="40" fill="#64748b" text-anchor="middle" font-family="POP,sans-serif">New quiz every day — subscribe so you never miss one</text>`);
-  y += 80;
+  // Subtitle — wrap to avoid overflow
+  const subText = "New quiz every day - subscribe so you never miss one";
+  const PADX = 72;
+  const subLines = wrapText(subText, W - PADX * 2, 38);
+  subLines.forEach((line, i) => {
+    parts.push(svgPath(line, CX, y + 44 + i * 52, 38, "#64748b", "middle"));
+  });
+  y += 44 + subLines.length * 52 + 20;
 
   // Subscribe button
   parts.push(roundRect(CX - 340, y, 680, 120, 28, "#a855f7"));
-  parts.push(`<text x="${CX}" y="${y + 78}" font-size="48" fill="white" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">▶ Subscribe on YouTube</text>`);
+  // Play triangle + text
+  const btnTx = CX - 280;
+  const btnTy = y + 76;
+  parts.push(`<polygon points="${(btnTx).toFixed(0)},${(btnTy - 26).toFixed(0)} ${(btnTx).toFixed(0)},${(btnTy + 6).toFixed(0)} ${(btnTx + 26).toFixed(0)},${(btnTy - 10).toFixed(0)}" fill="white"/>`);
+  parts.push(svgPath("Subscribe on YouTube", btnTx + 40, btnTy, 48, "white"));
   y += 160;
 
   // Divider + website
   parts.push(`<line x1="${CX - 200}" y1="${y}" x2="${CX + 200}" y2="${y}" stroke="#1e1e2e" stroke-width="2"/>`);
   y += 40;
-  parts.push(`<text x="${CX}" y="${y}" font-size="36" fill="#475569" text-anchor="middle" font-family="POP,sans-serif">Browse all quizzes at</text>`);
+  parts.push(svgPath("Browse all quizzes at", CX, y, 36, "#475569", "middle"));
   y += 56;
-  parts.push(`<text x="${CX}" y="${y}" font-size="58" fill="#22d3ee" text-anchor="middle" font-family="POP,sans-serif" font-weight="700">quizbytes.dev</text>`);
+  parts.push(svgPath("quizbytes.dev", CX, y, 58, "#22d3ee", "middle"));
 
   footer(parts, data.slideNum, data.totalSlides);
   return svgWrapper(parts.join("\n"));
