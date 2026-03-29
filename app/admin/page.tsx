@@ -291,9 +291,9 @@ interface AnalyticsData {
 export default function AdminPage() {
   const [tab, setTab] = useState<"generate" | "library" | "upload" | "analytics" | "settings">("generate");
 
-  // Generate
-  const [topic, setTopic] = useState(() => TRENDING_TOPICS["Python"]?.[0] ?? "");
-  const [genCategory, setGenCategory] = useState("Python");
+  // Generate — default to hottest AI/ML topic
+  const [topic, setTopic] = useState(() => TRENDING_TOPICS["AI/ML"]?.[0] ?? "");
+  const [genCategory, setGenCategory] = useState("AI/ML");
   const [genDifficulty, setGenDifficulty] = useState("Beginner");
   const [genLayout, setGenLayout] = useState<LayoutId>("quiz-reveal");
   const [catSuggestOpen, setCatSuggestOpen] = useState(false);

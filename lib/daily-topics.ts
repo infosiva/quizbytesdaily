@@ -23,44 +23,51 @@ export interface HotSuggestion {
   typeLabel: string; // e.g. "🧩 Quiz"
 }
 
+// Shown in Telegram after a Decline — hottest 2026 AI topics first
 export const HOT_SUGGESTIONS: HotSuggestion[] = [
-  { idx: 0, icon: "🤖", category: "AI/ML",         topic: "Mixture of Experts architecture",       layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
-  { idx: 1, icon: "🤖", category: "AI/ML",         topic: "RAG vs Fine-tuning",                    layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
-  { idx: 2, icon: "🐍", category: "Python",        topic: "UV package manager explained",          layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
-  { idx: 3, icon: "🤖", category: "AI/ML",         topic: "Function calling in LLMs",              layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
-  { idx: 4, icon: "🏗", category: "System Design", topic: "Rate limiting algorithms",              layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
-  { idx: 5, icon: "⚡", category: "JavaScript",    topic: "React server components",               layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
-  { idx: 6, icon: "🧮", category: "Algorithms",    topic: "Two-pointer technique",                 layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
-  { idx: 7, icon: "🤖", category: "AI/ML",         topic: "AI agents vs chatbots: Key differences",layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { idx: 0, icon: "🤖", category: "AI/ML",         topic: "MCP: The USB-C for AI agents",              layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { idx: 1, icon: "🤖", category: "AI/ML",         topic: "Claude Sonnet 4.5 vs GPT-4o compared",      layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { idx: 2, icon: "🤖", category: "AI/ML",         topic: "Gemini 2.5 Flash: Google's fastest model",  layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { idx: 3, icon: "🤖", category: "AI/ML",         topic: "Vibe coding with AI: How it works",         layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
+  { idx: 4, icon: "🤖", category: "AI/ML",         topic: "Llama 4 Scout vs Maverick by Meta",         layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { idx: 5, icon: "🤖", category: "AI/ML",         topic: "RAG vs Fine-tuning: When to use which",     layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { idx: 6, icon: "🐍", category: "Python",        topic: "UV package manager vs pip",                 layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { idx: 7, icon: "⚡", category: "JavaScript",    topic: "Vercel AI SDK streaming in Next.js",        layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
 ];
 
 // ── Single daily topic picker ──────────────────────────────────────────────────
 // Flat rotation across hot AI/tech topics — one per day, AI/ML weighted 50%.
+// Daily rotation — AI/ML heavily weighted, hottest 2026 releases first
 const DAILY_ROTATION: Omit<HotSuggestion, "idx">[] = [
-  { icon: "🤖", category: "AI/ML",         topic: "Context window limits in LLMs",          layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
-  { icon: "🐍", category: "Python",        topic: "Python type hints in 2026",               layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "RAG vs Fine-tuning: When to use which",  layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
-  { icon: "🧮", category: "Algorithms",    topic: "Two-pointer technique",                   layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "Mixture of Experts architecture",         layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
-  { icon: "⚡", category: "JavaScript",    topic: "React server components deep dive",       layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
-  { icon: "🤖", category: "AI/ML",         topic: "Function calling in LLMs",                layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
-  { icon: "🏗", category: "System Design", topic: "Rate limiting algorithms",                layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
-  { icon: "🤖", category: "AI/ML",         topic: "Vector databases: How they work",         layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
-  { icon: "🐍", category: "Python",        topic: "Dataclasses vs Pydantic models",          layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "Chain-of-thought prompting techniques",   layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
-  { icon: "🚀", category: "DevOps",        topic: "Docker multi-stage builds",               layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
-  { icon: "🤖", category: "AI/ML",         topic: "AI hallucination: Causes and fixes",      layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
-  { icon: "🧮", category: "Algorithms",    topic: "Sliding window pattern",                  layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "Model context protocol (MCP) explained",  layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
-  { icon: "🐍", category: "Python",        topic: "asyncio.gather vs asyncio.wait",          layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "Embedding models and semantic search",    layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
-  { icon: "⚡", category: "JavaScript",    topic: "TypeScript 5 decorators",                 layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "Quantization: Making LLMs run faster",   layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
-  { icon: "🏗", category: "System Design", topic: "Event-driven architecture",               layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
-  { icon: "🤖", category: "AI/ML",         topic: "Structured outputs from AI models",       layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
-  { icon: "🐍", category: "Python",        topic: "FastAPI dependency injection",            layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
-  { icon: "🤖", category: "AI/ML",         topic: "AI agents vs chatbots: Key differences",  layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
-  { icon: "🧮", category: "Algorithms",    topic: "Dynamic programming tabulation",          layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  // 🔥 Hottest 2026 AI releases — leads the rotation
+  { icon: "🤖", category: "AI/ML",         topic: "Model Context Protocol (MCP) explained",             layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "🤖", category: "AI/ML",         topic: "Claude Sonnet 4.5 vs GPT-4o: Which is better?",     layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { icon: "🐍", category: "Python",        topic: "UV package manager: Faster than pip",                layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Gemini 2.5 Flash: Google's fastest model explained", layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "🤖", category: "AI/ML",         topic: "Vibe coding with AI: How it actually works",         layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
+  { icon: "🏗", category: "System Design", topic: "Rate limiting algorithms",                           layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🤖", category: "AI/ML",         topic: "Llama 4 Scout vs Maverick: Meta's open models",     layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { icon: "⚡", category: "JavaScript",    topic: "Vercel AI SDK: Streaming AI responses in Next.js",  layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Claude Code vs Cursor vs Copilot compared",         layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { icon: "🐍", category: "Python",        topic: "Pydantic AI: Type-safe AI agents",                  layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "LangGraph: Build AI agent workflows",               layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "🧮", category: "Algorithms",    topic: "Two-pointer technique",                             layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "RAG vs Fine-tuning: When to use which",             layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🚀", category: "DevOps",        topic: "Docker multi-stage builds",                         layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
+  { icon: "🤖", category: "AI/ML",         topic: "OpenAI Agents SDK: Build AI agents in Python",      layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🐍", category: "Python",        topic: "Dataclasses vs Pydantic models",                    layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "Mixture of Experts architecture",                   layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "⚡", category: "JavaScript",    topic: "React server components deep dive",                  layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "🤖", category: "AI/ML",         topic: "Function calling in LLMs: How it works",            layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🏗", category: "System Design", topic: "Event-driven architecture",                         layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "🤖", category: "AI/ML",         topic: "Ollama: Run LLMs locally for free",                 layout: "quick-tips",   difficulty: "Beginner",     typeLabel: "⚡ Quick Tips"   },
+  { icon: "🧮", category: "Algorithms",    topic: "Sliding window pattern",                            layout: "code-example", difficulty: "Beginner",     typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "CrewAI: Multi-agent orchestration explained",       layout: "explainer",    difficulty: "Intermediate", typeLabel: "📖 Explainer"    },
+  { icon: "🐍", category: "Python",        topic: "asyncio.gather vs asyncio.wait",                    layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
+  { icon: "🤖", category: "AI/ML",         topic: "DeepSeek R2: New reasoning model explained",        layout: "quiz-reveal",  difficulty: "Beginner",     typeLabel: "🧩 Quiz"         },
+  { icon: "🧮", category: "Algorithms",    topic: "Dynamic programming tabulation",                    layout: "quiz-reveal",  difficulty: "Intermediate", typeLabel: "🧩 Quiz"         },
+  { icon: "🤖", category: "AI/ML",         topic: "Embedding models and semantic search",              layout: "explainer",    difficulty: "Beginner",     typeLabel: "📖 Explainer"    },
+  { icon: "🐍", category: "Python",        topic: "FastAPI dependency injection",                      layout: "code-example", difficulty: "Intermediate", typeLabel: "💻 Code Example" },
 ];
 
 export function getOneDailyTopic(date?: Date): Omit<HotSuggestion, "idx"> {

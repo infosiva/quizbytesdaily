@@ -58,10 +58,33 @@ export type LayoutId = (typeof LAYOUTS)[number]["id"];
 // ── Trending topic seeds (used to pre-populate the generate form) ─────────────
 
 export const TRENDING_TOPICS: Record<string, string[]> = {
+  // AI/ML — pinned to hottest 2026 releases first, then evergreen concepts
   "AI/ML": [
-    "Context window limits in LLMs", "Mixture of Experts architecture",
-    "RAG vs Fine-tuning", "Prompt caching strategies", "Vision language models",
-    "AI agents vs chatbots", "Embedding models explained", "Vector databases",
+    // 🔥 Hottest right now (2026 releases & viral topics)
+    "Claude Sonnet 4.5 vs GPT-4o: Which is better?",
+    "Gemini 2.5 Flash explained: Google's fastest model",
+    "Model Context Protocol (MCP): The USB-C for AI agents",
+    "Claude Code vs Cursor vs Copilot: AI coding tools compared",
+    "Llama 4 Scout and Maverick: Meta's new open models",
+    "Vibe coding with AI: How it works",
+    "DeepSeek R2: China's new reasoning model",
+    "Gemini 2.5 Pro vs Claude 3.7: Benchmark breakdown",
+    // 🚀 Hot frameworks & tools
+    "LangGraph for AI agent workflows",
+    "CrewAI: Multi-agent orchestration explained",
+    "OpenAI Agents SDK: Build AI agents in Python",
+    "Vercel AI SDK: Streaming AI responses in Next.js",
+    "Pydantic AI: Type-safe AI agents",
+    "Ollama: Run LLMs locally for free",
+    // 💡 Core AI/ML concepts (evergreen)
+    "RAG vs Fine-tuning: When to use which",
+    "Mixture of Experts architecture",
+    "Context window limits in LLMs",
+    "Prompt caching: Cut your AI costs by 90%",
+    "Embedding models and semantic search",
+    "AI agents vs chatbots: Key differences",
+    "Function calling in LLMs",
+    "Structured outputs from AI models",
   ],
   "Python": [
     "Python type hints in 2026", "Async generators", "Dataclasses vs Pydantic",
