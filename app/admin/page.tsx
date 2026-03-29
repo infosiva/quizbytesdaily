@@ -22,7 +22,9 @@ interface SeriesRecord {
   status: string;
   youtube_id: string | null;
   youtube_url: string | null;
+  scheduled_at: string | null;
   created_at: string;
+  updated_at: string;
   slide_count?: number;
 }
 
@@ -1043,7 +1045,23 @@ export default function AdminPage() {
                         <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, background: "rgba(168,85,247,0.15)", color: "#a855f7" }}>{s.category}</span>
                         <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: difficultyColor(s.difficulty), background: "rgba(255,255,255,0.05)" }}>{s.difficulty}</span>
                         <span style={{ fontSize: "0.7rem", padding: "1px 6px", borderRadius: 4, color: statusColor(s.status), background: "rgba(255,255,255,0.05)" }}>{s.status}</span>
-                        <span style={{ fontSize: "0.7rem", color: "#4a4a5a" }}>{s.slide_count ?? 0} slides · {new Date(s.created_at).toLocaleDateString()}</span>
+                        <span style={{ fontSize: "0.7rem", color: "#4a4a5a" }}>
+                          {s.slide_count ?? 0} slides
+                          {" · "}
+                          <span title="Created at">📅 {new Date(s.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                          {" · "}
+                          <span title={`Last updated: ${s.updated_at}`} style={{ color: "#374151" }}>
+                            ✏️ {new Date(s.updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {s.scheduled_at && (
+                            <>
+                              {" · "}
+                              <span style={{ color: "#fbbf24", fontWeight: 600 }} title="Scheduled upload time">
+                                🕐 {new Date(s.scheduled_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} {new Date(s.scheduled_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} UTC
+                              </span>
+                            </>
+                          )}
+                        </span>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
