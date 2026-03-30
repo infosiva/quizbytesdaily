@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSeriesBySlug } from "@/lib/db";
+import { buildThumbnailJpeg } from "@/lib/thumbnail-svg";
 
 export const runtime    = "nodejs";
 export const maxDuration = 300; // 5 min — large video uploads
@@ -37,12 +39,12 @@ export async function POST(req: NextRequest) {
     }
 
     const form          = await req.formData();
-    const videoFile     = form.get("video")       as File | null;
-    const thumbFile     = form.get("thumbnail")   as File | null;
+    const videoFile     = form.get("video")         as File | null;
+    const seriesSlug    = (form.get("seriesSlug")   as string) || "";
     const title         = (form.get("title")         as string) || "QuizBytesDaily Quiz #Shorts";
     const description   = (form.get("description")   as string) || "";
     const tagsRaw       = (form.get("tags")           as string) || "";
-    const privacyStatus = (form.get("privacyStatus")  as string) || "private";
+    const privacyStatus = (form.get("privacyStatus")  as string) || "public";
 
     if (!videoFile) {
       return NextResponse.json({ error: "No video file provided" }, { status: 400 });
@@ -104,26 +106,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── 3. Set custom thumbnail (if provided) ────────────────────────────────
-    if (thumbFile) {
-      const thumbBuffer = Buffer.from(await thumbFile.arrayBuffer());
-      await fetch(
-        `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${vid.id}&uploadType=media`,
-        {
-          method: "POST",
-          headers: {
-            Authorization:    `Bearer ${token}`,
-            "Content-Type":   thumbFile.type || "image/jpeg",
-            "Content-Length": String(thumbBuffer.byteLength),
-          },
-          body: thumbBuffer,
+    // ── 3. Set custom thumbnail (server-generated from series slug) ───────────
+    let thumbWarning: string | undefined;
+    try {
+      // Generate JPEG thumbnail from the series data
+      let thumbBuffer: Buffer | null = null;
+      if (seriesSlug) {
+        const series = await getSeriesBySlug(seriesSlug);
+        if (series) {
+          thumbBuffer = await buildThumbnailJpeg(series.title, series.category, series.difficulty);
         }
-      );
+      }
+
+      if (thumbBuffer) {
+        const thumbRes = await fetch(
+          `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${vid.id}&uploadType=media`,
+          {
+            method: "POST",
+            headers: {
+              Authorization:    `Bearer ${token}`,
+              "Content-Type":   "image/jpeg",
+              "Content-Length": String(thumbBuffer.byteLength),
+            },
+            body: new Uint8Array(thumbBuffer),
+          }
+        );
+        if (!thumbRes.ok) {
+          const thumbErr = await thumbRes.json().catch(() => ({}));
+          const errMsg   = (thumbErr as { error?: { message?: string } }).error?.message ?? thumbRes.statusText;
+          // Not a fatal error — video uploaded successfully, thumbnail just didn't apply
+          thumbWarning = `Thumbnail not applied: ${errMsg}. (Channel verification required for custom thumbnails.)`;
+          console.warn("[upload] thumbnail set failed:", errMsg);
+        }
+      }
+    } catch (thumbEx) {
+      thumbWarning = `Thumbnail generation failed: ${thumbEx instanceof Error ? thumbEx.message : String(thumbEx)}`;
+      console.warn("[upload] thumbnail error:", thumbWarning);
     }
 
     return NextResponse.json({
       videoId: vid.id,
       url: `https://www.youtube.com/shorts/${vid.id}`,
+      ...(thumbWarning ? { thumbWarning } : {}),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

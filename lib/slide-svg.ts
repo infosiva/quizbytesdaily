@@ -785,3 +785,6 @@ export async function slideToPngFrames(
   const sharp  = await getSharp();
   return Promise.all(frames.map(svg => sharp(Buffer.from(svg)).png().toBuffer()));
 }
+
+// ── Text utilities re-exported for thumbnail builder ─────────────────────────
+export { svgPath as thumbSvgPath, wrapText as thumbWrapText, textW as thumbTextW, getSharp as thumbGetSharp };

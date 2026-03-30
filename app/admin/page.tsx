@@ -350,10 +350,10 @@ export default function AdminPage() {
   const [uploadDesc, setUploadDesc] = useState("");
   const [showDesc, setShowDesc] = useState(false);
   const [uploadTags, setUploadTags] = useState("QuizBytesDaily,tech,coding,quiz");
-  const [uploadPrivacy, setUploadPrivacy] = useState<"private" | "unlisted" | "public">("private");
+  const [uploadPrivacy, setUploadPrivacy] = useState<"private" | "unlisted" | "public">("public");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<{ url: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ url: string; thumbWarning?: string } | null>(null);
   const [uploadError, setUploadError] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -625,23 +625,18 @@ export default function AdminPage() {
 
       // Step 2: upload to YouTube
       setUploadPhase("uploading");
-      let thumbBlob: Blob | null = null;
-      if (canvasRef.current) {
-        thumbBlob = await new Promise<Blob | null>((resolve) =>
-          canvasRef.current!.toBlob(resolve, "image/jpeg", 0.9)
-        );
-      }
       const form = new FormData();
       form.append("video", fileToUpload);
       form.append("title", uploadTitle);
       form.append("description", uploadDesc);
       form.append("tags", uploadTags);
       form.append("privacyStatus", uploadPrivacy);
-      if (thumbBlob) form.append("thumbnail", thumbBlob, "thumbnail.jpg");
+      // Thumbnail is generated server-side from the series slug
+      if (uploadSeries?.slug) form.append("seriesSlug", uploadSeries.slug);
       const res = await fetch("/api/youtube/upload", { method: "POST", body: form });
       const json = await res.json();
       if (!res.ok) { setUploadError(json.error ?? "Upload failed"); return; }
-      setUploadResult({ url: json.url });
+      setUploadResult({ url: json.url, thumbWarning: json.thumbWarning });
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Network error");
     } finally {
@@ -1322,9 +1317,16 @@ export default function AdminPage() {
                     </div>
                   )}
                   {uploadResult && (
-                    <div style={{ padding: "0.75rem 1rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 8, fontSize: "0.875rem" }}>
-                      <span style={{ color: "#4ade80" }}>✓ Uploaded!</span>{" "}
-                      <a href={uploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: "#22d3ee" }}>View on YouTube →</a>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ padding: "0.75rem 1rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 8, fontSize: "0.875rem" }}>
+                        <span style={{ color: "#4ade80" }}>✓ Uploaded!</span>{" "}
+                        <a href={uploadResult.url} target="_blank" rel="noopener noreferrer" style={{ color: "#22d3ee" }}>View on YouTube →</a>
+                      </div>
+                      {uploadResult.thumbWarning && (
+                        <div style={{ padding: "0.5rem 0.75rem", background: "rgba(251,191,36,0.08)", border: "1px solid #fbbf2460", borderRadius: 6, color: "#fbbf24", fontSize: "0.72rem" }}>
+                          ⚠ {uploadResult.thumbWarning}
+                        </div>
+                      )}
                     </div>
                   )}
 
