@@ -78,27 +78,31 @@ export async function renderSeries(
   onLog?.(`[render] "${series.title}" — ${totalSlides} slides (CTA skipped)`);
 
   try {
-    // ── Step 1: render each slide as progressive reveal frames ─────────────
-    // Each slide becomes N PNGs: frame 0 = heading only, frame N = all items.
-    // This creates a pop-in engagement effect without requiring video editing.
-    onLog?.("[render] Generating slide PNGs…");
+    // ── Step 1: render all slides in parallel ───────────────────────────────
+    // Renders all slides simultaneously so PNG generation time ≈ one slide's
+    // time rather than N slides × one slide's time. Critical for Vercel 60s limit.
+    onLog?.("[render] Generating slide PNGs (parallel)…");
 
     interface FrameEntry { path: string; dur: number }
+
+    const allSlides = await Promise.all(
+      renderRows.map(async (row, i) => {
+        const data = JSON.parse(row.data) as Record<string, unknown>;
+        data.slideNum    = i + 1;
+        data.totalSlides = totalSlides;
+        const slideDur = dur(row.template);
+        const bufs     = await slideToPngFrames(row.template, data);
+        const frameDur = slideDur / bufs.length;
+        return bufs.map((buf, f) => ({ buf, i, f, frameDur }));
+      })
+    );
+
+    // Write PNGs in slide order and collect frame entries
     const frames: FrameEntry[] = [];
-
-    for (let i = 0; i < renderRows.length; i++) {
-      const row  = renderRows[i];
-      const data = JSON.parse(row.data) as Record<string, unknown>;
-      data.slideNum    = i + 1;
-      data.totalSlides = totalSlides;
-
-      const slideDur = dur(row.template);
-      const bufs     = await slideToPngFrames(row.template, data);
-      const frameDur = slideDur / bufs.length;
-
-      for (let f = 0; f < bufs.length; f++) {
+    for (const slideFrames of allSlides) {
+      for (const { buf, i, f, frameDur } of slideFrames) {
         const fPath = path.join(tmpDir, `slide_${i}_f${f}.png`);
-        fs.writeFileSync(fPath, bufs[f]);
+        fs.writeFileSync(fPath, buf);
         frames.push({ path: fPath, dur: frameDur });
       }
     }
@@ -110,12 +114,14 @@ export async function renderSeries(
     // ── Step 2: build FFmpeg args ───────────────────────────────────────────
     const args: string[] = ["-y"];
 
-    // One PNG input per reveal frame, each held for frameDur seconds
+    // One PNG input per reveal frame, each held for frameDur seconds.
+    // Use 2 fps input for still images — 18 frames/slide instead of 270.
+    // The output is forced back to 30 fps via -r below (frame duplication is free).
     frames.forEach((f) => {
       args.push(
         "-loop",      "1",
         "-t",         f.dur.toFixed(2),
-        "-framerate", String(FPS),
+        "-framerate", "2",
         "-i",         f.path
       );
     });
@@ -143,7 +149,7 @@ export async function renderSeries(
     let filterComplex = "";
 
     frames.forEach((_f, i) => {
-      filterComplex += `[${i}:v]scale=${W}:${H}:flags=lanczos,format=yuv420p[s${i}];`;
+      filterComplex += `[${i}:v]scale=${W}:${H}:flags=bilinear,format=yuv420p[s${i}];`;
       labels.push(`[s${i}]`);
     });
 
@@ -162,8 +168,9 @@ export async function renderSeries(
       "-map",    "[vout]",
       "-map",    "[aout]",
       "-c:v",    "libx264",
-      "-preset", "ultrafast",   // fastest encode — critical for Vercel 120s limit
+      "-preset", "ultrafast",   // fastest encode — critical for Vercel limit
       "-crf",    "26",          // slightly higher CRF = smaller file, still good quality
+      "-r",      String(FPS),   // force 30fps output; input is 2fps (frame duplication is free)
       "-c:a",    "aac",
       "-b:a",    "96k",
       "-pix_fmt", "yuv420p",
@@ -180,7 +187,7 @@ export async function renderSeries(
     const result = spawnSync(FFMPEG, args, {
       encoding: "utf8",
       maxBuffer: 20 * 1024 * 1024,
-      timeout: 180_000,
+      timeout: 270_000,
     });
 
     if (result.status !== 0 || result.error) {
