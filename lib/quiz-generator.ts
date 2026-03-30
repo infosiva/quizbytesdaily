@@ -948,9 +948,17 @@ export async function generateQuizSeries(
       // Fix totalSlides across all LLM slides and append a CTA at the end
       const rawSlides = parsed.slides as unknown as Array<Record<string, unknown>>;
       const total = rawSlides.length + 1;
+      const CTA_COPY: Record<string, { heading: string; subtitle: string }> = {
+        "quiz-reveal":   { heading: "Enjoyed This Quiz?",        subtitle: "New quiz every day — subscribe so you never miss one" },
+        "explainer":     { heading: "Found This Useful?",        subtitle: "New tech explainer every day — subscribe to keep learning" },
+        "code-example":  { heading: "Levelled Up Your Code?",    subtitle: "New code examples every day — subscribe to keep growing" },
+        "quick-tips":    { heading: "Found These Tips Useful?",  subtitle: "Daily tips to make you a sharper developer — subscribe now" },
+        "cheat-sheet":   { heading: "Save This Cheat Sheet?",    subtitle: "New cheat sheets every day — subscribe for quick references" },
+      };
+      const ctaCopy = CTA_COPY[layout] ?? { heading: "Enjoyed This?", subtitle: "New content every day — subscribe so you never miss one" };
       const slides = [
         ...rawSlides.map((s, i) => ({ ...s, slideNum: i + 1, totalSlides: total })),
-        { template: "cta", heading: "Enjoyed This Quiz?", slideNum: total, totalSlides: total },
+        { template: "cta", ...ctaCopy, slideNum: total, totalSlides: total },
       ] as unknown as GeneratedSlide[];
 
       // Use the LLM-generated title as canonical topic (normalizes typos/question-form input)

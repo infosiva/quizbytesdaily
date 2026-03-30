@@ -513,6 +513,7 @@ export interface PipelineData {
 
 export interface CtaData {
   heading?: string;
+  subtitle?: string;
   slideNum?: number;
   totalSlides?: number;
 }
@@ -698,7 +699,7 @@ function buildCtaSvg(data: CtaData): string {
   y += headLines.length * headLH + 28;
 
   // Subtitle
-  const subText = "New quiz every day — subscribe so you never miss one";
+  const subText = data.subtitle ?? "New video every day — subscribe so you never miss one";
   const subLines = wrapText(subText, W - PADX * 2, 34);
   subLines.forEach((line, i) => {
     parts.push(svgPath(line, CX, y + 34 + i * 46, 34, "#64748b", "middle"));
