@@ -848,14 +848,23 @@ export async function generateQuizSeries(
       console.log(`[quiz-generator] Trying ${provider.name}…`);
       const text = await provider.fn();
       const parsed = parseJson(text);
-      console.log(`[quiz-generator] ✓ ${provider.name} succeeded (${parsed.slides.length} slides)`);
+
+      // Fix totalSlides across all LLM slides and append a CTA at the end
+      const rawSlides = parsed.slides as unknown as Array<Record<string, unknown>>;
+      const total = rawSlides.length + 1;
+      const slides = [
+        ...rawSlides.map((s, i) => ({ ...s, slideNum: i + 1, totalSlides: total })),
+        { template: "cta", heading: "Enjoyed This Quiz?", slideNum: total, totalSlides: total },
+      ] as unknown as GeneratedSlide[];
+
+      console.log(`[quiz-generator] ✓ ${provider.name} succeeded (${rawSlides.length} content + 1 CTA = ${total} slides)`);
       return {
         slug: slugify(`${topic}-${Date.now()}`),
         title: parsed.title ?? topic,
         topic,
         category,
         difficulty,
-        slides: parsed.slides,
+        slides,
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

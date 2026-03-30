@@ -636,51 +636,52 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
 }
 
 /**
- * Return a sequence of SVGs for a slide with text typing effect.
- * Frame 0 = all box shapes visible but no text.
- * Frames 1–N = content words revealed in equal-sized chunks.
- * Heading is always fully visible.
+ * Return a sequence of SVGs for a slide with a per-card reveal effect.
+ * Frame 0 = all box shapes visible, no text (structure preview).
+ * Frames 1…N = one additional card/definition revealed per frame.
+ * This is cleaner than word-by-word: viewers see each full card pop in.
  *
- * MAX_CONTENT_FRAMES caps frames per slide to keep total PNG count
- * manageable on Vercel (60s function limit). With 8 slides × 6 frames
- * = 48 PNGs total — well within the render time budget.
+ * Typical frame counts:
+ *   definition-steps (def + 3 cards) → 5 frames (empty + def + 3 cards)
+ *   pipeline         (4 cards)       → 5 frames (empty + 4 cards)
+ *   cta                              → 1 frame  (static)
  */
 export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
   if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
 
-  // Cap content frames per slide: 1 structure frame + up to 5 content frames = 6 total.
-  // 8 slides × 6 frames = 48 PNGs → ~30–45s render (safe for Vercel 60s limit).
-  const MAX_CONTENT_FRAMES = 5;
-
   if (template === "pipeline") {
     const d = data as unknown as PipelineData;
-    const totalWords = (d.cards ?? []).reduce(
-      (s, c) => s + countWords(c.title) + countWords(c.body ?? ""), 0
-    );
-    if (totalWords === 0) return [buildPipelineSvg(d)];
-    const n   = Math.min(MAX_CONTENT_FRAMES, totalWords);  // never more frames than words
-    const wpt = Math.ceil(totalWords / n);                  // words per content frame
+    const cards = d.cards ?? [];
+    if (cards.length === 0) return [buildPipelineSvg(d)];
+    // Build cumulative word-budgets: one frame per card revealed
+    const budgets: number[] = [];
+    let cum = 0;
+    for (const c of cards) {
+      cum += countWords(c.title) + countWords(c.body ?? "");
+      budgets.push(cum);
+    }
     return [
-      buildPipelineSvg(d, 0),  // structure visible, no text
-      ...Array.from({ length: n }, (_, f) => buildPipelineSvg(d, (f + 1) * wpt)),
+      buildPipelineSvg(d, 0),                        // structure, no text
+      ...budgets.map(b => buildPipelineSvg(d, b)),   // one card added per frame
     ];
   }
 
   // definition-steps (and default fallback)
   const d = data as unknown as DefinitionStepsData;
-  const defWords  = d.definition
-    ? countWords(d.definition.title) + countWords(d.definition.body ?? "")
-    : 0;
-  const cardWords = (d.cards ?? []).reduce(
-    (s, c) => s + countWords(c.title) + countWords(c.body ?? ""), 0
-  );
-  const totalWords = defWords + cardWords;
-  if (totalWords === 0) return [buildDefinitionStepsSvg(d)];
-  const n   = Math.min(MAX_CONTENT_FRAMES, totalWords);
-  const wpt = Math.ceil(totalWords / n);
+  const budgets: number[] = [];
+  let cum = 0;
+  if (d.definition) {
+    cum += countWords(d.definition.title) + countWords(d.definition.body ?? "");
+    budgets.push(cum);
+  }
+  for (const c of d.cards ?? []) {
+    cum += countWords(c.title) + countWords(c.body ?? "");
+    budgets.push(cum);
+  }
+  if (budgets.length === 0) return [buildDefinitionStepsSvg(d)];
   return [
-    buildDefinitionStepsSvg(d, 0),  // structure visible, no text
-    ...Array.from({ length: n }, (_, f) => buildDefinitionStepsSvg(d, (f + 1) * wpt)),
+    buildDefinitionStepsSvg(d, 0),                         // structure, no text
+    ...budgets.map(b => buildDefinitionStepsSvg(d, b)),    // one item added per frame
   ];
 }
 

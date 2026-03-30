@@ -27,6 +27,7 @@ const FPS = 30;
 // Slide durations (seconds)
 const DEF_STEPS_DUR = 9;
 const PIPELINE_DUR  = 9;
+const CTA_DUR       = 4;  // subscribe bumper — short static frame
 
 // Output directory — always /tmp so it works on Vercel's read-only filesystem
 const RENDERS_DIR = path.join(os.tmpdir(), "qbd-renders");
@@ -49,6 +50,7 @@ function getFFmpegPath(): string {
 
 function dur(template: string): number {
   if (template === "pipeline") return PIPELINE_DUR;
+  if (template === "cta")      return CTA_DUR;
   return DEF_STEPS_DUR;
 }
 
@@ -70,12 +72,11 @@ export async function renderSeries(
   const tmpDir  = path.join(os.tmpdir(), `qbd-render-${seriesId}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  // Skip CTA slides — video ends on the last content slide
-  const renderRows  = slideRows.filter(r => r.template !== "cta");
+  const renderRows  = slideRows;
   const totalSlides = renderRows.length;
 
-  if (totalSlides === 0) throw new Error("No renderable slides (all were CTA)");
-  onLog?.(`[render] "${series.title}" — ${totalSlides} slides (CTA skipped)`);
+  if (totalSlides === 0) throw new Error("No slides to render");
+  onLog?.(`[render] "${series.title}" — ${totalSlides} slides`);
 
   try {
     // ── Step 1: render all slides in parallel ───────────────────────────────
@@ -126,25 +127,8 @@ export async function renderSeries(
       );
     });
 
-    // Background music — C major chord (C4+E4+G4+C5) with gentle pulse and shimmer.
-    // Amplitudes at 0.18–0.28 so the music is clearly audible at quiz-show volume.
-    const musicIdx = frames.length;
-    args.push("-f", "lavfi", "-i",
-      `aevalsrc=` +
-      // Root: C4 (261.63 Hz) with slow 0.25 Hz swell
-      `0.28*sin(2*PI*t*261.63)*(0.85+0.15*sin(2*PI*t*0.25))` +
-      // Third: E4 (329.63 Hz) with 0.35 Hz swell (slightly out of phase)
-      `+0.22*sin(2*PI*t*329.63)*(0.85+0.15*sin(2*PI*t*0.35))` +
-      // Fifth: G4 (392.00 Hz) with 0.3 Hz swell
-      `+0.18*sin(2*PI*t*392.00)*(0.85+0.15*sin(2*PI*t*0.30))` +
-      // Octave: C5 (523.25 Hz) — adds brightness / sparkle
-      `+0.10*sin(2*PI*t*523.25)*(0.85+0.15*sin(2*PI*t*0.20))` +
-      // Subtle second harmonic on root for warmth
-      `+0.06*sin(2*PI*t*130.81)*(0.9+0.1*sin(2*PI*t*0.15))` +
-      `:s=44100:c=mono:d=${totalDur}`
-    );
-
-    // filter_complex: scale + concat all frames, add progress bar, fade music
+    // filter_complex: scale + concat all frames, add progress bar
+    // No background music — video-only output (cleaner, faster, no audio overhead)
     const labels: string[] = [];
     let filterComplex = "";
 
@@ -156,23 +140,13 @@ export async function renderSeries(
     filterComplex += `${labels.join("")}concat=n=${labels.length}:v=1:a=0[vconcat];`;
     filterComplex += `[vconcat]drawbox=x=0:y=${H - 10}:w='min(iw\\,(t/${totalDur})*iw)':h=10:color=0xa855f7@0.9:t=fill[vout]`;
 
-    const fadeDur = Math.min(3, totalDur * 0.1);
-    filterComplex +=
-      `;[${musicIdx}:a]aformat=channel_layouts=stereo,` +
-      `afade=t=in:st=0:d=${fadeDur},` +
-      `afade=t=out:st=${totalDur - fadeDur}:d=${fadeDur},` +
-      `volume=0.45[aout]`;  // 0.45 = clearly audible background; was 0.14 (inaudible)
-
     args.push(
       "-filter_complex", filterComplex,
       "-map",    "[vout]",
-      "-map",    "[aout]",
       "-c:v",    "libx264",
       "-preset", "ultrafast",   // fastest encode — critical for Vercel limit
-      "-crf",    "26",          // slightly higher CRF = smaller file, still good quality
+      "-crf",    "26",
       "-r",      String(FPS),   // force 30fps output; input is 2fps (frame duplication is free)
-      "-c:a",    "aac",
-      "-b:a",    "96k",
       "-pix_fmt", "yuv420p",
       "-movflags", "+faststart",
       "-threads", "0",
