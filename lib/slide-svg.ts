@@ -234,8 +234,8 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
   const fullBody  = card.body?.trim() ? String(card.body) : "";
 
   // Font sizing uses FULL text for layout stability across all reveal frames
-  let titleFs = Math.min(44, Math.max(20, Math.floor(h * 0.185)));
-  let bodyFs  = Math.min(32, Math.max(16, Math.floor(h * 0.135)));
+  let titleFs = Math.min(34, Math.max(18, Math.floor(h * 0.15)));
+  let bodyFs  = Math.min(26, Math.max(14, Math.floor(h * 0.11)));
   let titleLH = 0, bodyLH = 0;
   for (let it = 0; it < 14; it++) {
     titleLH = Math.round(titleFs * 1.28);
@@ -244,9 +244,9 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
     const bl = fullBody ? wrapText(fullBody, titleMaxW, bodyFs) : [];
     const gap    = bl.length > 0 ? 8 : 0;
     const totalH = tl.length * titleLH + gap + bl.length * bodyLH;
-    if (totalH <= availH || (titleFs <= 20 && bodyFs <= 16)) break;
-    titleFs = Math.max(20, titleFs - 2);
-    bodyFs  = Math.max(16, bodyFs  - 2);
+    if (totalH <= availH || (titleFs <= 18 && bodyFs <= 14)) break;
+    titleFs = Math.max(18, titleFs - 2);
+    bodyFs  = Math.max(14, bodyFs  - 2);
   }
 
   // Layout anchor from full text (stable position regardless of reveal state)
@@ -304,8 +304,8 @@ function renderDefBoxAtHeight(
   const fullBody  = def.body?.trim() ? String(def.body) : "";
 
   // Font sizing uses FULL text for layout stability
-  let titleFs = Math.min(46, Math.max(22, Math.floor(h * 0.19)));
-  let bodyFs  = Math.min(34, Math.max(18, Math.floor(h * 0.135)));
+  let titleFs = Math.min(36, Math.max(18, Math.floor(h * 0.15)));
+  let bodyFs  = Math.min(28, Math.max(14, Math.floor(h * 0.11)));
   let titleLH = 0, bodyLH = 0;
   for (let it = 0; it < 14; it++) {
     titleLH = Math.round(titleFs * 1.28);
@@ -314,9 +314,9 @@ function renderDefBoxAtHeight(
     const bl = fullBody ? wrapText(fullBody, innerW, bodyFs) : [];
     const gap    = bl.length > 0 ? 12 : 0;
     const totalH = tl.length * titleLH + gap + bl.length * bodyLH;
-    if (totalH <= availH || (titleFs <= 22 && bodyFs <= 18)) break;
-    titleFs = Math.max(22, titleFs - 2);
-    bodyFs  = Math.max(18, bodyFs  - 2);
+    if (totalH <= availH || (titleFs <= 18 && bodyFs <= 14)) break;
+    titleFs = Math.max(18, titleFs - 2);
+    bodyFs  = Math.max(14, bodyFs  - 2);
   }
 
   // Layout anchor from full text
@@ -541,7 +541,7 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
 function buildDefinitionStepsSvg(data: DefinitionStepsData, wordBudget = Infinity): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
-  const headingFs = 58;
+  const headingFs = 46;
   const accentCol = slideAccentColor(data.heading ?? "");
 
   const parts: string[] = [];
@@ -606,7 +606,7 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData, wordBudget = Infinit
 function buildPipelineSvg(data: PipelineData, wordBudget = Infinity): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
-  const headingFs = 58;
+  const headingFs = 46;
 
   const parts: string[] = [];
   parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee"));
@@ -672,52 +672,45 @@ function buildCtaSvg(data: CtaData): string {
   const CX   = W / 2;
   const parts: string[] = [progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee")];
 
-  let y = Math.round((H - 820) / 2);
+  // Total block height: star(200) + heading(100) + subtitle(120) + btn(110) = ~530
+  let y = Math.round((H - 530) / 2);
 
-  // Decorative star-burst (replaces emoji — renders anywhere, no font needed)
-  const sx = CX, sy = y + 110;
+  // Decorative star-burst
+  const sx = CX, sy = y + 90;
   const starPts = Array.from({ length: 10 }, (_, i) => {
     const angle = (i * Math.PI) / 5 - Math.PI / 2;
-    const r = i % 2 === 0 ? 90 : 38;
+    const r = i % 2 === 0 ? 74 : 30;
     return `${(sx + r * Math.cos(angle)).toFixed(1)},${(sy + r * Math.sin(angle)).toFixed(1)}`;
   }).join(" ");
   parts.push(`<polygon points="${starPts}" fill="#a855f7" opacity="0.9"/>`);
-  // Inner glow ring
-  parts.push(`<circle cx="${sx}" cy="${sy}" r="36" fill="#22d3ee" opacity="0.8"/>`);
-  // Check mark inside
-  parts.push(`<polyline points="${(sx-16).toFixed(0)},${sy.toFixed(0)} ${(sx-4).toFixed(0)},${(sy+14).toFixed(0)} ${(sx+18).toFixed(0)},${(sy-14).toFixed(0)}" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`);
-  y += 250;
+  parts.push(`<circle cx="${sx}" cy="${sy}" r="28" fill="#22d3ee" opacity="0.85"/>`);
+  parts.push(`<polyline points="${(sx-12).toFixed(0)},${sy.toFixed(0)} ${(sx-3).toFixed(0)},${(sy+11).toFixed(0)} ${(sx+14).toFixed(0)},${(sy-11).toFixed(0)}" fill="none" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`);
+  y += 200;
 
-  // Heading (path)
+  // Heading
   const headText = data.heading ?? "Enjoyed This Quiz?";
-  const headW = textW(headText, 86);
-  parts.push(svgPath(headText, CX - headW / 2, y + 86, 86, "url(#hg)"));
-  y += 120;
-
-  // Subtitle — wrap to avoid overflow
-  const subText = "New quiz every day - subscribe so you never miss one";
   const PADX = 72;
-  const subLines = wrapText(subText, W - PADX * 2, 38);
-  subLines.forEach((line, i) => {
-    parts.push(svgPath(line, CX, y + 44 + i * 52, 38, "#64748b", "middle"));
+  const headLines = wrapText(headText, W - PADX * 2, 68);
+  const headLH = Math.round(68 * 1.15);
+  headLines.forEach((line, i) => {
+    parts.push(svgPath(line, CX, y + 68 + i * headLH, 68, "url(#hg)", "middle"));
   });
-  y += 44 + subLines.length * 52 + 20;
+  y += headLines.length * headLH + 28;
+
+  // Subtitle
+  const subText = "New quiz every day — subscribe so you never miss one";
+  const subLines = wrapText(subText, W - PADX * 2, 34);
+  subLines.forEach((line, i) => {
+    parts.push(svgPath(line, CX, y + 34 + i * 46, 34, "#64748b", "middle"));
+  });
+  y += subLines.length * 46 + 36;
 
   // Subscribe button
-  parts.push(roundRect(CX - 340, y, 680, 120, 28, "#a855f7"));
-  // Play triangle + text
-  const btnTx = CX - 280;
-  const btnTy = y + 76;
-  parts.push(`<polygon points="${(btnTx).toFixed(0)},${(btnTy - 26).toFixed(0)} ${(btnTx).toFixed(0)},${(btnTy + 6).toFixed(0)} ${(btnTx + 26).toFixed(0)},${(btnTy - 10).toFixed(0)}" fill="white"/>`);
-  parts.push(svgPath("Subscribe on YouTube", btnTx + 40, btnTy, 48, "white"));
-  y += 160;
-
-  // Divider + website
-  parts.push(`<line x1="${CX - 200}" y1="${y}" x2="${CX + 200}" y2="${y}" stroke="#1e1e2e" stroke-width="2"/>`);
-  y += 40;
-  parts.push(svgPath("Browse all quizzes at", CX, y, 36, "#475569", "middle"));
-  y += 56;
-  parts.push(svgPath("quizbytes.dev", CX, y, 58, "#22d3ee", "middle"));
+  parts.push(roundRect(CX - 310, y, 620, 100, 24, "#a855f7"));
+  const btnTx = CX - 252;
+  const btnTy = y + 62;
+  parts.push(`<polygon points="${btnTx.toFixed(0)},${(btnTy-20).toFixed(0)} ${btnTx.toFixed(0)},${(btnTy+8).toFixed(0)} ${(btnTx+22).toFixed(0)},${(btnTy-6).toFixed(0)}" fill="white"/>`);
+  parts.push(svgPath("Subscribe on YouTube", btnTx + 34, btnTy, 40, "white"));
 
   footer(parts, data.slideNum, data.totalSlides);
   return svgWrapper(parts.join("\n"));
@@ -761,39 +754,13 @@ export function slideToRevealFrames(template: string, data: Record<string, unkno
   if (template === "grid-overview") return [buildGridOverviewSvg(data as unknown as GridOverviewData)];
 
   if (template === "pipeline") {
-    const d = data as unknown as PipelineData;
-    const cards = d.cards ?? [];
-    if (cards.length === 0) return [buildPipelineSvg(d)];
-    // Build cumulative word-budgets: one frame per card revealed
-    const budgets: number[] = [];
-    let cum = 0;
-    for (const c of cards) {
-      cum += countWords(c.title) + countWords(c.body ?? "");
-      budgets.push(cum);
-    }
-    return [
-      buildPipelineSvg(d, 0),                        // structure, no text
-      ...budgets.map(b => buildPipelineSvg(d, b)),   // one card added per frame
-    ];
+    // single full frame, all text upfront
+    return [buildPipelineSvg(data as unknown as PipelineData)];
   }
 
-  // definition-steps (and default fallback)
+  // definition-steps (and default fallback) — single full frame, all text upfront
   const d = data as unknown as DefinitionStepsData;
-  const budgets: number[] = [];
-  let cum = 0;
-  if (d.definition) {
-    cum += countWords(d.definition.title) + countWords(d.definition.body ?? "");
-    budgets.push(cum);
-  }
-  for (const c of d.cards ?? []) {
-    cum += countWords(c.title) + countWords(c.body ?? "");
-    budgets.push(cum);
-  }
-  if (budgets.length === 0) return [buildDefinitionStepsSvg(d)];
-  return [
-    buildDefinitionStepsSvg(d, 0),                         // structure, no text
-    ...budgets.map(b => buildDefinitionStepsSvg(d, b)),    // one item added per frame
-  ];
+  return [buildDefinitionStepsSvg(d)];
 }
 
 /** Convert a slide template + data to a PNG Buffer using Sharp (lazy-loaded). */
