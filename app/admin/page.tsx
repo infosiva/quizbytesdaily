@@ -480,7 +480,12 @@ export default function AdminPage() {
       .finally(() => setLoadingLive(false));
   }, []);
 
-  // Draw thumbnail when upload tab loads
+  // Scroll to top whenever the active tab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [tab]);
+
+  // Draw thumbnail when upload tab loads (canvas preview only)
   useEffect(() => {
     if (tab === "upload" && uploadSeries && canvasRef.current) {
       drawThumbnailToCanvas(canvasRef.current, uploadSeries.title, uploadSeries.category, uploadSeries.difficulty);
@@ -1324,7 +1329,10 @@ export default function AdminPage() {
                       </div>
                       {uploadResult.thumbWarning && (
                         <div style={{ padding: "0.5rem 0.75rem", background: "rgba(251,191,36,0.08)", border: "1px solid #fbbf2460", borderRadius: 6, color: "#fbbf24", fontSize: "0.72rem" }}>
-                          ⚠ {uploadResult.thumbWarning}
+                          ⚠ {uploadResult.thumbWarning}{" "}
+                          <a href="https://www.youtube.com/account_features" target="_blank" rel="noopener noreferrer" style={{ color: "#22d3ee", textDecoration: "underline" }}>
+                            Verify channel →
+                          </a>
                         </div>
                       )}
                     </div>
