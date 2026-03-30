@@ -376,6 +376,10 @@ export default function AdminPage() {
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [tgTestResult, setTgTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [tgTesting, setTgTesting] = useState(false);
+  const [tgWebhookResult, setTgWebhookResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [tgWebhooking, setTgWebhooking] = useState(false);
 
   // Render
   const [rendering, setRendering] = useState(false);
@@ -1725,6 +1729,97 @@ export default function AdminPage() {
                 <span style={{ fontSize: "0.82rem", color: "#4ade80", fontWeight: 600 }}>✓ Saved — changes live on public site</span>
               )}
             </div>
+
+            {/* ── Telegram / Automation Setup ── */}
+            <section style={{ marginTop: "2.5rem", paddingTop: "2rem", borderTop: "1px solid #1e1e2e" }}>
+              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: 1.2, marginBottom: 12 }}>
+                🤖 Telegram Bot &amp; Daily Automation
+              </label>
+
+              {/* What you need to add */}
+              <div style={{ padding: "1rem 1.25rem", background: "#0d0d18", border: "1px solid #1e1e2e", borderRadius: 10, marginBottom: "1.25rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#e2e8f0", marginBottom: 10 }}>📋 Required Vercel Environment Variables</div>
+                {[
+                  { name: "TELEGRAM_BOT_TOKEN", note: "From @BotFather on Telegram" },
+                  { name: "TELEGRAM_CHAT_ID",   note: "Your personal chat ID — send /start to the bot, then call getUpdates to get it" },
+                  { name: "CRON_SECRET",         note: "Any secret string — protects the /api/cron/* endpoints" },
+                  { name: "GROQ_API_KEY",        note: "For daily quiz generation (free tier: 100K tokens/day)" },
+                  { name: "YOUTUBE_CLIENT_ID",   note: "Google OAuth — for auto upload" },
+                  { name: "YOUTUBE_CLIENT_SECRET", note: "Google OAuth client secret" },
+                  { name: "YOUTUBE_REFRESH_TOKEN", note: "Long-lived OAuth refresh token" },
+                ].map(({ name, note }) => (
+                  <div key={name} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 7 }}>
+                    <code style={{ fontSize: "0.72rem", background: "#1e1e2e", padding: "2px 8px", borderRadius: 5, color: "#22d3ee", flexShrink: 0, fontFamily: "monospace" }}>{name}</code>
+                    <span style={{ fontSize: "0.72rem", color: "#64748b" }}>{note}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 12, padding: "0.6rem 0.85rem", background: "rgba(168,85,247,0.08)", border: "1px solid #a855f730", borderRadius: 7 }}>
+                  <div style={{ fontSize: "0.72rem", color: "#c084fc", fontWeight: 600, marginBottom: 4 }}>2. Register Telegram webhook (run once after deploying)</div>
+                  <code style={{ fontSize: "0.68rem", color: "#94a3b8", display: "block", wordBreak: "break-all" as const }}>
+                    https://api.telegram.org/bot&#123;TOKEN&#125;/setWebhook?url=https://quizbytes.dev/api/telegram/webhook
+                  </code>
+                </div>
+                <div style={{ marginTop: 8, padding: "0.6rem 0.85rem", background: "rgba(34,211,238,0.06)", border: "1px solid #22d3ee30", borderRadius: 7 }}>
+                  <div style={{ fontSize: "0.72rem", color: "#22d3ee", fontWeight: 600, marginBottom: 4 }}>3. Get your TELEGRAM_CHAT_ID</div>
+                  <code style={{ fontSize: "0.68rem", color: "#94a3b8", display: "block", wordBreak: "break-all" as const }}>
+                    https://api.telegram.org/bot&#123;TOKEN&#125;/getUpdates — find &quot;chat&quot;:&#123;&quot;id&quot;:XXXXXXXX&#125;
+                  </code>
+                </div>
+              </div>
+
+              {/* Daily cron info */}
+              <div style={{ fontSize: "0.78rem", color: "#64748b", marginBottom: "1.25rem", lineHeight: 1.7 }}>
+                <strong style={{ color: "#94a3b8" }}>Daily flow:</strong> Cron runs at <strong style={{ color: "#fbbf24" }}>8 PM UTC</strong> → generates quiz → sends Telegram approval → you tap ✅ → uploads at <strong style={{ color: "#fbbf24" }}>10 AM UTC</strong> next day.
+              </div>
+
+              {/* Test buttons */}
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" as const }}>
+                <div>
+                  <button
+                    onClick={async () => {
+                      setTgTesting(true); setTgTestResult(null);
+                      try {
+                        const r = await fetch("/api/admin/test-telegram", { method: "POST" });
+                        const j = await r.json() as { ok?: boolean; error?: string; message?: string };
+                        setTgTestResult({ ok: !!j.ok, msg: j.error ?? j.message ?? (j.ok ? "Message sent!" : "Unknown error") });
+                      } catch (e) { setTgTestResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" }); }
+                      finally { setTgTesting(false); }
+                    }}
+                    disabled={tgTesting}
+                    style={{ padding: "0.55rem 1.25rem", background: "rgba(34,211,238,0.1)", border: "1px solid #22d3ee", borderRadius: 8, color: "#22d3ee", cursor: tgTesting ? "not-allowed" : "pointer", fontSize: "0.82rem", fontWeight: 600 }}
+                  >
+                    {tgTesting ? "⏳ Sending…" : "📨 Test Notification"}
+                  </button>
+                  {tgTestResult && (
+                    <div style={{ marginTop: 6, fontSize: "0.72rem", color: tgTestResult.ok ? "#4ade80" : "#f87171" }}>
+                      {tgTestResult.ok ? "✓ " : "✗ "}{tgTestResult.msg}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <button
+                    onClick={async () => {
+                      setTgWebhooking(true); setTgWebhookResult(null);
+                      try {
+                        const r = await fetch("/api/admin/setup-webhook", { method: "POST" });
+                        const j = await r.json() as { ok?: boolean; error?: string; message?: string };
+                        setTgWebhookResult({ ok: !!j.ok, msg: j.error ?? j.message ?? (j.ok ? "Webhook registered!" : "Unknown error") });
+                      } catch (e) { setTgWebhookResult({ ok: false, msg: e instanceof Error ? e.message : "Network error" }); }
+                      finally { setTgWebhooking(false); }
+                    }}
+                    disabled={tgWebhooking}
+                    style={{ padding: "0.55rem 1.25rem", background: "rgba(168,85,247,0.1)", border: "1px solid #a855f7", borderRadius: 8, color: "#c084fc", cursor: tgWebhooking ? "not-allowed" : "pointer", fontSize: "0.82rem", fontWeight: 600 }}
+                  >
+                    {tgWebhooking ? "⏳ Registering…" : "🔗 Register Webhook"}
+                  </button>
+                  {tgWebhookResult && (
+                    <div style={{ marginTop: 6, fontSize: "0.72rem", color: tgWebhookResult.ok ? "#4ade80" : "#f87171" }}>
+                      {tgWebhookResult.ok ? "✓ " : "✗ "}{tgWebhookResult.msg}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         )}
 

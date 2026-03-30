@@ -717,6 +717,103 @@ function buildCtaSvg(data: CtaData): string {
   return svgWrapper(parts.join("\n"));
 }
 
+// ── Flowchart / diagram slide ─────────────────────────────────────────────────
+export interface FlowchartNode {
+  color: string;
+  icon?: string;
+  title: string;
+  body?: string;
+}
+export interface FlowchartData {
+  heading: string;
+  slideNum?: number;
+  totalSlides?: number;
+  nodes?: FlowchartNode[];
+}
+
+function buildFlowchartSvg(data: FlowchartData): string {
+  const PADX   = 72;
+  const nodes  = (data.nodes ?? []).slice(0, 6);
+  const count  = nodes.length;
+  const parts: string[] = [progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#a855f7")];
+
+  // Heading
+  const headingFs  = 46;
+  const headingLH  = Math.round(headingFs * 1.2);
+  const headText   = data.heading ?? "";
+  const headLines  = wrapText(headText, W - PADX * 2, headingFs);
+  headLines.forEach((l, i) => {
+    parts.push(svgPath(l, PADX, 100 + i * headingLH, headingFs, "url(#hg)"));
+  });
+
+  if (count === 0) return svgWrapper(parts.join("\n"));
+
+  // Layout: nodes stacked vertically with arrow connectors
+  const AREA_TOP  = 100 + headLines.length * headingLH + 40;
+  const AREA_BOT  = H - 80;
+  const AVAIL_H   = AREA_BOT - AREA_TOP;
+  const ARROW_H   = 42;
+  const TOTAL_ARROWS = count - 1;
+  const BOX_H     = Math.min(180, Math.floor((AVAIL_H - TOTAL_ARROWS * ARROW_H) / count));
+  const BOX_W     = W - PADX * 2;
+  const TITLE_FS  = Math.min(30, Math.max(20, Math.floor(BOX_H * 0.22)));
+  const BODY_FS   = Math.min(24, Math.max(16, Math.floor(BOX_H * 0.17)));
+
+  let cy = AREA_TOP;
+
+  nodes.forEach((node, idx) => {
+    const col = CARD_COLORS[node.color] ?? CARD_COLORS.cyan;
+
+    // Box background
+    parts.push(roundRect(PADX, cy, BOX_W, BOX_H, 14, `${col.bg}`));
+    parts.push(roundRect(PADX, cy, BOX_W, BOX_H, 14, "none", `${col.border}`));
+
+    // Left color accent bar
+    parts.push(`<rect x="${PADX}" y="${cy}" width="8" height="${BOX_H}" rx="4" fill="${col.text}"/>`);
+
+    // Step number badge
+    const numX = PADX + 28;
+    const numY = cy + BOX_H / 2;
+    parts.push(`<circle cx="${numX}" cy="${numY}" r="20" fill="${col.text}" opacity="0.15"/>`);
+    const numStr = String(idx + 1);
+    const numW   = textW(numStr, 22);
+    parts.push(svgPath(numStr, numX - numW / 2, numY + 8, 22, col.text));
+
+    // Title
+    const textX  = PADX + 62;
+    const titleLines = wrapText(node.title, BOX_W - 80, TITLE_FS);
+    const titleTotalH = titleLines.length * Math.round(TITLE_FS * 1.25);
+    const hasBody = node.body?.trim();
+    const blockH  = hasBody ? titleTotalH + 10 + BODY_FS * 1.3 : titleTotalH;
+    const blockY  = cy + (BOX_H - blockH) / 2;
+
+    titleLines.forEach((l, li) => {
+      parts.push(svgPath(l, textX, blockY + (li + 1) * Math.round(TITLE_FS * 1.25), TITLE_FS, col.text));
+    });
+
+    // Body
+    if (hasBody) {
+      const bodyLines = wrapText(node.body!, BOX_W - 80, BODY_FS).slice(0, 2);
+      bodyLines.forEach((l, bi) => {
+        parts.push(svgPath(l, textX, blockY + titleTotalH + 12 + (bi + 1) * Math.round(BODY_FS * 1.3), BODY_FS, "rgba(255,255,255,0.58)"));
+      });
+    }
+
+    cy += BOX_H;
+
+    // Arrow connector (not after last node)
+    if (idx < count - 1) {
+      const ax = W / 2;
+      parts.push(`<line x1="${ax}" y1="${cy + 4}" x2="${ax}" y2="${cy + ARROW_H - 14}" stroke="${col.text}" stroke-width="2.5" opacity="0.5"/>`);
+      parts.push(`<polygon points="${ax},${cy + ARROW_H} ${ax - 10},${cy + ARROW_H - 14} ${ax + 10},${cy + ARROW_H - 14}" fill="${col.text}" opacity="0.6"/>`);
+      cy += ARROW_H;
+    }
+  });
+
+  footer(parts, data.slideNum, data.totalSlides);
+  return svgWrapper(parts.join("\n"));
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export function slideToSvg(template: string, data: Record<string, unknown>): string {
@@ -729,6 +826,8 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
       return buildCtaSvg(data as unknown as CtaData);
     case "grid-overview":
       return buildGridOverviewSvg(data as unknown as GridOverviewData);
+    case "flowchart":
+      return buildFlowchartSvg(data as unknown as FlowchartData);
     default:
       return buildDefinitionStepsSvg({
         heading:     String(data.heading ?? template),
@@ -751,8 +850,9 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
  */
 export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
   if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
-  // grid-overview: single static frame — dense grids don't benefit from incremental reveal
+  // single static frames for templates that don't need reveal animation
   if (template === "grid-overview") return [buildGridOverviewSvg(data as unknown as GridOverviewData)];
+  if (template === "flowchart")     return [buildFlowchartSvg(data as unknown as FlowchartData)];
 
   if (template === "pipeline") {
     // single full frame, all text upfront

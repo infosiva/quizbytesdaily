@@ -184,6 +184,116 @@ export function buildThumbnailSvg(
   return svgWrapper(parts.join("\n"), col);
 }
 
+// ── Vertical title card 1080×1920 (for video first frame) ────────────────────
+// Used as the first frame of the rendered MP4 so YouTube auto-picks a good thumbnail.
+export function buildTitleCardSvg(
+  title: string,
+  category: string,
+  difficulty: string,
+): string {
+  const TW = 1080, TH = 1920;
+  const col = getColor(category);
+  const diffColor = DIFF_COLORS[difficulty] ?? "#94a3b8";
+  const parts: string[] = [];
+
+  const bg = `<svg xmlns="http://www.w3.org/2000/svg" width="${TW}" height="${TH}" viewBox="0 0 ${TW} ${TH}">
+<defs>
+  <linearGradient id="tcbg" x1="0" y1="0" x2="0.3" y2="1">
+    <stop offset="0%"   stop-color="#07071a"/>
+    <stop offset="60%"  stop-color="#0b0b20"/>
+    <stop offset="100%" stop-color="#060614"/>
+  </linearGradient>
+  <radialGradient id="tglow" cx="50%" cy="48%" r="52%">
+    <stop offset="0%"   stop-color="${col.dark}"    stop-opacity="0.70"/>
+    <stop offset="60%"  stop-color="${col.dark}"    stop-opacity="0.25"/>
+    <stop offset="100%" stop-color="${col.dark}"    stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="tbglow" cx="50%" cy="48%" r="38%">
+    <stop offset="0%"   stop-color="${col.primary}" stop-opacity="0.15"/>
+    <stop offset="100%" stop-color="${col.primary}" stop-opacity="0"/>
+  </radialGradient>
+  <pattern id="tdots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="1.5" fill="${col.primary}" opacity="0.12"/>
+  </pattern>
+</defs>
+<rect width="${TW}" height="${TH}" fill="url(#tcbg)"/>
+<rect width="${TW}" height="${TH}" fill="url(#tglow)"/>
+<rect width="${TW}" height="${TH}" fill="url(#tbglow)"/>
+<rect width="${TW}" height="${TH}" fill="url(#tdots)"/>`;
+
+  // Glow rings around ?
+  const cx = TW / 2;
+  const qcy = 860;
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="380" fill="${col.primary}" opacity="0.06"/>`);
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="300" fill="none" stroke="${col.primary}" stroke-width="2.5" opacity="0.20"/>`);
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="220" fill="${col.dark}" opacity="0.50"/>`);
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="216" fill="none" stroke="${col.primary}" stroke-width="1.5" opacity="0.25"/>`);
+
+  // Large "?" centred
+  const qFs = 300;
+  const qStr = "?";
+  const qW   = thumbTextW(qStr, qFs);
+  parts.push(thumbSvgPath(qStr, cx - qW / 2, qcy + qFs * 0.38, qFs, col.primary));
+
+  // ── Top badges ───────────────────────────────────────────────────────────
+  const PADX = 72;
+  const catText   = category.toUpperCase();
+  const catFs     = 26;
+  const catBadgeW = thumbTextW(catText, catFs) + 48;
+  parts.push(roundRect(PADX, 80, catBadgeW, 56, 12, `${col.dark}cc`));
+  parts.push(roundRect(PADX, 80, catBadgeW, 56, 12, "none", `${col.primary}90`));
+  parts.push(thumbSvgPath(catText, PADX + 24, 80 + 38, catFs, col.primary));
+
+  const diffText   = difficulty.toUpperCase();
+  const diffFs     = 24;
+  const diffBadgeX = PADX + catBadgeW + 20;
+  const diffBadgeW = thumbTextW(diffText, diffFs) + 40;
+  parts.push(roundRect(diffBadgeX, 80, diffBadgeW, 56, 12, `${diffColor}18`));
+  parts.push(roundRect(diffBadgeX, 80, diffBadgeW, 56, 12, "none", `${diffColor}70`));
+  parts.push(thumbSvgPath(diffText, diffBadgeX + 20, 80 + 37, diffFs, diffColor));
+
+  // ── Title (below rings) ───────────────────────────────────────────────────
+  const MAXW = TW - PADX * 2;
+  let titleFs = 96;
+  let titleLines: string[] = [];
+  for (let it = 0; it < 10; it++) {
+    titleLines = thumbWrapText(title, MAXW, titleFs);
+    if (titleLines.length <= 3) break;
+    titleFs = Math.max(64, titleFs - 6);
+  }
+  const titleLH = Math.round(titleFs * 1.18);
+  const ty = 1180;
+  titleLines.forEach((line, i) => {
+    const fill = (i === titleLines.length - 1 && titleLines.length > 1) ? col.primary : "#ffffff";
+    parts.push(thumbSvgPath(line, PADX, ty + i * titleLH, titleFs, fill));
+  });
+
+  // Underline accent
+  const ulY = ty + titleLines.length * titleLH + 10;
+  parts.push(`<rect x="${PADX}" y="${ulY}" width="100" height="6" rx="3" fill="${col.primary}" opacity="0.85"/>`);
+  parts.push(`<rect x="${PADX + 114}" y="${ulY + 1}" width="44" height="4" rx="2" fill="${col.primary}" opacity="0.32"/>`);
+
+  // Brand
+  const brandText = "@QuizBytesDaily";
+  const brandFs   = 30;
+  parts.push(thumbSvgPath(brandText, PADX, TH - 72, brandFs, `${col.primary}90`));
+
+  // Left accent stripe
+  parts.push(`<rect x="0" y="0" width="10" height="${TH}" fill="${col.primary}" opacity="0.90"/>`);
+
+  return `${bg}\n${parts.join("\n")}\n</svg>`;
+}
+
+export async function buildTitleCardPng(
+  title: string,
+  category: string,
+  difficulty: string,
+): Promise<Buffer> {
+  const svg   = buildTitleCardSvg(title, category, difficulty);
+  const sharp = await thumbGetSharp();
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
 // ── JPEG render (Sharp) ───────────────────────────────────────────────────────
 export async function buildThumbnailJpeg(
   title: string,

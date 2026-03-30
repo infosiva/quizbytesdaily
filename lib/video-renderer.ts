@@ -17,6 +17,7 @@ import fs from "fs";
 import os from "os";
 import { getSlides, getSeriesById } from "./db";
 import { slideToPngFrames } from "./slide-svg";
+import { buildTitleCardPng } from "./thumbnail-svg";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -49,8 +50,9 @@ function getFFmpegPath(): string {
 // ── Slide duration helper ─────────────────────────────────────────────────────
 
 function dur(template: string): number {
-  if (template === "pipeline") return PIPELINE_DUR;
-  if (template === "cta")      return CTA_DUR;
+  if (template === "pipeline")  return PIPELINE_DUR;
+  if (template === "flowchart") return PIPELINE_DUR;  // same pacing as pipeline
+  if (template === "cta")       return CTA_DUR;
   return DEF_STEPS_DUR;
 }
 
@@ -86,6 +88,11 @@ export async function renderSeries(
 
     interface FrameEntry { path: string; dur: number }
 
+    // Pre-render the title card (1080×1920) as first frame — YouTube auto-picks
+    // this as the video thumbnail so the channel doesn't need verification.
+    const titleCardBuf = await buildTitleCardPng(series.title, series.category, series.difficulty)
+      .catch(() => null); // don't fail the whole render if title card fails
+
     const allSlides = await Promise.all(
       renderRows.map(async (row, i) => {
         const data = JSON.parse(row.data) as Record<string, unknown>;
@@ -100,6 +107,14 @@ export async function renderSeries(
 
     // Write PNGs in slide order and collect frame entries
     const frames: FrameEntry[] = [];
+
+    // Prepend title card (1.5s) — becomes YouTube's auto-picked thumbnail
+    if (titleCardBuf) {
+      const tcPath = path.join(tmpDir, "titlecard.png");
+      fs.writeFileSync(tcPath, titleCardBuf);
+      frames.push({ path: tcPath, dur: 1.5 });
+    }
+
     for (const slideFrames of allSlides) {
       for (const { buf, i, f, frameDur } of slideFrames) {
         const fPath = path.join(tmpDir, `slide_${i}_f${f}.png`);

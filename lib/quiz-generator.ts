@@ -183,6 +183,7 @@ OPTIONAL SLIDES to insert between slide 3 and Quick Quiz (include based on topic
 - "Real-World Scenario" — concrete production example (definition-steps or pipeline)
 - "Common Pitfalls" — mistakes and how to avoid them (definition-steps)
 - "Comparison" — vs alternatives or similar tools (definition-steps)
+- "Architecture / Data Flow" — system diagram with connected steps (flowchart) — USE for topics that have a clear pipeline: RAG, transformers, CI/CD, microservices, OAuth, etc.
 
 Return ONLY raw JSON — no markdown fences, no extra text.
 Copy and expand this structure for "${topic}":
@@ -236,9 +237,21 @@ Copy and expand this structure for "${topic}":
       ]
     },
     {
+      "template": "flowchart",
+      "heading": "Architecture / Data Flow",
+      "slideNum": 4,
+      "totalSlides": 10,
+      "nodes": [
+        { "color": "cyan",   "title": "Component / Step 1 (max 22 chars)", "body": "What it does — 1 sentence (max 80 chars)" },
+        { "color": "purple", "title": "Component / Step 2 (max 22 chars)", "body": "What it does — 1 sentence (max 80 chars)" },
+        { "color": "green",  "title": "Component / Step 3 (max 22 chars)", "body": "What it does — 1 sentence (max 80 chars)" },
+        { "color": "amber",  "title": "Component / Step 4 (max 22 chars)", "body": "What it does — 1 sentence (max 80 chars)" }
+      ]
+    },
+    {
       "template": "definition-steps",
       "heading": "Key Concepts",
-      "slideNum": 4,
+      "slideNum": 5,
       "totalSlides": 10,
       "definition": {
         "color": "amber",
