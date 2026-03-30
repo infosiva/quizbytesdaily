@@ -51,6 +51,14 @@ export const LAYOUTS = [
     slides: 8,
     color: "#fbbf24",
   },
+  {
+    id: "cheat-sheet",
+    name: "Cheat Sheet",
+    icon: "📋",
+    desc: "Dense numbered grid — N key things on one slide",
+    slides: 3,
+    color: "#22d3ee",
+  },
 ] as const;
 
 export type LayoutId = (typeof LAYOUTS)[number]["id"];
@@ -694,12 +702,69 @@ STRICT RULES:
 - Return ONLY raw JSON`;
 }
 
+// ── Prompt: Cheat Sheet (3 slides: intro + grid-overview + CTA) ───────────────
+function buildCheatSheetPrompt(topic: string, category: string, difficulty: string): string {
+  const diffNote = difficultyNote(difficulty);
+  return `Create a ${category} cheat-sheet series about: "${topic}"
+Difficulty: ${difficulty} (${diffNote})
+
+Generate exactly 2 slides (the CTA will be added automatically):
+
+Slide 1: a definition-steps intro slide — what the topic is + 3 key aspects
+Slide 2: a grid-overview cheat-sheet slide — 6 to 8 numbered items, each a concrete, actionable thing to know/do
+
+STRICT RULES:
+- Slide 1 template MUST be "definition-steps"
+- Slide 2 template MUST be "grid-overview"
+- slideNum: 1 and 2, totalSlides: 3 (CTA will be slide 3)
+- grid-overview items: 6 to 8 items — pick the number based on topic richness
+  - title: max 4 words — ultra-concise
+  - body: max 8 words — one concrete takeaway
+- definition-steps: definition + 3 cards (color: cyan/purple/green)
+- colors: "cyan","purple","green","pink","amber" only
+- icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
+
+Return ONLY raw JSON:
+{
+  "title": "N ${topic} Things You Must Know",
+  "slides": [
+    {
+      "template": "definition-steps",
+      "heading": "What is ${topic}?",
+      "slideNum": 1, "totalSlides": 3,
+      "definition": { "color": "cyan", "title": "Core concept (max 6 words)", "body": "What it is and why it matters (max 200 chars)" },
+      "cards": [
+        { "color": "cyan",   "icon": "search", "title": "Key point 1 (max 22 chars)", "body": "Concise explanation (max 60 chars)" },
+        { "color": "purple", "icon": "gear",   "title": "Key point 2 (max 22 chars)", "body": "Concise explanation (max 60 chars)" },
+        { "color": "green",  "icon": "check",  "title": "Key point 3 (max 22 chars)", "body": "Concise explanation (max 60 chars)" }
+      ]
+    },
+    {
+      "template": "grid-overview",
+      "heading": "8 ${topic} Things Every Dev Should Know",
+      "slideNum": 2, "totalSlides": 3,
+      "items": [
+        { "title": "Item 1 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 2 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 3 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 4 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 5 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 6 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 7 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
+        { "title": "Item 8 (max 4 words)", "body": "One concrete takeaway (max 8 words)" }
+      ]
+    }
+  ]
+}`;
+}
+
 // ── Route prompt by layout ─────────────────────────────────────────────────────
 function buildPrompt(topic: string, category: string, difficulty: string, layout: LayoutId = "quiz-reveal"): string {
   switch (layout) {
     case "explainer":    return buildExplainerPrompt(topic, category, difficulty);
     case "code-example": return buildCodeExamplePrompt(topic, category, difficulty);
     case "quick-tips":   return buildQuickTipsPrompt(topic, category, difficulty);
+    case "cheat-sheet":  return buildCheatSheetPrompt(topic, category, difficulty);
     default:             return buildQuizRevealPrompt(topic, category, difficulty);
   }
 }

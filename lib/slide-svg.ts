@@ -386,6 +386,113 @@ ${content}
 </svg>`;
 }
 
+// ── grid-overview slide ────────────────────────────────────────────────────────
+// Dense numbered grid layout: heading + N items in 2 columns.
+// Great for "8 Python Tips", "Top 6 Design Patterns" cheat-sheets.
+// Single full-reveal frame — dense grids don't benefit from incremental reveal.
+
+export interface GridOverviewData {
+  heading: string;
+  items: Array<{ title: string; body?: string }>;
+  accentColor?: string;  // override heading accent (defaults to purple)
+  slideNum?: number;
+  totalSlides?: number;
+}
+
+// GRID_ITEM_COLORS: cycle through palette for each numbered item
+const GRID_COLORS = ["cyan", "purple", "green", "pink", "amber", "cyan", "purple", "green", "pink", "amber"];
+
+function buildGridOverviewSvg(data: GridOverviewData): string {
+  const PADX    = 64;
+  const AVAIL   = W - PADX * 2;
+  const COLS    = 2;
+  const GUTTER  = 24;
+  const cellW   = Math.floor((AVAIL - GUTTER) / COLS);
+  const items   = data.items ?? [];
+  const ROWS    = Math.ceil(items.length / COLS);
+  const accent  = data.accentColor ?? "#a855f7";
+
+  const parts: string[] = [];
+  parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, accent));
+
+  // ── Heading ──
+  const headingFs  = 52;
+  const headingLH  = Math.round(headingFs * 1.2);
+  const headLines  = wrapText(data.heading ?? "", AVAIL - 24, headingFs);
+  const headH      = headLines.length * headingLH;
+
+  // Accent bar on the left
+  parts.push(`<rect x="${PADX}" y="92" width="10" height="${headH + 12}" rx="5" fill="${accent}"/>`);
+
+  let y = 100;
+  headLines.forEach((line, i) => {
+    parts.push(svgPath(line, PADX + 28, y + i * headingLH, headingFs, "url(#hg)"));
+  });
+  y += headH + 32;
+
+  // ── Divider ──
+  parts.push(`<line x1="${PADX}" y1="${y}" x2="${W - PADX}" y2="${y}" stroke="#1e1e2e" stroke-width="1.5"/>`);
+  y += 24;
+
+  // ── Grid items ──
+  const FOOTER_DIV  = H - 108;
+  const gridAvailH  = FOOTER_DIV - 20 - y;
+  const GAP         = 16;
+  const rawCellH    = Math.floor((gridAvailH - (ROWS - 1) * GAP) / ROWS);
+  const cellH       = Math.max(180, Math.min(380, rawCellH));
+
+  const CIRC_R   = 32;
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const col   = idx % COLS;
+    const row   = Math.floor(idx / COLS);
+    const cx    = PADX + col * (cellW + GUTTER);
+    const cy    = y + row * (cellH + GAP);
+    const item  = items[idx];
+    const colName = GRID_COLORS[idx % GRID_COLORS.length];
+    const col2  = CARD_COLORS[colName] ?? CARD_COLORS.purple;
+
+    // Cell background
+    parts.push(roundRect(cx, cy, cellW, cellH, 16, col2.bg));
+    parts.push(roundRect(cx, cy, cellW, cellH, 16, "none", col2.border));
+
+    // Numbered circle
+    const circCX = cx + CIRC_R + 14;
+    const circCY = cy + CIRC_R + 14;
+    parts.push(`<circle cx="${circCX}" cy="${circCY}" r="${CIRC_R}" fill="${col2.text}22"/>`);
+    parts.push(`<circle cx="${circCX}" cy="${circCY}" r="${CIRC_R}" fill="none" stroke="${col2.text}" stroke-width="2"/>`);
+    const numStr = String(idx + 1);
+    const numFs  = numStr.length > 1 ? 22 : 26;
+    parts.push(svgPath(numStr, circCX, circCY + numFs * 0.38, numFs, col2.text, "middle"));
+
+    // Text block (to the right of circle)
+    const textX   = cx + CIRC_R * 2 + 26;
+    const textMaxW = cellW - CIRC_R * 2 - 40;
+    const titleFs = Math.min(34, Math.max(24, Math.floor(cellH * 0.16)));
+    const bodyFs  = Math.min(26, Math.max(18, Math.floor(cellH * 0.12)));
+    const titleLH = Math.round(titleFs * 1.25);
+    const bodyLH  = Math.round(bodyFs  * 1.3);
+
+    const titleLines = wrapText(item.title ?? "", textMaxW, titleFs);
+    const bodyLines  = item.body?.trim()
+      ? wrapText(item.body, textMaxW, bodyFs)
+      : [];
+
+    const totalTextH = titleLines.length * titleLH + (bodyLines.length > 0 ? 8 + bodyLines.length * bodyLH : 0);
+    const textStartY = cy + (cellH - totalTextH) / 2 + titleFs * 0.82;
+
+    titleLines.forEach((line, i) => {
+      parts.push(svgPath(line, textX, textStartY + i * titleLH, titleFs, col2.text));
+    });
+    bodyLines.forEach((line, i) => {
+      parts.push(svgPath(line, textX, textStartY + titleLines.length * titleLH + 8 + i * bodyLH, bodyFs, "#94a3b8"));
+    });
+  }
+
+  footer(parts, data.slideNum, data.totalSlides);
+  return svgWrapper(parts.join("\n"));
+}
+
 // ── Slide data interfaces ──────────────────────────────────────────────────────
 export interface DefinitionStepsData {
   heading: string;
@@ -626,6 +733,8 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
       return buildPipelineSvg(data as unknown as PipelineData);
     case "cta":
       return buildCtaSvg(data as unknown as CtaData);
+    case "grid-overview":
+      return buildGridOverviewSvg(data as unknown as GridOverviewData);
     default:
       return buildDefinitionStepsSvg({
         heading:     String(data.heading ?? template),
@@ -648,6 +757,8 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
  */
 export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
   if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
+  // grid-overview: single static frame — dense grids don't benefit from incremental reveal
+  if (template === "grid-overview") return [buildGridOverviewSvg(data as unknown as GridOverviewData)];
 
   if (template === "pipeline") {
     const d = data as unknown as PipelineData;

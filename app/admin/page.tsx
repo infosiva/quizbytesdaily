@@ -136,6 +136,33 @@ function SlidePreview({ slide }: { slide: SlideData }) {
     );
   }
 
+  if (template === "grid-overview") {
+    const items = (data.items as Array<{ title: string; body?: string }>) ?? [];
+    const ITEM_COLORS: Record<number, string> = { 0: "#22d3ee", 1: "#a855f7", 2: "#4ade80", 3: "#f472b6", 4: "#fbbf24" };
+    return (
+      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.6rem", fontSize: "0.62rem" }}>
+        <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: "0.67rem", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {String(data.heading ?? "")}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
+          {items.slice(0, 8).map((item, i) => {
+            const col = ITEM_COLORS[i % 5];
+            return (
+              <div key={i} style={{ display: "flex", gap: 4, alignItems: "flex-start", padding: "3px 5px", borderRadius: 4, background: `${col}0d`, border: `1px solid ${col}30` }}>
+                <span style={{ color: col, fontWeight: 800, flexShrink: 0, fontSize: "0.6rem" }}>{i + 1}</span>
+                <div style={{ overflow: "hidden" }}>
+                  <div style={{ color: col, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
+                  {item.body?.trim() && <div style={{ color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.body}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {items.length > 8 && <div style={{ color: "#374151", fontSize: "0.55rem", paddingTop: 3 }}>+{items.length - 8} more</div>}
+      </div>
+    );
+  }
+
   // Legacy template: title
   if (template === "title") {
     return (
@@ -215,7 +242,11 @@ const LAYOUT_STRUCTURE: Record<string, { label: string; color: string; bg: strin
     { label: "Tip #4",          color: "#fbbf24", bg: "#fbbf2418" },
     { label: "Tip #5",          color: "#f472b6", bg: "#f472b618" },
     { label: "+ more",          color: "#374151", bg: "#1e1e2e" },
-    { label: "📚 Resources",    color: "#22d3ee", bg: "#22d3ee25" },
+    { label: "🎉 CTA",           color: "#a855f7", bg: "#a855f725" },
+  ],
+  "cheat-sheet": [
+    { label: "What is it?",     color: "#22d3ee", bg: "#22d3ee18" },
+    { label: "📋 Grid (6-8)",   color: "#22d3ee", bg: "#22d3ee25" },
     { label: "🎉 CTA",           color: "#a855f7", bg: "#a855f725" },
   ],
 };
@@ -317,6 +348,7 @@ export default function AdminPage() {
   const [uploadSlides, setUploadSlides] = useState<SlideData[] | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
+  const [showDesc, setShowDesc] = useState(false);
   const [uploadTags, setUploadTags] = useState("QuizBytesDaily,tech,coding,quiz");
   const [uploadPrivacy, setUploadPrivacy] = useState<"private" | "unlisted" | "public">("private");
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -1211,14 +1243,14 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Description</label>
-                    <textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} rows={8}
-                      style={{ ...inp, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6 }} />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Tags (comma separated)</label>
-                    <input type="text" value={uploadTags} onChange={(e) => setUploadTags(e.target.value)} style={inp} />
+                    <button onClick={() => setShowDesc(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0, color: "#64748b", fontSize: "0.78rem" }}>
+                      <span style={{ transition: "transform 0.15s", display: "inline-block", transform: showDesc ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                      Edit description
+                    </button>
+                    {showDesc && (
+                      <textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} rows={8}
+                        style={{ ...inp, marginTop: 6, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6 }} />
+                    )}
                   </div>
 
                   <div>
@@ -1300,18 +1332,6 @@ export default function AdminPage() {
                     {uploadPhase === "rendering" ? "⏳ Step 1/2: Rendering…" : uploadPhase === "uploading" ? "⏳ Step 2/2: Uploading…" : videoFile ? "🚀 Upload to YouTube" : "🎬 Render & Upload to YouTube"}
                   </button>
 
-                  {/* YouTube API setup */}
-                  <div style={{ padding: "1rem", background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, fontSize: "0.78rem", color: "#4a4a5a" }}>
-                    <div style={{ color: "#94a3b8", fontWeight: 600, marginBottom: 8 }}>YouTube API Setup</div>
-                    <div style={{ fontFamily: "monospace", lineHeight: 1.8 }}>
-                      <span style={{ color: "#4a4a5a" }}># .env.local</span><br />
-                      <span style={{ color: "#22d3ee" }}>YOUTUBE_CLIENT_ID</span>=your-client-id<br />
-                      <span style={{ color: "#22d3ee" }}>YOUTUBE_CLIENT_SECRET</span>=your-client-secret<br />
-                      <span style={{ color: "#22d3ee" }}>YOUTUBE_REFRESH_TOKEN</span>=your-refresh-token<br />
-                      <span style={{ color: "#22d3ee" }}>ANTHROPIC_API_KEY</span>=your-api-key<br />
-                      <span style={{ color: "#22d3ee" }}>ADMIN_PASSWORD</span>=your-password
-                    </div>
-                  </div>
                 </div>
 
                 {/* Thumbnail + slides */}
