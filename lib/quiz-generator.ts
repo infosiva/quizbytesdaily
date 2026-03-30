@@ -152,6 +152,7 @@ function buildQuizRevealPrompt(topic: string, category: string, difficulty: stri
   const diffNote = difficultyNote(difficulty);
 
   return `Create an educational ${category} quiz series about: "${topic}"
+(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field and throughout the content.)
 Difficulty: ${difficulty} (${diffNote})
 
 CONTENT QUALITY (apply to every body field):
@@ -337,6 +338,7 @@ STRICT RULES:
 function buildExplainerPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
   return `Create an educational ${category} explainer series about: "${topic}"
+(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field and throughout the content.)
 Difficulty: ${difficulty} (${diffNote})
 
 CONTENT QUALITY (apply to every body field):
@@ -476,6 +478,7 @@ STRICT RULES:
 function buildCodeExamplePrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
   return `Create a code-focused ${category} series about: "${topic}"
+(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field and throughout the content.)
 Difficulty: ${difficulty} (${diffNote})
 
 CONTENT QUALITY (apply to every body field):
@@ -614,6 +617,7 @@ STRICT RULES:
 function buildQuickTipsPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
   return `Create a quick-tips ${category} series about: "${topic}"
+(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field and throughout the content.)
 Difficulty: ${difficulty} (${diffNote})
 
 CONTENT QUALITY (apply to every body field):
@@ -730,6 +734,7 @@ STRICT RULES:
 function buildCheatSheetPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
   return `Create a ${category} cheat-sheet series about: "${topic}"
+(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field and throughout the content.)
 Difficulty: ${difficulty} (${diffNote})
 
 CONTENT QUALITY: use specific technical details, real tool names, numbers, and code concepts — not generic descriptions.
@@ -948,11 +953,13 @@ export async function generateQuizSeries(
         { template: "cta", heading: "Enjoyed This Quiz?", slideNum: total, totalSlides: total },
       ] as unknown as GeneratedSlide[];
 
+      // Use the LLM-generated title as canonical topic (normalizes typos/question-form input)
+      const normalizedTopic = (parsed.title as string | undefined) ?? topic;
       console.log(`[quiz-generator] ✓ ${provider.name} succeeded (${rawSlides.length} content + 1 CTA = ${total} slides)`);
       return {
-        slug: slugify(`${topic}-${Date.now()}`),
-        title: parsed.title ?? topic,
-        topic,
+        slug: slugify(`${normalizedTopic}-${Date.now()}`),
+        title: normalizedTopic,
+        topic: normalizedTopic,
         category,
         difficulty,
         slides,

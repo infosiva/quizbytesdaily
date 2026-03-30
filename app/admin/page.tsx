@@ -338,6 +338,9 @@ export default function AdminPage() {
   const [genError, setGenError] = useState("");
   const [preview, setPreview] = useState<SlideData[] | null>(null);
   const [previewSeries, setPreviewSeries] = useState<SeriesRecord | null>(null);
+  const [topicSuggestion, setTopicSuggestion] = useState("");   // auto-correct suggestion
+  const [normalizing, setNormalizing] = useState(false);
+  const [ideasOpen, setIdeasOpen] = useState(false);            // topic ideas panel
 
   // Library
   const [library, setLibrary] = useState<SeriesRecord[]>([]);
@@ -491,6 +494,25 @@ export default function AdminPage() {
       drawThumbnailToCanvas(canvasRef.current, uploadSeries.title, uploadSeries.category, uploadSeries.difficulty);
     }
   }, [tab, uploadSeries]);
+
+  // Normalize topic on blur (auto-correct typos + question-form)
+  async function handleTopicBlur() {
+    const raw = topic.trim();
+    if (!raw || raw.length < 4) return;
+    setTopicSuggestion("");
+    setNormalizing(true);
+    try {
+      const res = await fetch("/api/admin/normalize-topic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: raw }),
+      });
+      const json = await res.json() as { normalized?: string };
+      const n = json.normalized?.trim() ?? "";
+      if (n && n.toLowerCase() !== raw.toLowerCase()) setTopicSuggestion(n);
+    } catch { /* silent */ }
+    finally { setNormalizing(false); }
+  }
 
   // Generate quiz
   async function handleGenerate() {
@@ -748,149 +770,46 @@ export default function AdminPage() {
         {/* ═══════════════════════ GENERATE ═══════════════════════════════ */}
         {tab === "generate" && (
           <div>
-            <div style={{ marginBottom: "1.75rem" }}>
+            <div style={{ marginBottom: "1.5rem" }}>
               <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.25rem" }}>Generate with AI</h2>
-              <p style={{ fontSize: "0.82rem", color: "#64748b" }}>Pick a layout, choose a topic, and let the AI do the rest.</p>
+              <p style={{ fontSize: "0.82rem", color: "#64748b" }}>Type a topic and let the AI build a complete quiz series.</p>
             </div>
 
-            {/* ── Layout picker ── */}
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 }}>
-                Content Layout
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.75rem" }}>
-                {LAYOUTS.map((l) => {
-                  const active = genLayout === l.id;
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => setGenLayout(l.id as LayoutId)}
-                      style={{
-                        padding: "0.9rem 0.75rem",
-                        borderRadius: 12,
-                        border: `2px solid ${active ? l.color : "#1e1e2e"}`,
-                        background: active ? `${l.color}15` : "#111118",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        transition: "all 0.15s",
-                        outline: "none",
-                      }}
-                    >
-                      <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>{l.icon}</div>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: active ? l.color : "#e2e8f0", marginBottom: 3 }}>{l.name}</div>
-                      <div style={{ fontSize: "0.7rem", color: "#64748b", lineHeight: 1.4 }}>{l.desc}</div>
-                      <div style={{ fontSize: "0.65rem", color: active ? l.color : "#374151", marginTop: 6, fontWeight: 600 }}>~{l.slides} slides</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Layout structure preview — shows slide flow for selected layout */}
-              {LAYOUT_STRUCTURE[genLayout] && (
-                <div style={{ marginTop: 12, padding: "0.75rem 1rem", background: "#0d0d18", border: "1px solid #1e1e2e", borderRadius: 10 }}>
-                  <div style={{ fontSize: "0.65rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1, marginBottom: 8 }}>
-                    Slide structure (dynamic — AI may add/remove based on topic depth)
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
-                    {LAYOUT_STRUCTURE[genLayout].map((s, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <span style={{
-                          fontSize: "0.67rem", fontWeight: 700,
-                          padding: "3px 9px", borderRadius: 20,
-                          background: s.bg, color: s.color,
-                          border: `1px solid ${s.color}40`,
-                          whiteSpace: "nowrap" as const,
-                        }}>
-                          {s.label}
-                        </span>
-                        {i < LAYOUT_STRUCTURE[genLayout].length - 1 && (
-                          <span style={{ color: "#374151", fontSize: "0.65rem" }}>→</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+            {/* ── Topic input (prominent, at the top) ── */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Topic *</label>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => { setTopic(e.target.value); setTopicSuggestion(""); }}
+                onBlur={handleTopicBlur}
+                onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                placeholder="e.g. Python decorators, RAG pipelines, Why is async faster…"
+                spellCheck={true}
+                style={{ ...inp, fontSize: "1rem", padding: "0.75rem 1rem" }}
+              />
+              {/* Auto-correct suggestion */}
+              {normalizing && (
+                <p style={{ fontSize: "0.72rem", color: "#475569", marginTop: 5 }}>Checking…</p>
+              )}
+              {topicSuggestion && !normalizing && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Did you mean:</span>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#22d3ee" }}>{topicSuggestion}</span>
+                  <button
+                    onClick={() => { setTopic(topicSuggestion); setTopicSuggestion(""); }}
+                    style={{ fontSize: "0.7rem", padding: "2px 10px", borderRadius: 6, background: "rgba(34,211,238,0.12)", border: "1px solid #22d3ee", color: "#22d3ee", cursor: "pointer" }}
+                  >Accept ✓</button>
+                  <button
+                    onClick={() => setTopicSuggestion("")}
+                    style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: 6, background: "transparent", border: "1px solid #374151", color: "#64748b", cursor: "pointer" }}
+                  >✕</button>
                 </div>
               )}
             </div>
 
-            {/* ── Live trending topics (HN / GitHub / ArXiv) ── */}
-            {(liveTrending.length > 0 || loadingLive) && (
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
-                  🔥 Live Trending Now
-                  {loadingLive && <span style={{ fontSize: "0.65rem", color: "#374151", fontWeight: 400, textTransform: "none" }}>fetching…</span>}
-                  {!loadingLive && liveTrending.length > 0 && (
-                    <span style={{ fontSize: "0.6rem", color: "#374151", fontWeight: 400, textTransform: "none" }}>
-                      HN · GitHub · ArXiv — click to fill
-                    </span>
-                  )}
-                </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                  {liveTrending.filter((t) => t.category === genCategory || genCategory === "AI/ML").slice(0, 12).map((t) => {
-                    const sourceColor = t.source === "hn" ? "#f97316" : t.source === "github" ? "#4ade80" : "#a855f7";
-                    const sourceLabel = t.source === "hn" ? "HN" : t.source === "github" ? "GH" : "arXiv";
-                    return (
-                      <button
-                        key={t.topic}
-                        onClick={() => { setTopic(t.topic); setGenCategory(t.category); }}
-                        title={`Source: ${t.source}`}
-                        style={{
-                          padding: "3px 10px", borderRadius: 999,
-                          border: `1px solid ${topic === t.topic ? sourceColor : "#2a2a3e"}`,
-                          background: topic === t.topic ? `${sourceColor}20` : "#111118",
-                          color: topic === t.topic ? sourceColor : "#94a3b8",
-                          fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s",
-                          display: "flex", alignItems: "center", gap: 5,
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = sourceColor; e.currentTarget.style.color = sourceColor; }}
-                        onMouseLeave={(e) => { if (topic !== t.topic) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
-                      >
-                        {t.topic.slice(0, 50)}{t.topic.length > 50 ? "…" : ""}
-                        <span style={{ fontSize: "0.58rem", color: sourceColor, opacity: 0.7 }}>{sourceLabel}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ── Curated trending topics for selected category ── */}
-            {TRENDING_TOPICS[genCategory] && (
-              <div style={{ marginBottom: "1.25rem" }}>
-                <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
-                  Curated: {genCategory} — click to fill
-                </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                  {TRENDING_TOPICS[genCategory].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTopic(t)}
-                      style={{
-                        padding: "3px 10px", borderRadius: 999,
-                        border: "1px solid #2a2a3e",
-                        background: topic === t ? "#a855f720" : "#111118",
-                        color: topic === t ? "#c084fc" : "#94a3b8",
-                        fontSize: "0.75rem", cursor: "pointer",
-                        transition: "all 0.15s",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#a855f760"; e.currentTarget.style.color = "#c084fc"; }}
-                      onMouseLeave={(e) => { if (topic !== t) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Topic / Category / Difficulty ── */}
+            {/* ── Category / Difficulty / Layout row ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Topic *</label>
-                <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g. Python decorators" onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-                  style={inp} />
-              </div>
               <div style={{ position: "relative" }}>
                 <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Category</label>
                 <input
@@ -944,16 +863,118 @@ export default function AdminPage() {
                   {difficulties.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.78rem", color: "#94a3b8", marginBottom: 6 }}>Layout</label>
+                <select value={genLayout} onChange={(e) => setGenLayout(e.target.value as LayoutId)} style={inp}>
+                  {LAYOUTS.map((l) => (
+                    <option key={l.id} value={l.id}>{l.icon} {l.name} (~{l.slides} slides)</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
+            {/* ── Slide structure (compact inline strip) ── */}
+            {LAYOUT_STRUCTURE[genLayout] && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginBottom: "1.25rem", padding: "0.5rem 0.75rem", background: "#0d0d18", border: "1px solid #1a1a28", borderRadius: 8 }}>
+                <span style={{ fontSize: "0.6rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginRight: 4 }}>Flow:</span>
+                {LAYOUT_STRUCTURE[genLayout].map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: "0.63rem", fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: s.bg, color: s.color, border: `1px solid ${s.color}40`, whiteSpace: "nowrap" as const }}>
+                      {s.label}
+                    </span>
+                    {i < LAYOUT_STRUCTURE[genLayout].length - 1 && (
+                      <span style={{ color: "#374151", fontSize: "0.6rem" }}>→</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* ── Generate button ── */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <button onClick={handleGenerate} disabled={generating} style={{ padding: "0.65rem 1.5rem", background: generating ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: generating ? "not-allowed" : "pointer", fontSize: "0.9rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <button onClick={handleGenerate} disabled={generating} style={{ padding: "0.7rem 1.75rem", background: generating ? "#333" : "#a855f7", border: "none", borderRadius: 8, color: "#fff", fontWeight: 700, cursor: generating ? "not-allowed" : "pointer", fontSize: "0.95rem" }}>
                 {generating ? "⏳ Generating…" : `✨ Generate ${LAYOUTS.find(l => l.id === genLayout)?.name ?? "Quiz"}`}
               </button>
               <span style={{ fontSize: "0.75rem", color: "#374151" }}>
-                {LAYOUTS.find(l => l.id === genLayout)?.slides} slides · {genCategory} · {genDifficulty}
+                ~{LAYOUTS.find(l => l.id === genLayout)?.slides} slides · {genCategory} · {genDifficulty}
               </span>
+            </div>
+
+            {/* ── Topic ideas (collapsible) ── */}
+            <div style={{ borderTop: "1px solid #1a1a28", paddingTop: "1rem" }}>
+              <button
+                onClick={() => setIdeasOpen((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, padding: 0, marginBottom: ideasOpen ? 12 : 0 }}
+              >
+                <span style={{ fontSize: "0.65rem", transition: "transform 0.2s", display: "inline-block", transform: ideasOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                💡 Topic Ideas {loadingLive && <span style={{ fontSize: "0.65rem", fontWeight: 400 }}>(fetching…)</span>}
+              </button>
+
+              {ideasOpen && (
+                <div>
+                  {/* Live trending */}
+                  {liveTrending.length > 0 && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.68rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 }}>
+                        🔥 Live — HN · GitHub · ArXiv
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                        {liveTrending.filter((t) => t.category === genCategory || genCategory === "AI/ML").slice(0, 12).map((t) => {
+                          const sourceColor = t.source === "hn" ? "#f97316" : t.source === "github" ? "#4ade80" : "#a855f7";
+                          const sourceLabel = t.source === "hn" ? "HN" : t.source === "github" ? "GH" : "arXiv";
+                          return (
+                            <button
+                              key={t.topic}
+                              onClick={() => { setTopic(t.topic); setGenCategory(t.category); setTopicSuggestion(""); }}
+                              title={`Source: ${t.source}`}
+                              style={{
+                                padding: "3px 10px", borderRadius: 999,
+                                border: `1px solid ${topic === t.topic ? sourceColor : "#2a2a3e"}`,
+                                background: topic === t.topic ? `${sourceColor}20` : "#111118",
+                                color: topic === t.topic ? sourceColor : "#94a3b8",
+                                fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s",
+                                display: "flex", alignItems: "center", gap: 5,
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = sourceColor; e.currentTarget.style.color = sourceColor; }}
+                              onMouseLeave={(e) => { if (topic !== t.topic) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
+                            >
+                              {t.topic.slice(0, 50)}{t.topic.length > 50 ? "…" : ""}
+                              <span style={{ fontSize: "0.58rem", color: sourceColor, opacity: 0.7 }}>{sourceLabel}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {/* Curated */}
+                  {TRENDING_TOPICS[genCategory] && (
+                    <div>
+                      <div style={{ fontSize: "0.68rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 }}>
+                        Curated: {genCategory}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                        {TRENDING_TOPICS[genCategory].map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => { setTopic(t); setTopicSuggestion(""); }}
+                            style={{
+                              padding: "3px 10px", borderRadius: 999,
+                              border: "1px solid #2a2a3e",
+                              background: topic === t ? "#a855f720" : "#111118",
+                              color: topic === t ? "#c084fc" : "#94a3b8",
+                              fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#a855f760"; e.currentTarget.style.color = "#c084fc"; }}
+                            onMouseLeave={(e) => { if (topic !== t) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {genError && (
