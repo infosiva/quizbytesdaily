@@ -572,6 +572,17 @@ export default function AdminPage() {
     const diffEmoji = s.difficulty === "Beginner" ? "🟢" : s.difficulty === "Intermediate" ? "🟡" : "🔴";
     const catTag    = s.category.replace(/[^a-zA-Z0-9]/g, "");
 
+    // Clear stale render/upload state from previous session
+    setRenderFile(null);
+    setRenderStatus("");
+    setRenderError("");
+    setUploadPhase(null);
+    setUploadResult(null);
+    setUploadError("");
+    setVideoFile(null);
+    setUploadSlides([]);
+
+    // Set series data + switch tab immediately so scroll-to-top fires on a short page
     setUploadSeries(s);
     setUploadTitle(s.title);
     setUploadDesc(
@@ -584,14 +595,12 @@ export default function AdminPage() {
       `#QuizBytesDaily #${catTag} #TechQuiz #CodingQuiz #${s.difficulty} #LearnToCode #Shorts`
     );
     setUploadTags(`QuizBytesDaily,${s.category},${s.difficulty},TechQuiz,CodingQuiz,LearnToCode,Shorts`);
-    setVideoFile(null);
-    setUploadResult(null);
-    setUploadError("");
-    // Load slides
+    setTab("upload"); // ← switch tab before fetch so scroll-to-top fires on minimal content
+
+    // Load slides in background after tab switch
     const res = await fetch(`/api/admin/series/${s.id}`);
     const json = await res.json();
     setUploadSlides(json.slides ?? []);
-    setTab("upload");
   }
 
   // Upload to YouTube (auto-renders first if no video file is ready)
@@ -1352,7 +1361,9 @@ export default function AdminPage() {
                   <img
                     src={`/api/thumbnail/${uploadSeries.slug}`}
                     alt="Thumbnail preview"
-                    style={{ width: "100%", borderRadius: 8, border: "1px solid #1e1e2e", display: "block" }}
+                    width={340}
+                    height={191}
+                    style={{ width: "100%", aspectRatio: "16/9", borderRadius: 8, border: "1px solid #1e1e2e", display: "block" }}
                   />
                   {/* Hidden canvas kept for download fallback */}
                   <canvas ref={canvasRef} style={{ display: "none" }} />
