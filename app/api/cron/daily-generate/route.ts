@@ -43,6 +43,49 @@ export async function GET(req: NextRequest) {
     console.log(`[daily-generate] Static fallback topic: "${t.topic}"`);
   }
 
+  return runGenerate(req, t, scheduledAt);
+}
+
+// POST variant allows passing a specific topic (used by the VPS quiz-agent)
+export async function POST(req: NextRequest) {
+  if (!authorized(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const now = new Date();
+  const scheduledAt = getScheduledAt(now, 10);
+
+  let t: { topic: string; category: string; layout: LayoutId; difficulty: string; icon: string };
+  try {
+    const body = await req.json().catch(() => ({})) as Record<string, string>;
+    if (body.topic && body.category) {
+      // Caller (quiz-agent) supplied a specific reviewed topic
+      t = {
+        topic:      body.topic,
+        category:   body.category,
+        layout:     (body.layout as LayoutId) ?? "quiz-reveal",
+        difficulty: body.difficulty ?? "Intermediate",
+        icon:       body.icon ?? "🤖",
+      };
+      console.log(`[daily-generate] Agent-supplied topic: "${t.topic}" (${t.category})`);
+    } else {
+      // No topic in body — fall through to auto-pick
+      t = await fetchOneLiveTopic().catch(() => getOneDailyTopic(now));
+      console.log(`[daily-generate] Auto-picked: "${t.topic}"`);
+    }
+  } catch {
+    t = getOneDailyTopic(now);
+  }
+
+  return runGenerate(req, t, scheduledAt);
+}
+
+async function runGenerate(
+  _req: NextRequest,
+  t: { topic: string; category: string; layout: LayoutId; difficulty: string; icon: string },
+  scheduledAt: string
+) {
+
   try {
     console.log(`[daily-generate] Generating: ${t.category} — ${t.topic} (${t.layout})`);
 
@@ -123,5 +166,5 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Allow both GET (Vercel cron) and POST (manual trigger from admin)
-export const POST = GET;
+// GET = Vercel cron trigger (auto-picks topic)
+// POST = manual / quiz-agent trigger (accepts optional { topic, category, difficulty, layout, icon } body)
