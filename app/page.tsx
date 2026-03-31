@@ -514,86 +514,66 @@ function QuizWidget() {
 
   return (
     <div>
-      {/* ── Pickers: OUTSIDE the card ── */}
-      <div className="mb-4 space-y-3">
+      {/* ── Pickers: topic scroll + level row ── */}
+      <div className="mb-3 space-y-2">
 
-        {/* ── TOPIC picker ── */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: "#334155" }}>Topic</span>
-            <div className="h-px flex-1" style={{ background: "#1e1e2e" }} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availCats.map((c) => {
-              const cnt      = cCount(c.id);
-              const isActive = activeCat === c.id;
-              const col      = c.id === "All" ? { text: "#e2e8f0", badge: "#334155" } : getCatColor(c.id);
-              if (cnt === 0 && c.id !== "All") return null;
-              return (
-                <button key={c.id} onClick={() => setActiveCat(c.id)}
-                  className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold transition-all duration-150"
-                  style={{
-                    padding: "6px 14px",
-                    background: isActive ? col.badge : "#0e0e1c",
-                    color: isActive ? col.text : "#4b5563",
-                    border: `1.5px solid ${isActive ? col.badge : "#1c1c2e"}`,
-                    boxShadow: isActive ? `0 0 16px ${col.badge}50, 0 2px 8px rgba(0,0,0,0.4)` : "none",
-                    transform: isActive ? "scale(1.04)" : "scale(1)",
-                  }}>
-                  <span className="text-sm leading-none">{c.emoji}</span>
-                  <span className="font-black">{c.id === "All" ? "All" : c.id}</span>
-                  {/* LIVE pill for DB categories */}
-                  {c.hasLive && (
-                    <span className="text-[9px] font-black px-1 py-0.5 rounded"
-                      style={{ background: isActive ? "rgba(255,255,255,0.18)" : "#22d3ee18", color: isActive ? col.text : "#22d3ee" }}>
-                      LIVE
-                    </span>
-                  )}
-                  <span className="font-mono text-[10px] ml-0.5"
-                    style={{ opacity: isActive ? 0.75 : 0.35 }}>
-                    {cnt}
+        {/* Topic pills — single scrollable row, no wrap */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1"
+          style={{ scrollbarWidth: "none" } as React.CSSProperties}>
+          {availCats.map((c) => {
+            const cnt      = cCount(c.id);
+            const isActive = activeCat === c.id;
+            const col      = c.id === "All" ? { text: "#e2e8f0", badge: "#334155" } : getCatColor(c.id);
+            if (cnt === 0 && c.id !== "All") return null;
+            return (
+              <button key={c.id} onClick={() => setActiveCat(c.id)}
+                className="inline-flex items-center gap-1 rounded-lg text-[11px] font-bold transition-all duration-150 shrink-0"
+                style={{
+                  padding: "5px 11px",
+                  background: isActive ? col.badge : "#0e0e1c",
+                  color: isActive ? col.text : "#4b5563",
+                  border: `1.5px solid ${isActive ? col.badge : "#1c1c2e"}`,
+                  boxShadow: isActive ? `0 0 10px ${col.badge}40` : "none",
+                }}>
+                <span className="text-xs leading-none">{c.emoji}</span>
+                <span className="font-black">{c.id === "All" ? "All" : c.id}</span>
+                {c.hasLive && (
+                  <span className="text-[8px] font-black px-1 py-0.5 rounded"
+                    style={{ background: isActive ? "rgba(255,255,255,0.2)" : "#22d3ee18", color: isActive ? col.text : "#22d3ee" }}>
+                    LIVE
                   </span>
-                </button>
-              );
-            })}
-          </div>
+                )}
+                <span className="font-mono text-[9px]" style={{ opacity: isActive ? 0.65 : 0.3 }}>{cnt}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── LEVEL picker ── */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: "#334155" }}>Level</span>
-            <div className="h-px flex-1" style={{ background: "#1e1e2e" }} />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {QUIZ_DIFFS.map((d) => {
-              const cnt      = dCount(d.id);
-              const isActive = activeDiff === d.id;
-              if (cnt === 0 && d.id !== "All") return null;
-              return (
-                <button key={d.id} onClick={() => setActiveDiff(d.id)}
-                  className="inline-flex items-center gap-2 rounded-xl text-xs font-bold transition-all duration-150"
-                  style={{
-                    padding: "6px 14px",
-                    background: isActive ? `${d.dot}22` : "#0e0e1c",
-                    color: isActive ? d.dot : "#4b5563",
-                    border: `1.5px solid ${isActive ? d.dot : "#1c1c2e"}`,
-                    boxShadow: isActive ? `0 0 14px ${d.dot}30` : "none",
-                    transform: isActive ? "scale(1.04)" : "scale(1)",
-                  }}>
-                  {d.id !== "All" && (
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ background: isActive ? d.dot : "#374151", boxShadow: isActive ? `0 0 6px ${d.dot}80` : "none" }}/>
-                  )}
-                  <span className="font-black">{d.label}</span>
-                  <span className="font-mono text-[10px]"
-                    style={{ opacity: isActive ? 0.7 : 0.35 }}>
-                    {cnt}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Level pills — compact single row */}
+        <div className="flex items-center gap-1.5">
+          {QUIZ_DIFFS.map((d) => {
+            const cnt      = dCount(d.id);
+            const isActive = activeDiff === d.id;
+            if (cnt === 0 && d.id !== "All") return null;
+            return (
+              <button key={d.id} onClick={() => setActiveDiff(d.id)}
+                className="inline-flex items-center gap-1.5 rounded-lg text-[11px] font-bold transition-all duration-150"
+                style={{
+                  padding: "5px 11px",
+                  background: isActive ? `${d.dot}22` : "#0e0e1c",
+                  color: isActive ? d.dot : "#4b5563",
+                  border: `1.5px solid ${isActive ? d.dot : "#1c1c2e"}`,
+                  boxShadow: isActive ? `0 0 8px ${d.dot}30` : "none",
+                }}>
+                {d.id !== "All" && (
+                  <span className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: isActive ? d.dot : "#374151" }}/>
+                )}
+                <span className="font-black">{d.label}</span>
+                <span className="font-mono text-[9px]" style={{ opacity: isActive ? 0.65 : 0.3 }}>{cnt}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -766,6 +746,7 @@ export default function Home() {
   const [sortBy,         setSortBy]         = useState<SortBy>("newest");
   const [page,           setPage]           = useState(1);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [heroCat,        setHeroCat]        = useState("AI/ML"); // driven by daily focus from quiz API
 
   // Derived from settings (with fallbacks)
   // Note: sub-components use module-level CYN; accent here applies to root-level chrome
@@ -789,6 +770,11 @@ export default function Home() {
     fetch("/api/series").then((r) => r.json()).then(setAllSeries).catch(() => {});
     fetch("/api/stats").then((r) => r.json()).then(setApiStats).catch(() => {});
     fetch("/api/track", { method: "POST" }).catch(() => {});
+    // Read daily focus to theme the hero section
+    fetch("/api/quiz")
+      .then((r) => r.json())
+      .then((d: { dailyFocus?: string }) => { if (d.dailyFocus && d.dailyFocus !== "All") setHeroCat(d.dailyFocus); })
+      .catch(() => {});
   }, []);
 
   const dynCategories = useMemo(
@@ -853,13 +839,31 @@ export default function Home() {
       </header>
 
       {/* ── Hero section — compact 2-column ── */}
+      {/* heroCat drives ambient glow colour + tagline */}
+      {(() => {
+        const hCol   = getCatColor(heroCat);
+        const hEmoji = CAT_EMOJI[heroCat] ?? "🤖";
+        // Pick a category-aware tagline
+        const TAGLINES: Record<string, string> = {
+          "AI/ML":           "RAG, embeddings, transformers & more —",
+          "AI Productivity": "MCP servers, Claude workflows & automation —",
+          "AI Evaluation":   "Benchmarks, evals, and model metrics —",
+          "AI Engineering":  "Vector DBs, LLM ops & production AI —",
+          "Python":          "Decorators, async, dataclasses & more —",
+          "Algorithms":      "Big-O, trees, graphs & dynamic programming —",
+          "JavaScript":      "Closures, promises, React & Next.js —",
+          "System Design":   "APIs, caching, load balancing & more —",
+          "DevOps":          "Docker, Kubernetes, CI/CD & more —",
+        };
+        const tagline = TAGLINES[heroCat] ?? "Python, AI, Algorithms & more —";
+        return (
       <div className="relative overflow-hidden border-b" style={{ borderColor: BORD }}>
-        {/* Ambient glows */}
+        {/* Ambient glows — tinted by today's category */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
-          <div className="absolute top-0 left-0 w-80 h-48 rounded-full opacity-25"
-            style={{ background: "radial-gradient(ellipse, #7c3aed 0%, transparent 70%)", filter: "blur(50px)" }}/>
-          <div className="absolute bottom-0 right-0 w-80 h-48 rounded-full opacity-15"
-            style={{ background: "radial-gradient(ellipse, #06b6d4 0%, transparent 70%)", filter: "blur(50px)" }}/>
+          <div className="absolute top-0 left-0 w-80 h-48 rounded-full opacity-20 transition-all duration-1000"
+            style={{ background: `radial-gradient(ellipse, ${hCol.badge} 0%, transparent 70%)`, filter: "blur(55px)" }}/>
+          <div className="absolute bottom-0 right-0 w-80 h-48 rounded-full opacity-12 transition-all duration-1000"
+            style={{ background: `radial-gradient(ellipse, ${hCol.text}88 0%, transparent 70%)`, filter: "blur(55px)" }}/>
         </div>
 
         <div className="relative px-6 py-6" style={{ maxWidth: 1440, margin: "0 auto" }}>
@@ -867,18 +871,25 @@ export default function Home() {
 
             {/* Left: branding + CTAs */}
             <div>
-              {/* Live badge */}
-              <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full border text-[10px] font-black tracking-widest uppercase"
-                style={{ borderColor: "#22d3ee30", background: "#22d3ee0e", color: "#22d3ee" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>
-                New quiz every day
+              {/* Daily focus chip + live badge */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black tracking-widest uppercase"
+                  style={{ borderColor: "#22d3ee30", background: "#22d3ee0e", color: "#22d3ee" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>
+                  New quiz every day
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border transition-all duration-500"
+                  style={{ borderColor: `${hCol.badge}60`, background: `${hCol.badge}15`, color: hCol.text }}>
+                  {hEmoji} Today: {heroCat}
+                </div>
               </div>
 
               {/* Headline */}
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none mb-2">
                 <span style={{
-                  background: "linear-gradient(135deg, #22d3ee 0%, #a855f7 50%, #f472b6 100%)",
+                  background: `linear-gradient(135deg, ${hCol.text} 0%, #a855f7 50%, #f472b6 100%)`,
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                  transition: "all 0.5s",
                 }}>
                   Test Your Tech
                 </span>
@@ -886,14 +897,42 @@ export default function Home() {
                 <span className="text-white">Knowledge Daily</span>
               </h1>
 
-              {/* Tagline */}
-              <p className="text-sm text-slate-400 mb-4 leading-relaxed max-w-sm">
-                Bite-sized quiz Shorts on Python, AI, Algorithms & more —
-                60 seconds to sharpen your edge.
+              {/* Tagline — category-aware */}
+              <p className="text-sm text-slate-400 mb-3 leading-relaxed max-w-sm">
+                {tagline}
+                <br />60 seconds to sharpen your edge.
               </p>
 
+              {/* Stats strip */}
+              <div className="flex items-center gap-x-3 gap-y-1 mb-3 flex-wrap text-xs">
+                {published > 0 && (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <span className="font-black" style={{ color: "#22d3ee" }}>{published}</span>
+                      <span className="text-slate-600">Quizzes</span>
+                    </span>
+                    <span className="text-slate-800">·</span>
+                  </>
+                )}
+                {dynCategories.length > 1 && (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <span className="font-black text-white">{dynCategories.length - 1}</span>
+                      <span className="text-slate-600">Topics</span>
+                    </span>
+                    <span className="text-slate-800">·</span>
+                  </>
+                )}
+                <span className="flex items-center gap-1.5 text-slate-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />
+                  Daily uploads
+                </span>
+                <span className="text-slate-800">·</span>
+                <span className="text-slate-600">Free</span>
+              </div>
+
               {/* CTAs */}
-              <div className="flex items-center gap-2.5 mb-4 flex-wrap">
+              <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                 <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-white shadow-lg transition-all hover:scale-105 hover:opacity-90"
                   style={{ background: "linear-gradient(135deg, #dc2626, #ef4444)", boxShadow: "0 4px 16px #dc262630" }}>
@@ -906,18 +945,20 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Category tags — dynamic from series API stats */}
-              <div className="flex flex-wrap gap-1.5">
+              {/* Category tags — scrollable single row */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1"
+                style={{ scrollbarWidth: "none" } as React.CSSProperties}>
                 {dynCategories
                   .filter((cat) => cat !== "All")
-                  .slice(0, 8)
                   .map((cat) => {
                     const col = getCatColor(cat);
+                    const cnt = apiStats?.categories.find((c) => c.name === cat)?.count ?? 0;
                     return (
                       <button key={cat} onClick={() => { handleCat(cat); document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
-                        className="text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all hover:scale-105"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all hover:scale-105 shrink-0"
                         style={{ borderColor: `${col.badge}50`, background: `${col.badge}12`, color: col.text }}>
-                        {cat}
+                        {CAT_EMOJI[cat] ?? "💡"} {cat}
+                        {cnt > 0 && <span className="font-mono text-[9px] opacity-50">{cnt}</span>}
                       </button>
                     );
                   })}
@@ -931,6 +972,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+        );
+      })()}
 
       {/* ── Stats + Search strip ── */}
       <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
