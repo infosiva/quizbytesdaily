@@ -69,23 +69,30 @@ export const TRENDING_TOPICS: Record<string, string[]> = {
 
   // ─── AI/ML — models, tools, frameworks ────────────────────────────────────
   "AI/ML": [
-    // 🔥 Hottest model releases (2026)
+    // 🔥 Model comparisons (highest search volume 2026)
     "Claude Opus 4.6 vs GPT-4.5: Which wins in 2026?",
     "Claude Sonnet 4.5 vs GPT-4o: Head-to-head comparison",
+    "When to use Codex vs ChatGPT for code generation",
+    "ChatGPT vs Claude: Which is better for coding?",
+    "GPT-4o vs Gemini 2.5 Pro: Real-world test results",
+    "Claude vs GPT-4: 10 tasks, one winner",
+    "How to save 80% on Claude API costs — practical guide",
+    "Claude Haiku vs Sonnet vs Opus: Pick the right model",
+    "OpenAI model versions explained: gpt-3.5 vs gpt-4 vs o1",
     "Gemini 2.5 Flash: Google's fastest model explained",
     "Llama 4 Scout and Maverick: Meta's open models",
     "DeepSeek R2: China's reasoning model breakdown",
     "OpenAI o3 vs o4-mini: When to use each",
-    "Vibe coding with AI: How it actually works",
-    // 🚀 Agentic AI frameworks
+    // 🤖 AI agents & orchestration
+    "How AI agents work: planning, memory, tools explained",
+    "Sub-agents in AI: What they are and how they communicate",
+    "Agent status tracking: How to monitor running agents",
     "Model Context Protocol (MCP): The USB-C for AI agents",
     "LangGraph for stateful AI agent workflows",
     "CrewAI: Multi-agent orchestration in Python",
     "OpenAI Agents SDK: Build AI agents in Python",
     "Pydantic AI: Type-safe AI agents explained",
-    "Smolagents by HuggingFace: Minimal agent framework",
     "AutoGen 0.4: Microsoft's async agent framework",
-    "Mastra: TypeScript-first AI agent framework",
     // 💡 Core evergreen concepts
     "RAG vs Fine-tuning: When to use which in 2026",
     "Mixture of Experts: How GPT-4 and Mixtral scale",
@@ -93,8 +100,6 @@ export const TRENDING_TOPICS: Record<string, string[]> = {
     "Function calling in LLMs: The agent backbone",
     "Structured outputs: Get reliable JSON from any LLM",
     "Agentic loops: Reflection, planning, and tool use",
-    "Embedding models: Ada vs text-embedding-3 vs BGE",
-    "Context window tricks: Making the most of 1M tokens",
   ],
 
   // ─── AI Evaluation — RAGAS, DeepEval, observability ───────────────────────
@@ -107,19 +112,24 @@ export const TRENDING_TOPICS: Record<string, string[]> = {
     "Langfuse: Open-source LLM observability explained",
     "LangSmith: Trace and evaluate LangChain apps",
     "Arize Phoenix: Visual LLM debugging and evals",
-    "Helicone: Proxy-based LLM monitoring",
     "TruLens: RAG evaluation with TruEra",
+    // 🧠 Hallucination & error handling
+    "Hallucination in LLMs: Why it happens and how to fix it",
+    "How to detect AI hallucinations before they reach users",
+    "Grounding techniques: Stop your LLM from making things up",
+    "Error handling patterns for AI agents in production",
+    "Retry and fallback strategies for flaky LLM calls",
+    "Graceful degradation in AI-powered apps",
+    "AI agent error recovery: Retry vs rethink vs escalate",
+    "Guardrails AI: Input/output validation for LLMs",
+    "NeMo Guardrails: Safe dialogue management",
     // 📊 Evaluation concepts
     "RAG evaluation metrics: Faithfulness, relevance, recall",
-    "RAGAS scores explained: What each metric means",
-    "Context recall vs context precision in RAG evals",
     "LLM-as-judge: Use GPT-4 to evaluate GPT-4",
-    "Hallucination detection in LLM outputs",
-    "Answer relevancy scoring with embedding similarity",
     "Benchmark your LLM: MMLU, HellaSwag, HumanEval",
     "A/B testing prompts in production",
-    "Latency vs accuracy tradeoff in LLM systems",
     "Red-teaming your AI: Safety evaluation basics",
+    "Sub-agent tracing: Track what each agent actually did",
   ],
 
   // ─── AI Engineering — Vector DBs, RAG, production LLM ────────────────────
@@ -231,13 +241,20 @@ export const TRENDING_TOPICS: Record<string, string[]> = {
     "Claude Code vs Cursor vs GitHub Copilot: Which wins?",
     "Automate code reviews with Claude",
     "Claude for technical documentation: 10x faster writing",
+    // 💰 AI cost optimisation (trending search 2026)
+    "How to save 80% on Claude API costs",
+    "Claude Haiku: When cheaper is actually better",
+    "Prompt caching with Claude: Pay once, reuse forever",
+    "Batch API vs real-time: Save 50% on background tasks",
+    "Token budgeting: Control LLM spend at scale",
+    "Router pattern: Use cheap models for simple tasks",
     // ⚡ Task automation
     "Automate your daily standups with AI",
     "Automate PR descriptions with Claude",
     "AI-powered email triage: Zero inbox in 10 minutes",
     "Writing prompts that work for recurring tasks",
-    "Batch API: Process 1000 tasks overnight at 50% cost",
     "Claude + Notion: Build your AI-powered second brain",
+    "Claude Code: Turn your terminal into an AI dev pair",
   ],
 
   // ─── DevOps ────────────────────────────────────────────────────────────────

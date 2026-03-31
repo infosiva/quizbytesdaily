@@ -428,7 +428,37 @@ function filterAndShuffle(qs: QuizQ[], cat: string, diff: string): number[] {
 }
 
 // ── Quiz Section: filter pickers live OUTSIDE the card ─────────────────────────
-function QuizWidget() {
+// ── Streak helpers (localStorage) ─────────────────────────────────────────────
+function todayIso(): string { return new Date().toISOString().slice(0, 10); }
+function loadStreak(): number {
+  try {
+    const raw = localStorage.getItem("qb_streak");
+    if (!raw) return 0;
+    const { date, count } = JSON.parse(raw) as { date: string; count: number };
+    const today = todayIso();
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (date === today) return count;
+    if (date === yesterday) return count; // carry over until they play today
+    return 0;
+  } catch { return 0; }
+}
+function recordStreak(): void {
+  try {
+    const today = todayIso();
+    const raw = localStorage.getItem("qb_streak");
+    if (raw) {
+      const { date, count } = JSON.parse(raw) as { date: string; count: number };
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (date === today) return; // already recorded today
+      const newCount = date === yesterday ? count + 1 : 1;
+      localStorage.setItem("qb_streak", JSON.stringify({ date: today, count: newCount }));
+    } else {
+      localStorage.setItem("qb_streak", JSON.stringify({ date: today, count: 1 }));
+    }
+  } catch { /* ignore */ }
+}
+
+function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
   const [allQs,      setAllQs]      = useState<QuizQ[]>([]);
   const [activeCat,  setActiveCat]  = useState("All");
   const [activeDiff, setActiveDiff] = useState("All");
@@ -438,6 +468,9 @@ function QuizWidget() {
   const [score,      setScore]      = useState(0);
   const [roundDone,  setRoundDone]  = useState(false);
   const [loading,    setLoading]    = useState(true);
+
+  // Report streak to parent on mount
+  useEffect(() => { onStreak(loadStreak()); }, [onStreak]);
 
   useEffect(() => {
     setLoading(true);
@@ -495,6 +528,9 @@ function QuizWidget() {
     if (chosen !== null) return;
     setChosen(idx);
     if (idx === q.ans) setScore((s) => s + 1);
+    // Record streak and report updated value
+    recordStreak();
+    onStreak(loadStreak());
     // Record stat (fire-and-forget)
     fetch("/api/quiz/stats", {
       method: "POST",
@@ -747,6 +783,7 @@ export default function Home() {
   const [page,           setPage]           = useState(1);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [heroCat,        setHeroCat]        = useState("AI/ML"); // driven by daily focus from quiz API
+  const [streak,         setStreak]         = useState(0);
 
   // Derived from settings (with fallbacks)
   // Note: sub-components use module-level CYN; accent here applies to root-level chrome
@@ -918,7 +955,7 @@ export default function Home() {
                   <>
                     <span className="flex items-center gap-1">
                       <span className="font-black text-white">{dynCategories.length - 1}</span>
-                      <span className="text-slate-600">Topics</span>
+                      <span className="text-slate-600">Topic{dynCategories.length - 1 !== 1 ? "s" : ""}</span>
                     </span>
                     <span className="text-slate-800">·</span>
                   </>
@@ -929,6 +966,14 @@ export default function Home() {
                 </span>
                 <span className="text-slate-800">·</span>
                 <span className="text-slate-600">Free</span>
+                {streak > 0 && (
+                  <>
+                    <span className="text-slate-800">·</span>
+                    <span className="flex items-center gap-1 font-bold" style={{ color: "#f97316" }}>
+                      🔥 {streak} day{streak !== 1 ? "s" : ""} streak
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* CTAs */}
@@ -963,11 +1008,34 @@ export default function Home() {
                     );
                   })}
               </div>
+
+              {/* Feature highlight cards — fills left panel vertical gap */}
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                {([
+                  { icon: "🧩", title: "Interactive",  desc: "Pick answers, get instant explanations" },
+                  { icon: "📹", title: "New Daily",    desc: "Fresh quiz Short on YouTube every day" },
+                  { icon: "⌨️", title: "Keyboard",     desc: "Press 1–4 to pick, Enter for next" },
+                ] as const).map(({ icon, title, desc }) => (
+                  <div key={title} className="rounded-xl p-3 border transition-colors"
+                    style={{ background: "#0d0d18", borderColor: "#1c1c2e" }}>
+                    <div className="text-xl mb-1.5 leading-none">{icon}</div>
+                    <div className="text-[11px] font-black text-white leading-none mb-1">{title}</div>
+                    <div className="text-[10px] leading-snug" style={{ color: "#475569" }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mobile quiz CTA — only below md (quiz is hidden on mobile in right col) */}
+              <button onClick={() => { document.getElementById("mobile-quiz")?.scrollIntoView({ behavior: "smooth" }); }}
+                className="lg:hidden mt-4 w-full py-2.5 rounded-xl text-sm font-black border transition-all hover:scale-105"
+                style={{ borderColor: "#a855f740", color: "#a855f7", background: "#a855f712" }}>
+                🧩 Play Quiz Now ↓
+              </button>
             </div>
 
             {/* Right: interactive quiz widget (visible on lg+, pickers are above the card) */}
             <div className="hidden lg:block">
-              <QuizWidget />
+              <QuizWidget onStreak={setStreak} />
             </div>
           </div>
         </div>
