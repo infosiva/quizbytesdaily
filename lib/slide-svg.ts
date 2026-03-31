@@ -26,6 +26,35 @@ const CARD_COLORS: Record<string, { text: string; border: string; bg: string }> 
   amber:  { text: "#fbbf24", border: "#fbbf2466", bg: "#fbbf2418" },
 };
 
+// ── Per-category background themes ─────────────────────────────────────────────
+interface BgTheme {
+  bg1: string; bg2: string;
+  blob1: string; blob2: string;
+  hgStart: string; hgMid: string; hgEnd: string;
+  accent: string;
+  dots: string;
+}
+const SLIDE_THEMES: Record<string, BgTheme> = {
+  "AI/ML":            { bg1: "#0d0d1e", bg2: "#08080f", blob1: "#7c3aed",  blob2: "#06b6d4",  hgStart: "#22d3ee", hgMid: "#60a5fa", hgEnd: "#a5f3fc", accent: "#a855f7", dots: "#7c3aed1a" },
+  "AI":               { bg1: "#0d0d1e", bg2: "#08080f", blob1: "#7c3aed",  blob2: "#06b6d4",  hgStart: "#22d3ee", hgMid: "#60a5fa", hgEnd: "#a5f3fc", accent: "#a855f7", dots: "#7c3aed1a" },
+  "Python":           { bg1: "#020c18", bg2: "#04090f", blob1: "#1d4ed8",  blob2: "#ca8a04",  hgStart: "#60a5fa", hgMid: "#3b82f6", hgEnd: "#93c5fd", accent: "#60a5fa", dots: "#1d4ed81a" },
+  "Algorithms":       { bg1: "#021508", bg2: "#040d05", blob1: "#065f46",  blob2: "#6d28d9",  hgStart: "#4ade80", hgMid: "#22c55e", hgEnd: "#86efac", accent: "#4ade80", dots: "#065f461a" },
+  "JavaScript":       { bg1: "#160c00", bg2: "#0c0600", blob1: "#b45309",  blob2: "#dc2626",  hgStart: "#fbbf24", hgMid: "#f59e0b", hgEnd: "#fde68a", accent: "#fbbf24", dots: "#b453091a" },
+  "TypeScript":       { bg1: "#020c18", bg2: "#01080f", blob1: "#0369a1",  blob2: "#7c3aed",  hgStart: "#38bdf8", hgMid: "#0ea5e9", hgEnd: "#7dd3fc", accent: "#38bdf8", dots: "#0369a11a" },
+  "System Design":    { bg1: "#04081a", bg2: "#02050f", blob1: "#1e3a8a",  blob2: "#065f46",  hgStart: "#4ade80", hgMid: "#22d3ee", hgEnd: "#67e8f9", accent: "#22d3ee", dots: "#1e3a8a1a" },
+  "DevOps":           { bg1: "#0e0700", bg2: "#080400", blob1: "#9a3412",  blob2: "#166534",  hgStart: "#fb923c", hgMid: "#f97316", hgEnd: "#fdba74", accent: "#34d399", dots: "#9a34121a" },
+  "Data Structures":  { bg1: "#160209", bg2: "#0d0105", blob1: "#831843",  blob2: "#1d4ed8",  hgStart: "#f472b6", hgMid: "#ec4899", hgEnd: "#fbcfe8", accent: "#f472b6", dots: "#8318431a" },
+  "Machine Learning": { bg1: "#0b031c", bg2: "#060115", blob1: "#4c1d95",  blob2: "#be185d",  hgStart: "#a78bfa", hgMid: "#8b5cf6", hgEnd: "#c4b5fd", accent: "#a78bfa", dots: "#4c1d951a" },
+  "React":            { bg1: "#020c18", bg2: "#010a0f", blob1: "#0e7490",  blob2: "#7c3aed",  hgStart: "#22d3ee", hgMid: "#0ea5e9", hgEnd: "#67e8f9", accent: "#22d3ee", dots: "#0e74901a" },
+  "Docker":           { bg1: "#02091a", bg2: "#010610", blob1: "#1e3a8a",  blob2: "#0369a1",  hgStart: "#60a5fa", hgMid: "#3b82f6", hgEnd: "#bfdbfe", accent: "#60a5fa", dots: "#1e3a8a1a" },
+  "Database":         { bg1: "#120500", bg2: "#090300", blob1: "#9a3412",  blob2: "#1d4ed8",  hgStart: "#fb923c", hgMid: "#f97316", hgEnd: "#fed7aa", accent: "#fb923c", dots: "#9a34121a" },
+};
+const DEFAULT_THEME: BgTheme = SLIDE_THEMES["AI/ML"];
+function getTheme(category?: string): BgTheme {
+  if (!category) return DEFAULT_THEME;
+  return SLIDE_THEMES[category] ?? DEFAULT_THEME;
+}
+
 // ── opentype.js — parse font once, cache for all subsequent renders ────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _otFont: any = null;
@@ -230,7 +259,12 @@ function renderCardAtHeight(card: CardData, x: number, y: number, availW: number
   const titleMaxW = availW - padV - iconSz - 22 - padV;
   const availH    = h - 32;
 
-  const fullTitle = String(card.title ?? "");
+  // Strip leading "A) " / "B) " prefix if the icon is opt_a/b/c/d
+  // (the letter is already shown by the icon circle badge)
+  const rawTitle = String(card.title ?? "");
+  const fullTitle = /^opt_[abcd]$/i.test(String(card.icon ?? ""))
+    ? rawTitle.replace(/^[A-Da-d][).]\s*/u, "")
+    : rawTitle;
   const fullBody  = card.body?.trim() ? String(card.body) : "";
 
   // Font sizing uses FULL text for layout stability across all reveal frames
@@ -358,30 +392,38 @@ function renderDefBoxAtHeight(
 }
 
 // ── SVG wrapper — no @font-face needed (all text is paths) ────────────────────
-function svgWrapper(content: string): string {
+function svgWrapper(content: string, category?: string): string {
+  const t = getTheme(category);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs>
   <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#0d0d20"/>
-    <stop offset="100%" stop-color="#09091a"/>
+    <stop offset="0%" stop-color="${t.bg1}"/>
+    <stop offset="100%" stop-color="${t.bg2}"/>
   </linearGradient>
   <linearGradient id="hg" gradientUnits="userSpaceOnUse" x1="72" y1="0" x2="${W - 72}" y2="0">
-    <stop offset="0%"   stop-color="#22d3ee"/>
-    <stop offset="65%"  stop-color="#60a5fa"/>
-    <stop offset="100%" stop-color="#a5f3fc"/>
+    <stop offset="0%"   stop-color="${t.hgStart}"/>
+    <stop offset="65%"  stop-color="${t.hgMid}"/>
+    <stop offset="100%" stop-color="${t.hgEnd}"/>
   </linearGradient>
-  <radialGradient id="blob1" cx="0.15" cy="0.12" r="0.5">
-    <stop offset="0%"   stop-color="#a855f7" stop-opacity="0.18"/>
-    <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+  <radialGradient id="blob1" cx="0.15" cy="0.12" r="0.55">
+    <stop offset="0%"   stop-color="${t.blob1}" stop-opacity="0.22"/>
+    <stop offset="100%" stop-color="${t.blob1}" stop-opacity="0"/>
   </radialGradient>
-  <radialGradient id="blob2" cx="0.85" cy="0.88" r="0.45">
-    <stop offset="0%"   stop-color="#22d3ee" stop-opacity="0.10"/>
-    <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+  <radialGradient id="blob2" cx="0.85" cy="0.88" r="0.48">
+    <stop offset="0%"   stop-color="${t.blob2}" stop-opacity="0.16"/>
+    <stop offset="100%" stop-color="${t.blob2}" stop-opacity="0"/>
   </radialGradient>
+  <pattern id="dots" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+    <circle cx="24" cy="24" r="1.5" fill="${t.dots}"/>
+  </pattern>
 </defs>
 <rect width="${W}" height="${H}" fill="url(#bg)"/>
 <rect width="${W}" height="${H}" fill="url(#blob1)"/>
 <rect width="${W}" height="${H}" fill="url(#blob2)"/>
+<rect width="${W}" height="${H}" fill="url(#dots)"/>
+<!-- Corner accent marks -->
+<path d="M0 90 L0 0 L90 0" fill="none" stroke="${t.accent}" stroke-width="1.5" opacity="0.2"/>
+<path d="M${W} ${H - 90} L${W} ${H} L${W - 90} ${H}" fill="none" stroke="${t.accent}" stroke-width="1.5" opacity="0.2"/>
 ${content}
 </svg>`;
 }
@@ -402,7 +444,7 @@ export interface GridOverviewData {
 // GRID_ITEM_COLORS: cycle through palette for each numbered item
 const GRID_COLORS = ["cyan", "purple", "green", "pink", "amber", "cyan", "purple", "green", "pink", "amber"];
 
-function buildGridOverviewSvg(data: GridOverviewData): string {
+function buildGridOverviewSvg(data: GridOverviewData, category?: string): string {
   const PADX    = 64;
   const AVAIL   = W - PADX * 2;
   const COLS    = 2;
@@ -490,7 +532,7 @@ function buildGridOverviewSvg(data: GridOverviewData): string {
   }
 
   footer(parts, data.slideNum, data.totalSlides);
-  return svgWrapper(parts.join("\n"));
+  return svgWrapper(parts.join("\n"), category);
 }
 
 // ── Slide data interfaces ──────────────────────────────────────────────────────
@@ -539,7 +581,7 @@ function footer(parts: string[], slideNum?: number, totalSlides?: number): void 
 // ── definition-steps slide ─────────────────────────────────────────────────────
 // wordBudget = total content words to reveal (Infinity = all). Word-by-word
 // typing effect: all box shapes visible from frame 0; text fills in word by word.
-function buildDefinitionStepsSvg(data: DefinitionStepsData, wordBudget = Infinity): string {
+function buildDefinitionStepsSvg(data: DefinitionStepsData, wordBudget = Infinity, category?: string): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
   const headingFs = 46;
@@ -598,13 +640,13 @@ function buildDefinitionStepsSvg(data: DefinitionStepsData, wordBudget = Infinit
   }
 
   footer(parts, data.slideNum, data.totalSlides);
-  return svgWrapper(parts.join("\n"));
+  return svgWrapper(parts.join("\n"), category);
 }
 
 // ── pipeline slide ─────────────────────────────────────────────────────────────
 // wordBudget = total content words to reveal (Infinity = all). Arrows appear
 // between steps as each step's text begins typing in.
-function buildPipelineSvg(data: PipelineData, wordBudget = Infinity): string {
+function buildPipelineSvg(data: PipelineData, wordBudget = Infinity, category?: string): string {
   const PADX      = 72;
   const AVAIL     = W - PADX * 2;
   const headingFs = 46;
@@ -665,11 +707,11 @@ function buildPipelineSvg(data: PipelineData, wordBudget = Infinity): string {
   }
 
   footer(parts, data.slideNum, data.totalSlides);
-  return svgWrapper(parts.join("\n"));
+  return svgWrapper(parts.join("\n"), category);
 }
 
 // ── CTA slide ─────────────────────────────────────────────────────────────────
-function buildCtaSvg(data: CtaData): string {
+function buildCtaSvg(data: CtaData, category?: string): string {
   const CX   = W / 2;
   const parts: string[] = [progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, "#22d3ee")];
 
@@ -714,7 +756,7 @@ function buildCtaSvg(data: CtaData): string {
   parts.push(svgPath("Subscribe on YouTube", btnTx + 34, btnTy, 40, "white"));
 
   footer(parts, data.slideNum, data.totalSlides);
-  return svgWrapper(parts.join("\n"));
+  return svgWrapper(parts.join("\n"), category);
 }
 
 // ── Flowchart / diagram slide ─────────────────────────────────────────────────
@@ -731,7 +773,7 @@ export interface FlowchartData {
   nodes?: FlowchartNode[];
 }
 
-function buildFlowchartSvg(data: FlowchartData): string {
+function buildFlowchartSvg(data: FlowchartData, category?: string): string {
   const PADX   = 72;
   const nodes  = (data.nodes ?? []).slice(0, 6);
   const count  = nodes.length;
@@ -746,7 +788,7 @@ function buildFlowchartSvg(data: FlowchartData): string {
     parts.push(svgPath(l, PADX, 100 + i * headingLH, headingFs, "url(#hg)"));
   });
 
-  if (count === 0) return svgWrapper(parts.join("\n"));
+  if (count === 0) return svgWrapper(parts.join("\n"), category);
 
   // Layout: nodes stacked vertically with arrow connectors
   const AREA_TOP  = 100 + headLines.length * headingLH + 40;
@@ -811,29 +853,121 @@ function buildFlowchartSvg(data: FlowchartData): string {
   });
 
   footer(parts, data.slideNum, data.totalSlides);
-  return svgWrapper(parts.join("\n"));
+  return svgWrapper(parts.join("\n"), category);
+}
+
+// ── code-quiz slide ────────────────────────────────────────────────────────────
+// Layout: heading → code block → question label → 4 A/B/C/D option cards
+export interface CodeQuizData {
+  heading:     string;
+  slideNum?:   number;
+  totalSlides?: number;
+  language?:   string;
+  code:        string;    // newline-separated code lines
+  question?:   string;    // "What does this output?" etc.
+  cards:       CardData[];
+}
+
+function buildCodeQuizSvg(data: CodeQuizData, category?: string): string {
+  const PADX    = 64;
+  const AVAIL   = W - PADX * 2;
+  const theme   = getTheme(category);
+  const parts: string[] = [progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, theme.accent)];
+
+  // ── 1. Heading ────────────────────────────────────────────────────────────
+  const headFs   = 50;
+  const headLH   = Math.round(headFs * 1.2);
+  const headText = data.heading ?? "Code Check!";
+  const headLines = wrapText(headText, AVAIL, headFs);
+  headLines.forEach((l, i) => parts.push(svgPath(l, PADX, 90 + headFs + i * headLH, headFs, "url(#hg)")));
+  let cy = 90 + headLines.length * headLH + 22;
+
+  // ── 2. Code box ───────────────────────────────────────────────────────────
+  const CODE_LINES = (data.code ?? "").replace(/\\n/g, "\n").split("\n").map((l) => l.replace(/\t/g, "  ")).slice(0, 11);
+  const CODE_FS    = 25;
+  const CODE_LH    = Math.round(CODE_FS * 1.6);
+  const BAR_H      = 46;
+  const PAD_V      = 18;
+  const PAD_H      = 32;
+  const boxH       = BAR_H + PAD_V + CODE_LINES.length * CODE_LH + PAD_V;
+
+  // Box background + border
+  parts.push(roundRect(PADX, cy, AVAIL, boxH, 18, "#080d14"));
+  parts.push(roundRect(PADX, cy, AVAIL, boxH, 18, "none", `${theme.accent}35`));
+
+  // Title bar (macOS-style dots + language label)
+  parts.push(roundRect(PADX, cy, AVAIL, BAR_H, 18, `${theme.accent}12`));
+  // Clip the bottom corners of the title bar to be square
+  parts.push(`<rect x="${PADX}" y="${cy + BAR_H / 2}" width="${AVAIL}" height="${BAR_H / 2}" fill="${theme.accent}12"/>`);
+  parts.push(`<line x1="${PADX}" y1="${cy + BAR_H}" x2="${PADX + AVAIL}" y2="${cy + BAR_H}" stroke="${theme.accent}25" stroke-width="1"/>`);
+
+  // Traffic-light dots
+  const dotY  = cy + BAR_H / 2;
+  const dotCx = PADX + 20;
+  (["#ff5f57", "#febc2e", "#28c840"] as const).forEach((c, i) => {
+    parts.push(`<circle cx="${dotCx + i * 22}" cy="${dotY}" r="7" fill="${c}" opacity="0.8"/>`);
+  });
+
+  // Language label (right-aligned in bar)
+  const lang = (data.language ?? "python").toUpperCase();
+  parts.push(svgPath(lang, PADX + AVAIL - PAD_H, cy + BAR_H / 2 + CODE_FS * 0.38, CODE_FS - 3, `${theme.accent}70`, "end"));
+
+  // Code lines — rendered with Poppins (not monospace, but clean in a code box)
+  const codeY0 = cy + BAR_H + PAD_V + CODE_FS;
+  CODE_LINES.forEach((line, i) => {
+    if (!line.trim()) return; // skip blank lines but keep spacing
+    // Simple two-tone: comments gray, everything else light
+    const isComment = /^\s*(#|\/\/)/.test(line);
+    const lineColor = isComment ? "#4a5568" : "#c8daf0";
+    parts.push(svgPath(line, PADX + PAD_H, codeY0 + i * CODE_LH, CODE_FS, lineColor));
+  });
+
+  cy += boxH + 22;
+
+  // ── 3. Question label ─────────────────────────────────────────────────────
+  const qText  = data.question ?? "What does this code output?";
+  const qFs    = 42;
+  const qLH    = Math.round(qFs * 1.25);
+  const qLines = wrapText(qText, AVAIL, qFs);
+  qLines.forEach((l, i) => parts.push(svgPath(l, PADX, cy + qFs + i * qLH, qFs, "rgba(255,255,255,0.88)")));
+  cy += qLines.length * qLH + 18;
+
+  // ── 4. Option cards ───────────────────────────────────────────────────────
+  const cards   = (data.cards ?? []).slice(0, 4);
+  const FOOT_Y  = H - 120;
+  const cardGap = 8;
+  const cardH   = Math.min(162, Math.floor((FOOT_Y - cy - cardGap * (cards.length - 1)) / Math.max(1, cards.length)));
+  cards.forEach((card) => {
+    parts.push(renderCardAtHeight(card, PADX, cy, AVAIL, cardH));
+    cy += cardH + cardGap;
+  });
+
+  footer(parts, data.slideNum, data.totalSlides);
+  return svgWrapper(parts.join("\n"), category);
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-export function slideToSvg(template: string, data: Record<string, unknown>): string {
+export function slideToSvg(template: string, data: Record<string, unknown>, category?: string): string {
   switch (template) {
     case "definition-steps":
-      return buildDefinitionStepsSvg(data as unknown as DefinitionStepsData);
+      return buildDefinitionStepsSvg(data as unknown as DefinitionStepsData, Infinity, category);
     case "pipeline":
-      return buildPipelineSvg(data as unknown as PipelineData);
+      return buildPipelineSvg(data as unknown as PipelineData, Infinity, category);
     case "cta":
-      return buildCtaSvg(data as unknown as CtaData);
+      return buildCtaSvg(data as unknown as CtaData, category);
     case "grid-overview":
-      return buildGridOverviewSvg(data as unknown as GridOverviewData);
+      return buildGridOverviewSvg(data as unknown as GridOverviewData, category);
     case "flowchart":
-      return buildFlowchartSvg(data as unknown as FlowchartData);
+      return buildFlowchartSvg(data as unknown as FlowchartData, category);
+    case "code-quiz":
+      return buildCodeQuizSvg(data as unknown as CodeQuizData, category);
     default:
       return buildDefinitionStepsSvg({
         heading:     String(data.heading ?? template),
         slideNum:    data.slideNum as number,
         totalSlides: data.totalSlides as number,
-      });
+      }, Infinity, category);
   }
 }
 
@@ -848,28 +982,30 @@ export function slideToSvg(template: string, data: Record<string, unknown>): str
  *   pipeline         (4 cards)       → 5 frames (empty + 4 cards)
  *   cta                              → 1 frame  (static)
  */
-export function slideToRevealFrames(template: string, data: Record<string, unknown>): string[] {
-  if (template === "cta") return [buildCtaSvg(data as unknown as CtaData)];
+export function slideToRevealFrames(template: string, data: Record<string, unknown>, category?: string): string[] {
+  if (template === "cta") return [buildCtaSvg(data as unknown as CtaData, category)];
   // single static frames for templates that don't need reveal animation
-  if (template === "grid-overview") return [buildGridOverviewSvg(data as unknown as GridOverviewData)];
-  if (template === "flowchart")     return [buildFlowchartSvg(data as unknown as FlowchartData)];
+  if (template === "grid-overview") return [buildGridOverviewSvg(data as unknown as GridOverviewData, category)];
+  if (template === "flowchart")     return [buildFlowchartSvg(data as unknown as FlowchartData, category)];
+  if (template === "code-quiz")     return [buildCodeQuizSvg(data as unknown as CodeQuizData, category)];
 
   if (template === "pipeline") {
     // single full frame, all text upfront
-    return [buildPipelineSvg(data as unknown as PipelineData)];
+    return [buildPipelineSvg(data as unknown as PipelineData, Infinity, category)];
   }
 
   // definition-steps (and default fallback) — single full frame, all text upfront
   const d = data as unknown as DefinitionStepsData;
-  return [buildDefinitionStepsSvg(d)];
+  return [buildDefinitionStepsSvg(d, Infinity, category)];
 }
 
 /** Convert a slide template + data to a PNG Buffer using Sharp (lazy-loaded). */
 export async function slideToPng(
   template: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  category?: string
 ): Promise<Buffer> {
-  const svg   = slideToSvg(template, data);
+  const svg   = slideToSvg(template, data, category);
   const sharp = await getSharp();
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
@@ -880,9 +1016,10 @@ export async function slideToPng(
  */
 export async function slideToPngFrames(
   template: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  category?: string
 ): Promise<Buffer[]> {
-  const frames = slideToRevealFrames(template, data);
+  const frames = slideToRevealFrames(template, data, category);
   const sharp  = await getSharp();
   return Promise.all(frames.map(svg => sharp(Buffer.from(svg)).png().toBuffer()));
 }

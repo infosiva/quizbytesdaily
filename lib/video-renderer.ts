@@ -99,7 +99,7 @@ export async function renderSeries(
         data.slideNum    = i + 1;
         data.totalSlides = totalSlides;
         const slideDur = dur(row.template);
-        const bufs     = await slideToPngFrames(row.template, data);
+        const bufs     = await slideToPngFrames(row.template, data, series.category);
         const frameDur = slideDur / bufs.length;
         return bufs.map((buf, f) => ({ buf, i, f, frameDur }));
       })

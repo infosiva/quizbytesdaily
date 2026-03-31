@@ -74,6 +74,17 @@ async function ensureSchema() {
       )`,
       args: [],
     },
+    {
+      sql: `CREATE TABLE IF NOT EXISTS quiz_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question_id TEXT NOT NULL,
+        correct INTEGER NOT NULL DEFAULT 0,
+        cat TEXT NOT NULL DEFAULT '',
+        diff TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )`,
+      args: [],
+    },
   ], "write");
 
   // Add scheduled_at column (migration — safe to fail if already exists)
@@ -415,6 +426,117 @@ export async function setBotState(state: string): Promise<void> {
     sql:  "INSERT OR REPLACE INTO site_settings (key, value) VALUES ('bot_state', ?)",
     args: [state],
   });
+}
+
+// ── Quiz Question Extraction ──────────────────────────────────────────────────
+
+export interface SeriesSlideRow {
+  series_id: number;
+  category:  string;
+  difficulty: string;
+  topic:     string;
+  slug:      string;
+  template:  string;
+  data:      string; // JSON string
+  position:  number;
+}
+
+/** Fetch all slides for series matching optional category/difficulty filters */
+export async function getSeriesSlides(category?: string, difficulty?: string): Promise<SeriesSlideRow[]> {
+  await ensureSchema();
+  const c = getClient();
+  const conds: string[] = [];
+  const args: InValue[] = [];
+  if (category)   { conds.push("s.category = ?");   args.push(category); }
+  if (difficulty) { conds.push("s.difficulty = ?"); args.push(difficulty); }
+  const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+  const rs = await c.execute({
+    sql: `SELECT s.id AS series_id, s.category, s.difficulty, s.topic, s.slug,
+                 sl.template, sl.data, sl.position
+          FROM series s
+          JOIN slides sl ON sl.series_id = s.id
+          ${where}
+          ORDER BY s.id, sl.position`,
+    args,
+  });
+  return rs.rows.map((r) => ({
+    series_id:  Number(r.series_id),
+    category:   String(r.category   ?? ""),
+    difficulty: String(r.difficulty ?? ""),
+    topic:      String(r.topic      ?? ""),
+    slug:       String(r.slug       ?? ""),
+    template:   String(r.template   ?? ""),
+    data:       String(r.data       ?? "{}"),
+    position:   Number(r.position),
+  }));
+}
+
+// ── Quiz Stats ────────────────────────────────────────────────────────────────
+
+export interface QuizStatRow {
+  question_id: string;
+  correct:     boolean;
+  cat:         string;
+  diff:        string;
+}
+
+export async function saveQuizStat(stat: QuizStatRow): Promise<void> {
+  await ensureSchema();
+  const c = getClient();
+  await c.execute({
+    sql:  "INSERT INTO quiz_stats (question_id, correct, cat, diff) VALUES (?, ?, ?, ?)",
+    args: [stat.question_id, stat.correct ? 1 : 0, stat.cat, stat.diff],
+  });
+}
+
+export interface QuizStatsSummary {
+  totalAttempts: number;
+  correctAttempts: number;
+  accuracyPct: number;
+  byCategory: { cat: string; attempts: number; correct: number; pct: number }[];
+  byDifficulty: { diff: string; attempts: number; correct: number; pct: number }[];
+  recent: { date: string; attempts: number }[];
+}
+
+export async function getQuizStatsSummary(): Promise<QuizStatsSummary> {
+  await ensureSchema();
+  const c = getClient();
+  const [totals, byCat, byDiff, recentRows] = await Promise.all([
+    c.execute(`
+      SELECT COUNT(*) AS total, SUM(correct) AS correct FROM quiz_stats
+    `),
+    c.execute(`
+      SELECT cat, COUNT(*) AS attempts, SUM(correct) AS correct
+      FROM quiz_stats GROUP BY cat ORDER BY attempts DESC
+    `),
+    c.execute(`
+      SELECT diff, COUNT(*) AS attempts, SUM(correct) AS correct
+      FROM quiz_stats GROUP BY diff ORDER BY attempts DESC
+    `),
+    c.execute(`
+      SELECT date(created_at) AS date, COUNT(*) AS attempts
+      FROM quiz_stats
+      WHERE created_at >= date('now', '-29 days')
+      GROUP BY date(created_at)
+      ORDER BY date ASC
+    `),
+  ]);
+  const total   = Number(totals.rows[0]?.total   ?? 0);
+  const correct = Number(totals.rows[0]?.correct ?? 0);
+  return {
+    totalAttempts:   total,
+    correctAttempts: correct,
+    accuracyPct:     total > 0 ? Math.round((correct / total) * 100) : 0,
+    byCategory: byCat.rows.map((r) => {
+      const a = Number(r.attempts ?? 0); const c2 = Number(r.correct ?? 0);
+      return { cat: String(r.cat ?? ""), attempts: a, correct: c2, pct: a > 0 ? Math.round((c2/a)*100) : 0 };
+    }),
+    byDifficulty: byDiff.rows.map((r) => {
+      const a = Number(r.attempts ?? 0); const c2 = Number(r.correct ?? 0);
+      return { diff: String(r.diff ?? ""), attempts: a, correct: c2, pct: a > 0 ? Math.round((c2/a)*100) : 0 };
+    }),
+    recent: recentRows.rows.map((r) => ({ date: String(r.date ?? ""), attempts: Number(r.attempts ?? 0) })),
+  };
 }
 
 // ── Site Settings CRUD ────────────────────────────────────────────────────────

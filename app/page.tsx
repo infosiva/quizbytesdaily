@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { channelConfig } from "@/lib/config";
+import { channelConfig, CAT_EMOJI } from "@/lib/config";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface SeriesItem {
@@ -78,9 +78,33 @@ const DIFF_COLOR: Record<string, string> = {
 function seriesUrl(s: SeriesItem): string {
   return s.youtube_url ?? channelConfig.youtubeUrl;
 }
+// Prompt map for Pollinations — maps categories to vivid dark-tech prompts
+const POLL_PROMPTS: Record<string, string> = {
+  "AI/ML":          "neural network artificial intelligence dark abstract glowing blue circuits minimal tech",
+  "AI Evaluation":  "AI testing metrics charts dashboard dark neon glow precision accuracy minimal",
+  "AI Engineering": "vector database embeddings geometric nodes dark purple cyan minimal tech art",
+  "AI Productivity":"workflow automation tools dark minimal neon glowing productivity tech abstract",
+  "Python":         "python programming code dark green terminal minimal abstract tech illustration",
+  "Algorithms":     "algorithm graph nodes tree dark purple minimal geometric abstract tech",
+  "JavaScript":     "javascript code browser dark yellow neon minimal tech abstract react",
+  "TypeScript":     "typescript code dark blue neon minimal abstract tech illustration",
+  "System Design":  "system architecture microservices cloud dark minimal geometric tech illustration",
+  "DevOps":         "kubernetes docker containers cloud dark minimal neon tech abstract",
+  "React":          "react components UI dark cyan neon minimal abstract tech",
+  "Docker":         "docker containers whale dark blue minimal tech abstract",
+  "Database":       "database tables SQL dark orange neon minimal tech abstract",
+  "Data Structures":"linked list binary tree stack dark minimal geometric abstract tech",
+  "Machine Learning":"machine learning model training dark minimal neon abstract tech",
+};
+
 function seriesThumbnail(s: SeriesItem): string {
   if (s.youtube_id) return `https://i.ytimg.com/vi/${s.youtube_id}/mqdefault.jpg`;
-  return `/api/thumbnail/${s.slug}`;
+  // Use Pollinations.ai for AI-generated thumbnails — free, no API key, CDN-cached
+  const base   = POLL_PROMPTS[s.category] ?? `${s.category} tech dark minimal abstract`;
+  const prompt = encodeURIComponent(`${base}, quiz question, high quality`);
+  // Seed from series ID makes it deterministic (same series = same image always)
+  const seed   = s.id % 9999;
+  return `https://image.pollinations.ai/prompt/${prompt}?width=640&height=360&nologo=true&seed=${seed}`;
 }
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -163,45 +187,55 @@ function SeriesCard({ series }: { series: SeriesItem }) {
         className="block relative overflow-hidden bg-[#07070e]" style={{ aspectRatio: "16/9" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={seriesThumbnail(series)} alt={series.title}
-          className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+          style={{ opacity: 0 }}
+          loading="lazy"
+          onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = "1"; }}
+        />
 
-        {isLive && (
-          <>
-            <div className="absolute inset-0"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
-            <div className="absolute inset-0"
-              style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 40%)" }} />
-            <div className="absolute top-2.5 left-2.5">
-              <span className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md uppercase"
-                style={{ background: `${col.badge}ee`, color: col.text }}>
-                {series.category}
-              </span>
-            </div>
-            <div className="absolute top-2.5 right-2.5">
-              <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
-                style={{ background: "rgba(0,0,0,0.8)", color: diffCol, border: `1px solid ${diffCol}50` }}>
-                {series.difficulty.toUpperCase()}
-              </span>
-            </div>
-            {slides > 0 && (
-              <div className="absolute bottom-2.5 right-2.5">
-                <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md"
-                  style={{ background: "rgba(0,0,0,0.75)", color: "#e2e8f0" }}>
-                  <Ico.Slides />{slides} slides
-                </span>
-              </div>
-            )}
-          </>
-        )}
-
-        {isLive && (
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl"
-              style={{ background: `${CYN}cc`, boxShadow: `0 0 24px ${CYN}66` }}>
-              <svg className="w-6 h-6 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </div>
+        {/* Always show overlays + badges (for both live and AI-thumbnail cards) */}
+        <div className="absolute inset-0"
+          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)" }} />
+        <div className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 40%)" }} />
+        <div className="absolute top-2.5 left-2.5">
+          <span className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md uppercase"
+            style={{ background: `${col.badge}ee`, color: col.text }}>
+            {series.category}
+          </span>
+        </div>
+        <div className="absolute top-2.5 right-2.5">
+          <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
+            style={{ background: "rgba(0,0,0,0.8)", color: diffCol, border: `1px solid ${diffCol}50` }}>
+            {series.difficulty.toUpperCase()}
+          </span>
+        </div>
+        {slides > 0 && (
+          <div className="absolute bottom-2.5 right-2.5">
+            <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "rgba(0,0,0,0.75)", color: "#e2e8f0" }}>
+              <Ico.Slides />{slides} slides
+            </span>
           </div>
         )}
+        {!isLive && (
+          <div className="absolute bottom-2.5 left-2.5">
+            <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md"
+              style={{ background: "#451a0388", color: "#fbbf24", border: "1px solid #451a0360" }}>
+              ⏳ Coming Soon
+            </span>
+          </div>
+        )}
+
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl"
+            style={{ background: isLive ? `${CYN}cc` : `${col.badge}cc`, boxShadow: `0 0 24px ${isLive ? CYN : col.badge}66` }}>
+            {isLive
+              ? <svg className="w-6 h-6 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              : <span className="text-lg">🔔</span>
+            }
+          </div>
+        </div>
       </a>
 
       {/* Card body */}
@@ -278,14 +312,17 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
           style={{ width: 104, aspectRatio: "16/9" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={seriesThumbnail(series)} alt={series.title}
-            className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-          {isLive && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/40 transition-colors">
-              <svg className="w-4 h-4 opacity-0 group-hover/thumb:opacity-100 transition-opacity" fill="white" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </div>
-          )}
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+            style={{ opacity: 0 }}
+            loading="lazy"
+            onLoad={(e) => { (e.target as HTMLImageElement).style.opacity = "1"; }}
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumb:bg-black/40 transition-colors">
+            {isLive
+              ? <svg className="w-4 h-4 opacity-0 group-hover/thumb:opacity-100 transition-opacity" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              : <span className="text-xs opacity-0 group-hover/thumb:opacity-100 transition-opacity">🔔</span>
+            }
+          </div>
         </a>
       </td>
 
@@ -348,6 +385,361 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
         )}
       </td>
     </tr>
+  );
+}
+
+// ── Mini Quiz Widget ───────────────────────────────────────────────────────────
+
+interface QuizQ {
+  id?:       string;
+  cat:       string;
+  diff:      string;
+  q:         string;
+  opts:      string[];
+  ans:       number;
+  exp:       string;
+  type?:     "text" | "code";
+  code?:     string;
+  language?: string;
+  live?:     boolean;   // true = from DB (actual series), false/undefined = static fallback
+}
+
+const LABELS       = ["A", "B", "C", "D"];
+const LABEL_COLORS = ["#22d3ee", "#a855f7", "#4ade80", "#f472b6"];
+// CAT_EMOJI is imported from @/lib/config — shared source of truth across all pages
+
+const QUIZ_DIFFS = [
+  { id: "All",          label: "All",       dot: "#94a3b8" },
+  { id: "Beginner",     label: "Beginner",  dot: "#4ade80" },
+  { id: "Intermediate", label: "Mid",       dot: "#fbbf24" },
+  { id: "Advanced",     label: "Adv",       dot: "#f87171" },
+];
+
+function filterAndShuffle(qs: QuizQ[], cat: string, diff: string): number[] {
+  let idx = qs.map((_, i) => i);
+  if (cat  !== "All") idx = idx.filter((i) => qs[i].cat  === cat);
+  if (diff !== "All") idx = idx.filter((i) => qs[i].diff === diff);
+  if (idx.length === 0) idx = qs.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
+// ── Quiz Section: filter pickers live OUTSIDE the card ─────────────────────────
+function QuizWidget() {
+  const [allQs,      setAllQs]      = useState<QuizQ[]>([]);
+  const [activeCat,  setActiveCat]  = useState("All");
+  const [activeDiff, setActiveDiff] = useState("All");
+  const [deck,       setDeck]       = useState<number[]>([]);
+  const [step,       setStep]       = useState(0);
+  const [chosen,     setChosen]     = useState<number | null>(null);
+  const [score,      setScore]      = useState(0);
+  const [roundDone,  setRoundDone]  = useState(false);
+  const [loading,    setLoading]    = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/quiz")
+      .then((r) => r.json())
+      .then((d: { questions?: QuizQ[]; dailyFocus?: string }) => {
+        const qs = d.questions ?? [];
+        setAllQs(qs);
+        // Pre-select today's daily focus category so the quiz feels fresh each day
+        const focus = d.dailyFocus && d.dailyFocus !== "All" ? d.dailyFocus : "All";
+        setActiveCat(focus);
+        setDeck(filterAndShuffle(qs, focus, "All"));
+      })
+      .catch(() => {
+        // On network error keep loading spinner removed, show empty state
+        setAllQs([]);
+        setDeck([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    setDeck(filterAndShuffle(allQs, activeCat, activeDiff));
+    setStep(0); setChosen(null); setScore(0); setRoundDone(false);
+  }, [allQs, activeCat, activeDiff]);
+
+  const total  = deck.length;
+  const qi     = deck[Math.min(step, total - 1)] ?? 0;
+  const q      = allQs[qi] ?? allQs[0];
+  const catCol = getCatColor(q?.cat ?? "AI/ML");
+  const qNum   = step + 1;
+
+  // Dynamic category list derived from full pool — no hardcoding
+  // Categories with any DB (live) question are marked as live
+  const availCats = useMemo(() => {
+    const seen = new Map<string, boolean>(); // cat → hasLive
+    for (const qv of allQs) {
+      if (!seen.has(qv.cat)) seen.set(qv.cat, false);
+      if (qv.live) seen.set(qv.cat, true);
+    }
+    const cats = [...seen.entries()].map(([id, hasLive]) => ({
+      id, emoji: CAT_EMOJI[id] ?? "💡", hasLive,
+    }));
+    return [{ id: "All", emoji: "🌐", hasLive: false }, ...cats];
+  }, [allQs]);
+
+  const cCount = (catId: string) => allQs.filter((qv) =>
+    (catId === "All" || qv.cat === catId) && (activeDiff === "All" || qv.diff === activeDiff)
+  ).length;
+  const dCount = (diffId: string) => allQs.filter((qv) =>
+    (activeCat === "All" || qv.cat === activeCat) && (diffId === "All" || qv.diff === diffId)
+  ).length;
+
+  function pick(idx: number) {
+    if (chosen !== null) return;
+    setChosen(idx);
+    if (idx === q.ans) setScore((s) => s + 1);
+    // Record stat (fire-and-forget)
+    fetch("/api/quiz/stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question_id: q.id ?? `${q.cat}-${q.q.slice(0,20)}`, correct: idx === q.ans, cat: q.cat, diff: q.diff }),
+    }).catch(() => {});
+  }
+  function next() {
+    const nxt = step + 1;
+    setChosen(null);
+    if (nxt >= total) setRoundDone(true); else setStep(nxt);
+  }
+  function startNewRound() {
+    setDeck(filterAndShuffle(allQs, activeCat, activeDiff));
+    setStep(0); setChosen(null); setScore(0); setRoundDone(false);
+  }
+
+  return (
+    <div>
+      {/* ── Pickers: OUTSIDE the card ── */}
+      <div className="mb-4 space-y-3">
+
+        {/* ── TOPIC picker ── */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: "#334155" }}>Topic</span>
+            <div className="h-px flex-1" style={{ background: "#1e1e2e" }} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {availCats.map((c) => {
+              const cnt      = cCount(c.id);
+              const isActive = activeCat === c.id;
+              const col      = c.id === "All" ? { text: "#e2e8f0", badge: "#334155" } : getCatColor(c.id);
+              if (cnt === 0 && c.id !== "All") return null;
+              return (
+                <button key={c.id} onClick={() => setActiveCat(c.id)}
+                  className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold transition-all duration-150"
+                  style={{
+                    padding: "6px 14px",
+                    background: isActive ? col.badge : "#0e0e1c",
+                    color: isActive ? col.text : "#4b5563",
+                    border: `1.5px solid ${isActive ? col.badge : "#1c1c2e"}`,
+                    boxShadow: isActive ? `0 0 16px ${col.badge}50, 0 2px 8px rgba(0,0,0,0.4)` : "none",
+                    transform: isActive ? "scale(1.04)" : "scale(1)",
+                  }}>
+                  <span className="text-sm leading-none">{c.emoji}</span>
+                  <span className="font-black">{c.id === "All" ? "All" : c.id}</span>
+                  {/* LIVE pill for DB categories */}
+                  {c.hasLive && (
+                    <span className="text-[9px] font-black px-1 py-0.5 rounded"
+                      style={{ background: isActive ? "rgba(255,255,255,0.18)" : "#22d3ee18", color: isActive ? col.text : "#22d3ee" }}>
+                      LIVE
+                    </span>
+                  )}
+                  <span className="font-mono text-[10px] ml-0.5"
+                    style={{ opacity: isActive ? 0.75 : 0.35 }}>
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── LEVEL picker ── */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: "#334155" }}>Level</span>
+            <div className="h-px flex-1" style={{ background: "#1e1e2e" }} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {QUIZ_DIFFS.map((d) => {
+              const cnt      = dCount(d.id);
+              const isActive = activeDiff === d.id;
+              if (cnt === 0 && d.id !== "All") return null;
+              return (
+                <button key={d.id} onClick={() => setActiveDiff(d.id)}
+                  className="inline-flex items-center gap-2 rounded-xl text-xs font-bold transition-all duration-150"
+                  style={{
+                    padding: "6px 14px",
+                    background: isActive ? `${d.dot}22` : "#0e0e1c",
+                    color: isActive ? d.dot : "#4b5563",
+                    border: `1.5px solid ${isActive ? d.dot : "#1c1c2e"}`,
+                    boxShadow: isActive ? `0 0 14px ${d.dot}30` : "none",
+                    transform: isActive ? "scale(1.04)" : "scale(1)",
+                  }}>
+                  {d.id !== "All" && (
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: isActive ? d.dot : "#374151", boxShadow: isActive ? `0 0 6px ${d.dot}80` : "none" }}/>
+                  )}
+                  <span className="font-black">{d.label}</span>
+                  <span className="font-mono text-[10px]"
+                    style={{ opacity: isActive ? 0.7 : 0.35 }}>
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Quiz card ── */}
+      <div className="rounded-2xl border overflow-hidden flex flex-col"
+        style={{ background: "#0d0d1a", borderColor: "#1e1e30", boxShadow: "0 4px 40px rgba(168,85,247,0.15)" }}>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16">
+            <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"/>
+            <p className="text-xs text-slate-600">Loading questions…</p>
+          </div>
+        ) : allQs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
+            <p className="text-2xl">🧩</p>
+            <p className="text-sm font-bold text-slate-400">Questions loading…</p>
+            <p className="text-xs text-slate-700">Check back in a moment.</p>
+          </div>
+        ) : roundDone ? (
+          <div className="flex flex-col items-center justify-center py-10 px-6 text-center gap-2">
+            <div className="text-5xl mb-2">{score === total ? "🏆" : score >= Math.ceil(total * 0.7) ? "🎉" : "💪"}</div>
+            <p className="text-lg font-black text-white">Round Complete!</p>
+            <p className="text-sm text-slate-300 font-bold">{score}/{total} correct
+              <span className="ml-2 font-mono text-xs px-2 py-0.5 rounded" style={{ background: "#4ade8015", color: "#4ade80" }}>
+                {Math.round((score / total) * 100)}%
+              </span>
+            </p>
+            <p className="text-xs text-slate-600 mb-4">
+              {activeCat === "All" ? "All topics" : activeCat}{activeDiff !== "All" ? ` · ${activeDiff}` : ""}
+            </p>
+            <button onClick={startNewRound}
+              className="px-7 py-2.5 rounded-xl text-sm font-black transition-all hover:opacity-85 hover:scale-105"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff",
+                boxShadow: "0 4px 20px rgba(168,85,247,0.35)" }}>
+              Play Again →
+            </button>
+            <p className="text-[11px] text-slate-700 mt-1">Change area or level above to explore more</p>
+          </div>
+        ) : (
+          <>
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-4 py-3 border-b"
+              style={{ borderColor: "#1a1a28", background: "#09091550" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg"
+                  style={{ background: `${catCol.badge}35`, color: catCol.text, border: `1px solid ${catCol.badge}55` }}>
+                  {q.cat}
+                </span>
+                <span className="text-xs font-bold" style={{ color: DIFF_COLOR[q.diff] ?? "#94a3b8" }}>
+                  {q.diff}
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                {score > 0 && (
+                  <span className="text-xs font-black font-mono px-2 py-0.5 rounded-lg"
+                    style={{ background: "#4ade8018", color: "#4ade80", border: "1px solid #4ade8035" }}>
+                    {score} ✓
+                  </span>
+                )}
+                <span className="text-xs font-black font-mono" style={{ color: "#475569" }}>
+                  Q {qNum}/{total}
+                </span>
+                <button onClick={startNewRound} title="Restart" aria-label="Restart round"
+                  className="text-slate-700 hover:text-slate-400 transition-colors text-sm px-1">↺</button>
+              </div>
+            </div>
+
+            {/* Code block */}
+            {q.type === "code" && q.code && (
+              <div className="mx-4 mt-3 rounded-xl overflow-hidden border" style={{ borderColor: "#1e3a5f", background: "#060c14" }}>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 border-b" style={{ borderColor: "#0e2040", background: "#0a1020" }}>
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/70"/>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70"/>
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
+                  <span className="text-[10px] font-mono text-slate-500 ml-1.5">{q.language ?? "code"}</span>
+                </div>
+                <pre className="text-xs leading-5 p-3.5 overflow-x-auto text-slate-300 font-mono whitespace-pre">{q.code}</pre>
+              </div>
+            )}
+
+            {/* Question */}
+            <div className="px-4 pt-4 pb-3">
+              <p className="text-base font-black text-white leading-snug">{q.q}</p>
+              {chosen === null && (
+                <p className="text-[11px] text-slate-600 mt-1.5">Pick the best answer</p>
+              )}
+            </div>
+
+            {/* Options */}
+            <div className="px-3 pb-3 flex flex-col gap-2">
+              {q.opts.map((opt, i) => {
+                const isCorrect = i === q.ans;
+                const isChosen  = i === chosen;
+                const revealed  = chosen !== null;
+                const lColor    = LABEL_COLORS[i];
+                let bg = "#111120", bord = "#1e1e2e", txt = "#cbd5e1";
+                if (!revealed) {
+                  // nothing extra
+                } else if (isCorrect) {
+                  bg = "#4ade8014"; bord = "#4ade8055"; txt = "#4ade80";
+                } else if (isChosen) {
+                  bg = "#f8717114"; bord = "#f8717155"; txt = "#f87171";
+                } else {
+                  bg = "#0a0a16"; bord = "#13131f"; txt = "#334155";
+                }
+                return (
+                  <button key={i} onClick={() => pick(i)} disabled={revealed}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all"
+                    style={{ background: bg, border: `1px solid ${bord}`, color: txt,
+                      cursor: revealed ? "default" : "pointer",
+                      boxShadow: !revealed ? "none" : isCorrect ? "0 0 12px #4ade8020" : isChosen ? "0 0 12px #f8717120" : "none" }}>
+                    <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black"
+                      style={{
+                        background: revealed ? "transparent" : `${lColor}18`,
+                        border: `2px solid ${revealed ? (isCorrect ? "#4ade80" : isChosen ? "#f87171" : "#1e1e2e") : lColor}`,
+                        color:   revealed ? (isCorrect ? "#4ade80" : isChosen ? "#f87171" : "#334155") : lColor,
+                      }}>
+                      {LABELS[i]}
+                    </span>
+                    <span className="text-sm font-semibold leading-snug flex-1">{opt}</span>
+                    {revealed && isCorrect && <span className="text-base shrink-0">✓</span>}
+                    {revealed && isChosen && !isCorrect && <span className="text-base shrink-0">✗</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Explanation + Next */}
+            {chosen !== null && (
+              <div className="px-4 pb-4 pt-1 space-y-2.5">
+                <div className="rounded-xl px-4 py-3 text-xs leading-relaxed"
+                  style={{ background: "#071410", border: "1px solid #4ade8025", color: "#94a3b8" }}>
+                  <span className="font-black text-green-400">Why: </span>{q.exp}
+                </div>
+                <button onClick={next}
+                  className="w-full py-2.5 rounded-xl text-sm font-black tracking-wide transition-all hover:opacity-85"
+                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff",
+                    boxShadow: "0 4px 16px rgba(168,85,247,0.3)" }}>
+                  Next Question →
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -435,7 +827,6 @@ export default function Home() {
   useEffect(() => { setPage(1); }, [searchQuery, sortBy]);
 
   const published = apiStats?.published ?? 0;
-  const apiCats   = apiStats?.categories ?? [];
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "#e2e8f0" }}>
@@ -461,65 +852,128 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Hero search bar ── */}
-      <div className="border-b" style={{ borderColor: BORD, background: "#09091380" }}>
-        <div className="px-6 py-5" style={{ maxWidth: 1440, margin: "0 auto" }}>
-          <div className="flex items-center gap-3 rounded-xl px-5 py-0 border transition-colors"
-            style={{
-              background: "#0d0d1a",
-              borderColor: searchQuery ? `${accent}60` : "#22222e",
-              boxShadow: searchQuery ? `0 0 0 3px ${accent}12` : "none",
-              height: 56,
-            }}>
-            <span style={{ color: searchQuery ? accent : "#374151", transition: "color 0.15s" }}>
-              <Ico.Search />
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search quizzes — try 'Python', 'RAG', 'binary search'…"
-              className="bg-transparent text-base text-white placeholder-slate-700 outline-none flex-1 min-w-0"
-              style={{ fontSize: 15 }}
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")}
-                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10 text-slate-500 hover:text-white text-sm">
-                ✕
-              </button>
-            )}
+      {/* ── Hero section — compact 2-column ── */}
+      <div className="relative overflow-hidden border-b" style={{ borderColor: BORD }}>
+        {/* Ambient glows */}
+        <div className="absolute inset-0 pointer-events-none" aria-hidden>
+          <div className="absolute top-0 left-0 w-80 h-48 rounded-full opacity-25"
+            style={{ background: "radial-gradient(ellipse, #7c3aed 0%, transparent 70%)", filter: "blur(50px)" }}/>
+          <div className="absolute bottom-0 right-0 w-80 h-48 rounded-full opacity-15"
+            style={{ background: "radial-gradient(ellipse, #06b6d4 0%, transparent 70%)", filter: "blur(50px)" }}/>
+        </div>
+
+        <div className="relative px-6 py-6" style={{ maxWidth: 1440, margin: "0 auto" }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+
+            {/* Left: branding + CTAs */}
+            <div>
+              {/* Live badge */}
+              <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full border text-[10px] font-black tracking-widest uppercase"
+                style={{ borderColor: "#22d3ee30", background: "#22d3ee0e", color: "#22d3ee" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>
+                New quiz every day
+              </div>
+
+              {/* Headline */}
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none mb-2">
+                <span style={{
+                  background: "linear-gradient(135deg, #22d3ee 0%, #a855f7 50%, #f472b6 100%)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                }}>
+                  Test Your Tech
+                </span>
+                {" "}
+                <span className="text-white">Knowledge Daily</span>
+              </h1>
+
+              {/* Tagline */}
+              <p className="text-sm text-slate-400 mb-4 leading-relaxed max-w-sm">
+                Bite-sized quiz Shorts on Python, AI, Algorithms & more —
+                60 seconds to sharpen your edge.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex items-center gap-2.5 mb-4 flex-wrap">
+                <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-white shadow-lg transition-all hover:scale-105 hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #dc2626, #ef4444)", boxShadow: "0 4px 16px #dc262630" }}>
+                  <Ico.YT />Subscribe
+                </a>
+                <button onClick={() => { document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105"
+                  style={{ borderColor: "#22d3ee40", color: "#22d3ee", background: "#22d3ee0e" }}>
+                  Browse Quizzes ↓
+                </button>
+              </div>
+
+              {/* Category tags — dynamic from series API stats */}
+              <div className="flex flex-wrap gap-1.5">
+                {dynCategories
+                  .filter((cat) => cat !== "All")
+                  .slice(0, 8)
+                  .map((cat) => {
+                    const col = getCatColor(cat);
+                    return (
+                      <button key={cat} onClick={() => { handleCat(cat); document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all hover:scale-105"
+                        style={{ borderColor: `${col.badge}50`, background: `${col.badge}12`, color: col.text }}>
+                        {cat}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Right: interactive quiz widget (visible on lg+, pickers are above the card) */}
+            <div className="hidden lg:block">
+              <QuizWidget />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Stats strip ── */}
-      {showStats && (published > 0 || apiCats.length > 0) && (
-        <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
-          <div className="flex items-center gap-5 px-6 py-2 overflow-x-auto"
-            style={{ maxWidth: 1440, margin: "0 auto" }}>
-            <span className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap" style={{ color: accent }}>
-              <span className="font-black text-sm">{published}</span> Videos
+      {/* ── Stats + Search strip ── */}
+      <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
+        <div className="flex items-center gap-3 px-6 py-2.5 overflow-x-auto"
+          style={{ maxWidth: 1440, margin: "0 auto" }}>
+          {showStats && published > 0 && (
+            <>
+              <span className="flex items-center gap-1 text-xs font-semibold whitespace-nowrap shrink-0" style={{ color: accent }}>
+                <span className="font-black">{published}</span> Videos
+              </span>
+              <span className="text-slate-800 shrink-0">·</span>
+              <span className="text-xs text-slate-600 whitespace-nowrap shrink-0">Daily quiz Shorts</span>
+              <span className="text-slate-800 shrink-0">·</span>
+            </>
+          )}
+          {/* Inline search */}
+          <div className="flex items-center gap-2 rounded-lg px-3 py-0 border flex-1 min-w-0 transition-colors"
+            style={{ background: "#0d0d1a", borderColor: searchQuery ? `${accent}60` : "#1c1c2e",
+              boxShadow: searchQuery ? `0 0 0 2px ${accent}10` : "none", height: 36 }}>
+            <span style={{ color: searchQuery ? accent : "#374151", transition: "color 0.15s", flexShrink: 0 }}>
+              <Ico.Search />
             </span>
-            <span className="text-slate-800">·</span>
-            <span className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap text-slate-500">
-              <span className="font-black text-sm text-green-400">{apiCats.length}</span> Categories
-            </span>
-            <span className="text-slate-800">·</span>
-            <span className="text-xs text-slate-600 whitespace-nowrap">Daily tech quiz Shorts</span>
-            <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
-              className="ml-auto shrink-0 text-xs font-bold flex items-center gap-1.5 transition-opacity hover:opacity-80"
-              style={{ color: accent }}>
-              <Ico.YT /> Watch all on YouTube →
-            </a>
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search — Python, RAG, binary search…"
+              className="bg-transparent text-sm text-white placeholder-slate-700 outline-none flex-1 min-w-0" />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")}
+                className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-500 hover:text-white text-xs">✕</button>
+            )}
           </div>
+          <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-80 whitespace-nowrap"
+            style={{ color: accent }}>
+            <Ico.YT /> YouTube →
+          </a>
         </div>
-      )}
+      </div>
 
       {/* ── Main content ── */}
-      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "1.5rem 1.5rem", opacity: settingsLoaded ? 1 : 0, transition: "opacity 0.15s" }}>
+      <main id="video-grid" style={{ maxWidth: 1440, margin: "0 auto", padding: "1rem 1.5rem", opacity: settingsLoaded ? 1 : 0, transition: "opacity 0.15s" }}>
 
         {/* Controls row: category pills | sort | view toggle */}
-        <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+        <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
 
           {/* Category pills */}
           <div className="flex flex-wrap gap-2">

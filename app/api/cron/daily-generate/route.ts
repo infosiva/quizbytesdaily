@@ -46,7 +46,8 @@ export async function GET(req: NextRequest) {
   try {
     console.log(`[daily-generate] Generating: ${t.category} — ${t.topic} (${t.layout})`);
 
-    const generated = await generateQuizSeries(t.topic, t.category, t.difficulty, t.layout);
+    // Always generate quiz-reveal to keep channel focused on quiz format
+    const generated = await generateQuizSeries(t.topic, t.category, t.difficulty, "quiz-reveal");
 
     // Ensure unique slug
     let slug = generated.slug;
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
     console.log(`[daily-generate] ✓ "${series.title}" (id=${series.id})`);
 
     // ── Send Telegram approval message ─────────────────────────────────────
-    const typeLabel  = LAYOUT_LABELS[t.layout] ?? t.layout;
+    const typeLabel  = LAYOUT_LABELS["quiz-reveal"];
     const slideCount = generated.slides.length;
     const uploadTime = scheduledAt.slice(11, 16); // HH:MM
 
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
       seriesId:    series.id,
       title:       series.title,
       category:    t.category,
-      layout:      t.layout,
+      layout:      "quiz-reveal",
       slideCount,
       scheduledAt,
     });

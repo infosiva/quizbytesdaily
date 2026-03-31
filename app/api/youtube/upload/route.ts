@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSeriesBySlug } from "@/lib/db";
+import { getSeriesBySlug, updateSeriesYouTube } from "@/lib/db";
 import { buildThumbnailJpeg } from "@/lib/thumbnail-svg";
 
 export const runtime    = "nodejs";
@@ -106,7 +106,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── 3. Set custom thumbnail (server-generated from series slug) ───────────
+    // ── 3. Persist YouTube ID to DB (marks series as published) ─────────────
+    const youtubeUrl = `https://www.youtube.com/shorts/${vid.id}`;
+    if (seriesSlug) {
+      try {
+        const series = await getSeriesBySlug(seriesSlug);
+        if (series) {
+          await updateSeriesYouTube(series.id, vid.id as string, youtubeUrl);
+        }
+      } catch (dbErr) {
+        console.warn("[upload] DB update failed:", dbErr);
+        // Non-fatal — video is on YouTube, DB link is secondary
+      }
+    }
+
+    // ── 4. Set custom thumbnail (server-generated from series slug) ───────────
     let thumbWarning: string | undefined;
     try {
       // Generate JPEG thumbnail from the series data
@@ -146,7 +160,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       videoId: vid.id,
-      url: `https://www.youtube.com/shorts/${vid.id}`,
+      url: youtubeUrl,
       ...(thumbWarning ? { thumbWarning } : {}),
     });
   } catch (err) {

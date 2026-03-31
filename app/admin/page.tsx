@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { channelConfig, categories, difficulties } from "@/lib/config";
+import { channelConfig, difficulties } from "@/lib/config";
 import { LAYOUTS, TRENDING_TOPICS, type LayoutId } from "@/lib/quiz-generator";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -163,6 +163,31 @@ function SlidePreview({ slide }: { slide: SlideData }) {
     );
   }
 
+  if (template === "code-quiz") {
+    const codeLines = (String(data.code ?? "")).replace(/\\n/g, "\n").split("\n").slice(0, 8);
+    const cards     = (data.cards as CardItem[]) ?? [];
+    const OPT_COLS  = ["#22d3ee", "#a855f7", "#4ade80", "#f472b6"];
+    return (
+      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.6rem", fontSize: "0.62rem" }}>
+        <div style={{ fontWeight: 700, color: "#22d3ee", fontSize: "0.67rem", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {String(data.heading ?? "Code Check!")}
+        </div>
+        <div style={{ background: "#080d14", border: "1px solid #22d3ee25", borderRadius: 5, padding: "5px 8px", marginBottom: 5, fontFamily: "monospace" }}>
+          <div style={{ color: "#22d3ee70", fontSize: "0.5rem", marginBottom: 3 }}>{String(data.language ?? "python").toUpperCase()}</div>
+          {codeLines.map((l, i) => <div key={i} style={{ color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l || "\u00a0"}</div>)}
+        </div>
+        {data.question != null && <div style={{ color: "rgba(255,255,255,0.7)", marginBottom: 4, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(data.question)}</div>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {cards.slice(0, 4).map((c, i) => (
+            <div key={i} style={{ padding: "2px 6px", borderRadius: 3, background: `${OPT_COLS[i] ?? "#22d3ee"}0d`, border: `1px solid ${OPT_COLS[i] ?? "#22d3ee"}30`, color: OPT_COLS[i] ?? "#22d3ee", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {"ABCD"[i]}) {c.title}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // Legacy template: title
   if (template === "title") {
     return (
@@ -313,12 +338,22 @@ function drawThumbnailToCanvas(canvas: HTMLCanvasElement, title: string, categor
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 // ── Analytics types ───────────────────────────────────────────────────────────
+interface QuizStatsSummary {
+  totalAttempts:   number;
+  correctAttempts: number;
+  accuracyPct:     number;
+  byCategory: { cat: string; attempts: number; correct: number; pct: number }[];
+  byDifficulty: { diff: string; attempts: number; correct: number; pct: number }[];
+  recent: { date: string; attempts: number }[];
+}
+
 interface AnalyticsData {
   dailyActivity:       { date: string; count: number }[];
   categoryBreakdown:   { category: string; total: number; published: number }[];
   difficultyBreakdown: { difficulty: string; count: number }[];
   statusSummary:       { status: string; count: number }[];
   totalSlides:         number;
+  quizStats:           QuizStatsSummary | null;
 }
 
 export default function AdminPage() {
@@ -331,8 +366,8 @@ export default function AdminPage() {
   const [genLayout, setGenLayout] = useState<LayoutId>("quiz-reveal");
   const [catSuggestOpen, setCatSuggestOpen] = useState(false);
   const [dbCategories, setDbCategories] = useState<string[]>([]);
-  // Live trending topics from HN / GitHub / ArXiv
-  const [liveTrending, setLiveTrending] = useState<{ topic: string; category: string; source: string }[]>([]);
+  // Live trending topics from HN / GitHub / ArXiv / Reddit / Dev.to / SO
+  const [liveTrending, setLiveTrending] = useState<{ topic: string; category: string; source: string; layout?: string; difficulty?: string; score?: number }[]>([]);
   const [loadingLive, setLoadingLive] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState("");
@@ -470,22 +505,37 @@ export default function AdminPage() {
     if (first) setTopic(first);
   }, [genCategory]);
 
-  // Fetch live trending topics on mount (from HN / GitHub / ArXiv)
-  useEffect(() => {
+  // Fetch live trending topics on mount (from HN / GitHub / ArXiv / Reddit / Dev.to / SO)
+  const fetchLive = useCallback(() => {
     setLoadingLive(true);
     fetch("/api/trending")
       .then((r) => r.json())
       .then((d) => {
         if (Array.isArray(d.topics) && d.topics.length > 0) {
-          setLiveTrending(d.topics);
-          // Auto-fill topic with the first live AI/ML trending topic
-          const first = d.topics.find((t: { category: string }) => t.category === "AI/ML");
-          if (first) setTopic(first.topic);
+          // Sort: AI/ML first, then by source priority (hn/reddit > github > devto/so > arxiv/static)
+          const SOURCE_PRIORITY: Record<string, number> = { hn: 5, reddit: 4, github: 3, devto: 2, stackoverflow: 2, arxiv: 1, static: 0 };
+          const sorted = [...d.topics].sort((a: { category: string; source: string }, b: { category: string; source: string }) => {
+            if (a.category === "AI/ML" && b.category !== "AI/ML") return -1;
+            if (b.category === "AI/ML" && a.category !== "AI/ML") return 1;
+            return (SOURCE_PRIORITY[b.source] ?? 0) - (SOURCE_PRIORITY[a.source] ?? 0);
+          });
+          setLiveTrending(sorted);
+          // Auto-fill topic with the top AI/ML live trending topic
+          const first = sorted.find((t: { category: string }) => t.category === "AI/ML");
+          if (first) {
+            setTopic(first.topic);
+            if (first.layout) setGenLayout(first.layout as LayoutId);
+            if (first.difficulty) setGenDifficulty(first.difficulty);
+          }
+          // Auto-open the ideas panel so user can see what's trending
+          setIdeasOpen(true);
         }
       })
       .catch(() => {})
       .finally(() => setLoadingLive(false));
   }, []);
+
+  useEffect(() => { fetchLive(); }, [fetchLive]);
 
   // Scroll to top whenever the active tab changes
   useEffect(() => {
@@ -834,7 +884,7 @@ export default function AdminPage() {
                     maxHeight: 220, overflowY: "auto",
                   }}>
                     {[...new Set([
-                      ...categories.filter((c) => c !== "All"),
+                      ...Object.keys(TRENDING_TOPICS),
                       ...dbCategories,
                     ])]
                       .filter((c) => c.toLowerCase().includes(genCategory.toLowerCase()))
@@ -853,7 +903,7 @@ export default function AdminPage() {
                           {c}
                         </button>
                       ))}
-                    {genCategory.trim() && ![...new Set([...categories.filter((c) => c !== "All"), ...dbCategories])].some((c) => c.toLowerCase() === genCategory.toLowerCase().trim()) && (
+                    {genCategory.trim() && ![...new Set([...Object.keys(TRENDING_TOPICS), ...dbCategories])].some((c) => c.toLowerCase() === genCategory.toLowerCase().trim()) && (
                       <div style={{ padding: "0.45rem 0.85rem", color: "#64748b", fontSize: "0.75rem", fontStyle: "italic" }}>
                         Custom: &ldquo;{genCategory}&rdquo; ✓
                       </div>
@@ -906,44 +956,69 @@ export default function AdminPage() {
 
             {/* ── Topic ideas (collapsible) ── */}
             <div style={{ borderTop: "1px solid #1a1a28", paddingTop: "1rem" }}>
-              <button
-                onClick={() => setIdeasOpen((v) => !v)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, padding: 0, marginBottom: ideasOpen ? 12 : 0 }}
-              >
-                <span style={{ fontSize: "0.65rem", transition: "transform 0.2s", display: "inline-block", transform: ideasOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
-                💡 Topic Ideas {loadingLive && <span style={{ fontSize: "0.65rem", fontWeight: 400 }}>(fetching…)</span>}
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: ideasOpen ? 12 : 0 }}>
+                <button
+                  onClick={() => setIdeasOpen((v) => !v)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "0.78rem", fontWeight: 600, padding: 0, flex: 1 }}
+                >
+                  <span style={{ fontSize: "0.65rem", transition: "transform 0.2s", display: "inline-block", transform: ideasOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                  💡 Topic Ideas {loadingLive && <span style={{ fontSize: "0.65rem", fontWeight: 400 }}>(fetching…)</span>}
+                  {liveTrending.length > 0 && !loadingLive && (
+                    <span style={{ fontSize: "0.62rem", background: "#22d3ee18", border: "1px solid #22d3ee40", color: "#22d3ee", borderRadius: 99, padding: "1px 7px", marginLeft: 4 }}>
+                      {liveTrending.length} live
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={fetchLive}
+                  disabled={loadingLive}
+                  title="Refresh live trending topics"
+                  style={{ fontSize: "0.7rem", color: "#374151", background: "none", border: "none", cursor: loadingLive ? "not-allowed" : "pointer", padding: "2px 6px" }}
+                >
+                  ↻
+                </button>
+              </div>
 
               {ideasOpen && (
                 <div>
-                  {/* Live trending */}
+                  {/* Live trending — ALL sources, no category filter (clicking sets category automatically) */}
                   {liveTrending.length > 0 && (
                     <div style={{ marginBottom: "1rem" }}>
                       <div style={{ fontSize: "0.68rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 }}>
-                        🔥 Live — HN · GitHub · ArXiv
+                        🔥 Live — HN · Reddit · GitHub · Dev.to · SO · arXiv
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                        {liveTrending.filter((t) => t.category === genCategory || genCategory === "AI/ML").slice(0, 12).map((t) => {
-                          const sourceColor = t.source === "hn" ? "#f97316" : t.source === "github" ? "#4ade80" : "#a855f7";
-                          const sourceLabel = t.source === "hn" ? "HN" : t.source === "github" ? "GH" : "arXiv";
+                        {liveTrending.slice(0, 18).map((t) => {
+                          const sourceColor = t.source === "hn" ? "#f97316" : t.source === "github" ? "#4ade80" : t.source === "reddit" ? "#ef4444" : t.source === "devto" ? "#a855f7" : t.source === "stackoverflow" ? "#f59e0b" : "#22d3ee";
+                          const sourceLabel = t.source === "hn" ? "HN" : t.source === "github" ? "GH" : t.source === "reddit" ? "Reddit" : t.source === "devto" ? "Dev.to" : t.source === "stackoverflow" ? "SO" : "arXiv";
+                          const scoreLabel  = t.score == null ? null : t.score >= 1000 ? `${(t.score / 1000).toFixed(1)}k` : `${t.score}`;
+                          const isSelected  = topic === t.topic;
                           return (
                             <button
                               key={t.topic}
-                              onClick={() => { setTopic(t.topic); setGenCategory(t.category); setTopicSuggestion(""); }}
-                              title={`Source: ${t.source}`}
+                              onClick={() => {
+                                setTopic(t.topic);
+                                setGenCategory(t.category);
+                                if (t.layout) setGenLayout(t.layout as LayoutId);
+                                if (t.difficulty) setGenDifficulty(t.difficulty);
+                                setTopicSuggestion("");
+                              }}
+                              title={`${t.category} · ${t.source}`}
                               style={{
                                 padding: "3px 10px", borderRadius: 999,
-                                border: `1px solid ${topic === t.topic ? sourceColor : "#2a2a3e"}`,
-                                background: topic === t.topic ? `${sourceColor}20` : "#111118",
-                                color: topic === t.topic ? sourceColor : "#94a3b8",
+                                border: `1px solid ${isSelected ? sourceColor : "#2a2a3e"}`,
+                                background: isSelected ? `${sourceColor}20` : "#111118",
+                                color: isSelected ? sourceColor : "#94a3b8",
                                 fontSize: "0.75rem", cursor: "pointer", transition: "all 0.15s",
                                 display: "flex", alignItems: "center", gap: 5,
                               }}
                               onMouseEnter={(e) => { e.currentTarget.style.borderColor = sourceColor; e.currentTarget.style.color = sourceColor; }}
-                              onMouseLeave={(e) => { if (topic !== t.topic) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
+                              onMouseLeave={(e) => { if (!isSelected) { e.currentTarget.style.borderColor = "#2a2a3e"; e.currentTarget.style.color = "#94a3b8"; } }}
                             >
                               {t.topic.slice(0, 50)}{t.topic.length > 50 ? "…" : ""}
-                              <span style={{ fontSize: "0.58rem", color: sourceColor, opacity: 0.7 }}>{sourceLabel}</span>
+                              <span style={{ fontSize: "0.58rem", color: sourceColor, opacity: 0.7 }}>
+                                {sourceLabel}{scoreLabel ? ` ${scoreLabel}` : ""}
+                              </span>
                             </button>
                           );
                         })}
@@ -1167,8 +1242,19 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-                      {s.youtube_url && (
+                      {s.youtube_url ? (
                         <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" style={{ padding: "0.4rem 0.75rem", background: "rgba(74,222,128,0.1)", border: "1px solid #4ade80", borderRadius: 6, color: "#4ade80", textDecoration: "none", fontSize: "0.75rem" }}>▶ YouTube</a>
+                      ) : (
+                        <button onClick={async () => {
+                          const url = prompt("Paste the YouTube video URL or ID:");
+                          if (!url) return;
+                          const res = await fetch(`/api/admin/series/${s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ youtubeUrl: url }) });
+                          const json = await res.json();
+                          if (json.ok) loadLibrary();
+                          else alert(json.error ?? "Failed to link YouTube video");
+                        }} style={{ padding: "0.4rem 0.75rem", background: "rgba(251,191,36,0.08)", border: "1px solid #fbbf2460", borderRadius: 6, color: "#fbbf24", cursor: "pointer", fontSize: "0.75rem" }}>
+                          🔗 Link YT
+                        </button>
                       )}
                       {s.youtube_id && (
                         <button onClick={async () => {
@@ -1568,6 +1654,124 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* ── Quiz Engagement Stats ── */}
+                  {analytics.quizStats && (() => {
+                    const qs = analytics.quizStats!;
+                    const maxCatAttempts = Math.max(...qs.byCategory.map((c) => c.attempts), 1);
+                    const diffColor = (d: string) => d === "Beginner" ? "#4ade80" : d === "Intermediate" ? "#fbbf24" : d === "Advanced" ? "#f87171" : "#94a3b8";
+
+                    // Quiz activity chart (last 30 days)
+                    const quizActivityMap = Object.fromEntries(qs.recent.map((r) => [r.date, r.attempts]));
+                    const quizChartData   = last30.map((date) => ({ date, count: quizActivityMap[date] ?? 0 }));
+                    const quizChartMax    = Math.max(...quizChartData.map((d) => d.count), 1);
+
+                    return (
+                      <>
+                        <div style={{ marginTop: "2rem", marginBottom: "1rem", borderTop: "1px solid #1e1e2e", paddingTop: "2rem" }}>
+                          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.2rem" }}>🧠 Quiz Engagement</h3>
+                          <p style={{ fontSize: "0.78rem", color: "#64748b" }}>User quiz attempts, accuracy, and engagement trends.</p>
+                        </div>
+
+                        {/* Quiz summary cards */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+                          {[
+                            { label: "Total Attempts", value: qs.totalAttempts,   icon: "🎯", color: "#a855f7" },
+                            { label: "Correct Answers", value: qs.correctAttempts, icon: "✅", color: "#4ade80" },
+                            { label: "Accuracy",        value: `${qs.accuracyPct}%`, icon: "📊", color: "#22d3ee" },
+                          ].map((s) => (
+                            <div key={s.label} style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.25rem" }}>
+                              <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 1 }}>{s.icon} {s.label}</div>
+                              <div style={{ fontSize: "2rem", fontWeight: 900, fontFamily: "monospace", color: s.color }}>{s.value}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Quiz activity chart */}
+                        <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.5rem", marginBottom: "1.5rem" }}>
+                          <div style={{ fontWeight: 700, marginBottom: "0.5rem" }}>Daily Quiz Attempts — Last 30 Days</div>
+                          <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: "1rem" }}>Number of questions answered per day</div>
+                          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 90 }}>
+                            {quizChartData.map(({ date, count }) => {
+                              const pct = count / quizChartMax;
+                              const isToday = date === today.toISOString().split("T")[0];
+                              return (
+                                <div key={date} title={`${date}: ${count} attempt${count !== 1 ? "s" : ""}`}
+                                  style={{ flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                                  <div style={{
+                                    width: "100%",
+                                    height: count === 0 ? 3 : `${Math.max(pct * 100, 8)}%`,
+                                    background: count === 0 ? "#1e1e2e" : isToday ? "#22d3ee" : "rgba(34,211,238,0.45)",
+                                    borderRadius: "3px 3px 0 0",
+                                  }} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                            <span style={{ fontSize: "0.62rem", color: "#475569" }}>{last30[0]}</span>
+                            <span style={{ fontSize: "0.62rem", color: "#475569" }}>Today</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                          {/* By category */}
+                          <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.25rem" }}>
+                            <div style={{ fontWeight: 700, marginBottom: "0.875rem" }}>Attempts by Category</div>
+                            <div style={{ display: "flex", flexDirection: "column" as const, gap: "0.75rem" }}>
+                              {qs.byCategory.map((c) => (
+                                <div key={c.cat}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                    <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{c.cat}</span>
+                                    <span style={{ fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
+                                      {c.attempts} attempts · {c.pct}% ✓
+                                    </span>
+                                  </div>
+                                  <div style={{ height: 7, background: "#1e1e2e", borderRadius: 4, overflow: "hidden" }}>
+                                    <div style={{ height: "100%", width: `${Math.round((c.attempts / maxCatAttempts) * 100)}%`, background: "linear-gradient(90deg,#22d3ee,#06b6d4)", borderRadius: 4 }} />
+                                  </div>
+                                </div>
+                              ))}
+                              {qs.byCategory.length === 0 && <p style={{ fontSize: "0.82rem", color: "#4a4a5a" }}>No quiz attempts yet.</p>}
+                            </div>
+                          </div>
+
+                          {/* By difficulty */}
+                          <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, padding: "1.25rem" }}>
+                            <div style={{ fontWeight: 700, marginBottom: "0.875rem" }}>Accuracy by Difficulty</div>
+                            <div style={{ display: "flex", flexDirection: "column" as const, gap: "0.75rem" }}>
+                              {qs.byDifficulty.map((d) => {
+                                const col = diffColor(d.diff);
+                                return (
+                                  <div key={d.diff}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                      <span style={{ fontSize: "0.82rem", fontWeight: 600, color: col }}>{d.diff}</span>
+                                      <span style={{ fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
+                                        {d.pct}% correct
+                                      </span>
+                                    </div>
+                                    <div style={{ height: 7, background: "#1e1e2e", borderRadius: 4, overflow: "hidden" }}>
+                                      <div style={{ height: "100%", width: `${d.pct}%`, background: col, borderRadius: 4, opacity: 0.7 }} />
+                                    </div>
+                                    <div style={{ fontSize: "0.62rem", color: "#475569", marginTop: 2 }}>
+                                      {d.correct}/{d.attempts} correct answers
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {qs.byDifficulty.length === 0 && <p style={{ fontSize: "0.82rem", color: "#4a4a5a" }}>No quiz attempts yet.</p>}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {!analytics.quizStats && (
+                    <div style={{ marginTop: "2rem", padding: "1.25rem", background: "#111118", border: "1px solid #1e1e2e", borderRadius: 10, textAlign: "center" as const }}>
+                      <p style={{ fontSize: "0.82rem", color: "#4a4a5a" }}>🧠 Quiz engagement data will appear here once users start answering questions.</p>
+                    </div>
+                  )}
                 </>
               );
             })()}

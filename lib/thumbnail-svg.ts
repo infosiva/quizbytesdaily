@@ -221,16 +221,16 @@ export function buildTitleCardSvg(
 <rect width="${TW}" height="${TH}" fill="url(#tbglow)"/>
 <rect width="${TW}" height="${TH}" fill="url(#tdots)"/>`;
 
-  // Glow rings around ?
+  // Glow rings around ? — smaller, centred higher to leave room for title
   const cx = TW / 2;
-  const qcy = 860;
-  parts.push(`<circle cx="${cx}" cy="${qcy}" r="380" fill="${col.primary}" opacity="0.06"/>`);
-  parts.push(`<circle cx="${cx}" cy="${qcy}" r="300" fill="none" stroke="${col.primary}" stroke-width="2.5" opacity="0.20"/>`);
-  parts.push(`<circle cx="${cx}" cy="${qcy}" r="220" fill="${col.dark}" opacity="0.50"/>`);
-  parts.push(`<circle cx="${cx}" cy="${qcy}" r="216" fill="none" stroke="${col.primary}" stroke-width="1.5" opacity="0.25"/>`);
+  const qcy = 680;
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="260" fill="${col.primary}" opacity="0.06"/>`);
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="200" fill="none" stroke="${col.primary}" stroke-width="2" opacity="0.18"/>`);
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="148" fill="${col.dark}" opacity="0.55"/>`);
+  parts.push(`<circle cx="${cx}" cy="${qcy}" r="144" fill="none" stroke="${col.primary}" stroke-width="1.5" opacity="0.22"/>`);
 
-  // Large "?" centred
-  const qFs = 300;
+  // "?" — smaller
+  const qFs = 200;
   const qStr = "?";
   const qW   = thumbTextW(qStr, qFs);
   parts.push(thumbSvgPath(qStr, cx - qW / 2, qcy + qFs * 0.38, qFs, col.primary));
@@ -240,38 +240,41 @@ export function buildTitleCardSvg(
   const catText   = category.toUpperCase();
   const catFs     = 26;
   const catBadgeW = thumbTextW(catText, catFs) + 48;
-  parts.push(roundRect(PADX, 80, catBadgeW, 56, 12, `${col.dark}cc`));
-  parts.push(roundRect(PADX, 80, catBadgeW, 56, 12, "none", `${col.primary}90`));
-  parts.push(thumbSvgPath(catText, PADX + 24, 80 + 38, catFs, col.primary));
+  parts.push(roundRect(PADX, 80, catBadgeW, 52, 12, `${col.dark}cc`));
+  parts.push(roundRect(PADX, 80, catBadgeW, 52, 12, "none", `${col.primary}90`));
+  parts.push(thumbSvgPath(catText, PADX + 24, 80 + 35, catFs, col.primary));
 
   const diffText   = difficulty.toUpperCase();
   const diffFs     = 24;
   const diffBadgeX = PADX + catBadgeW + 20;
   const diffBadgeW = thumbTextW(diffText, diffFs) + 40;
-  parts.push(roundRect(diffBadgeX, 80, diffBadgeW, 56, 12, `${diffColor}18`));
-  parts.push(roundRect(diffBadgeX, 80, diffBadgeW, 56, 12, "none", `${diffColor}70`));
-  parts.push(thumbSvgPath(diffText, diffBadgeX + 20, 80 + 37, diffFs, diffColor));
+  parts.push(roundRect(diffBadgeX, 80, diffBadgeW, 52, 12, `${diffColor}18`));
+  parts.push(roundRect(diffBadgeX, 80, diffBadgeW, 52, 12, "none", `${diffColor}70`));
+  parts.push(thumbSvgPath(diffText, diffBadgeX + 20, 80 + 34, diffFs, diffColor));
 
-  // ── Title (below rings) ───────────────────────────────────────────────────
+  // ── Title — positioned higher, more breathing room ────────────────────────
   const MAXW = TW - PADX * 2;
-  let titleFs = 96;
+  let titleFs = 100;
   let titleLines: string[] = [];
   for (let it = 0; it < 10; it++) {
     titleLines = thumbWrapText(title, MAXW, titleFs);
     if (titleLines.length <= 3) break;
-    titleFs = Math.max(64, titleFs - 6);
+    titleFs = Math.max(66, titleFs - 6);
   }
-  const titleLH = Math.round(titleFs * 1.18);
-  const ty = 1180;
+  const titleLH = Math.round(titleFs * 1.2);
+  const ty = 1000;  // was 1180 — moved up 180px
   titleLines.forEach((line, i) => {
     const fill = (i === titleLines.length - 1 && titleLines.length > 1) ? col.primary : "#ffffff";
     parts.push(thumbSvgPath(line, PADX, ty + i * titleLH, titleFs, fill));
   });
 
   // Underline accent
-  const ulY = ty + titleLines.length * titleLH + 10;
-  parts.push(`<rect x="${PADX}" y="${ulY}" width="100" height="6" rx="3" fill="${col.primary}" opacity="0.85"/>`);
-  parts.push(`<rect x="${PADX + 114}" y="${ulY + 1}" width="44" height="4" rx="2" fill="${col.primary}" opacity="0.32"/>`);
+  const ulY = ty + titleLines.length * titleLH + 14;
+  parts.push(`<rect x="${PADX}" y="${ulY}" width="110" height="6" rx="3" fill="${col.primary}" opacity="0.85"/>`);
+  parts.push(`<rect x="${PADX + 124}" y="${ulY + 1}" width="50" height="4" rx="2" fill="${col.primary}" opacity="0.32"/>`);
+
+  // Category tag line below underline (extra visual info + spacing)
+  parts.push(thumbSvgPath(`${category} · Quiz`, PADX, ulY + 52, 30, `${col.primary}70`));
 
   // Brand
   const brandText = "@QuizBytesDaily";

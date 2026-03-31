@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { getAnalytics } from "@/lib/db";
+import { getAnalytics, getQuizStatsSummary } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    return NextResponse.json(await getAnalytics());
+    const [analytics, quizStats] = await Promise.all([
+      getAnalytics(),
+      getQuizStatsSummary().catch(() => null),
+    ]);
+    return NextResponse.json({ ...analytics, quizStats });
   } catch (err) {
     console.error("[analytics]", err);
     return NextResponse.json(

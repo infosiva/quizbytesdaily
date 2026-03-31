@@ -13,18 +13,26 @@ export interface LiveTrendingTopic {
   layout: LayoutId;
   difficulty: string;
   icon: string;
-  source: "hn" | "github" | "arxiv" | "static";
+  source: "hn" | "github" | "arxiv" | "reddit" | "devto" | "stackoverflow" | "static";
+  score?: number;   // HN points, GitHub stars, Reddit upvotes, or DevTo reactions
 }
 
 // ── Category detection ────────────────────────────────────────────────────────
 
 const CATEGORY_RULES: { pattern: RegExp; category: string; icon: string }[] = [
-  { pattern: /\b(llm|gpt|claude|gemini|llama|mistral|openai|anthropic|deepseek|groq|ai.?agent|rag|embedding|fine.?tun|transformer|diffusion|multimodal|mcp|model.?context|copilot|cursor|windsurf|vibe.?cod|langgraph|langchain|crewai|autogen|ollama|hugging.?face|stable.?diffusion|midjourney|sora|grok|chatgpt|o3|o4)\b/i, category: "AI/ML",         icon: "🤖" },
-  { pattern: /\b(python|pip|uv|ruff|pydantic|fastapi|django|flask|pandas|numpy|pytorch|polars|asyncio|celery|sqlalchemy|pytorch|tensorflow)\b/i,                                                                                                                                                                                                   category: "Python",        icon: "🐍" },
-  { pattern: /\b(javascript|typescript|react|next\.?js|vue|angular|node\.?js|bun|deno|svelte|vite|webpack|tailwind|prisma|remix|htmx)\b/i,                                                                                                                                                                                                        category: "JavaScript",    icon: "⚡" },
-  { pattern: /\b(docker|kubernetes|k8s|terraform|ansible|github.?actions|ci.?cd|devops|helm|argo|gitops|prometheus|grafana|aws|gcp|azure|cloud)\b/i,                                                                                                                                                                                               category: "DevOps",        icon: "🚀" },
-  { pattern: /\b(system.?design|microservice|api.?gateway|cdn|sharding|distributed|load.?balanc|message.?queue|kafka|redis|postgres|database)\b/i,                                                                                                                                                                                                category: "System Design", icon: "🏗" },
-  { pattern: /\b(algorithm|leetcode|data.?structure|graph.?(theory|algorithm)|tree|dynamic.?program|sorting|binary.?search|bfs|dfs|heap|trie)\b/i,                                                                                                                                                                                                category: "Algorithms",    icon: "🧮" },
+  // AI Productivity — MCP tooling, Claude workflows, task automation (before AI/ML so MCP server topics land here)
+  { pattern: /\b(mcp.?server|mcp.?tool|model.?context.?protocol|claude.?project|claude.?workflow|claude.?subscription|claude.?pro|ai.?productivity|ai.?workflow|ai.?automation|prompt.?workflow|ai.?assistant.?tips|cursor.?rule|copilot.?tip|github.?copilot.?tip|automat.{1,15}(task|daily|email|pr|code)|pr.?description.?ai|batch.?api|claude.?code.?tip|ai.?writing)\b/i, category: "AI Productivity", icon: "💡" },
+  // AI Evaluation — must come before AI/ML so RAGAS/DeepEval etc. are correctly tagged
+  { pattern: /\b(ragas|deepeval|promptfoo|braintrust|langfuse|langsmith|arize|helicone|trulens|llm.?eval|llm.?test|llm.?observ|hallucin|faithfulness|context.?recall|llm.?as.?judge|prompt.?test|eval.?framework|ai.?benchmark)\b/i, category: "AI Evaluation", icon: "🎯" },
+  // AI Engineering — vector DBs, RAG pipelines, LLM infra
+  { pattern: /\b(vector.?db|vector.?database|pinecone|chroma|weaviate|qdrant|pgvector|milvus|faiss|lancedb|hybrid.?search|rerank|vllm|quantiz|llm.?serving|llm.?gateway|llm.?prod|llm.?deploy|rag.?pipeline|advanced.?rag|hyde|graph.?rag|self.?rag|ann.?search|embedding.?search)\b/i, category: "AI Engineering", icon: "⚙️" },
+  // General AI/ML models and frameworks
+  { pattern: /\b(llm|gpt|claude|gemini|llama|mistral|openai|anthropic|deepseek|groq|ai.?agent|rag|embedding|fine.?tun|transformer|diffusion|multimodal|mcp|model.?context|copilot|cursor|windsurf|vibe.?cod|langgraph|langchain|crewai|autogen|smolagents|pydantic.?ai|mastra|ollama|hugging.?face|stable.?diffusion|midjourney|sora|grok|chatgpt|o3|o4)\b/i, category: "AI/ML", icon: "🤖" },
+  { pattern: /\b(python|pip|uv|ruff|pydantic|fastapi|django|flask|pandas|numpy|pytorch|polars|asyncio|celery|sqlalchemy|tensorflow)\b/i, category: "Python",        icon: "🐍" },
+  { pattern: /\b(javascript|typescript|react|next\.?js|vue|angular|node\.?js|bun|deno|svelte|vite|webpack|tailwind|prisma|remix|htmx|trpc)\b/i, category: "JavaScript",    icon: "⚡" },
+  { pattern: /\b(docker|kubernetes|k8s|terraform|ansible|github.?actions|ci.?cd|devops|helm|argo|gitops|prometheus|grafana|aws|gcp|azure|cloud|opentelemetry|otel)\b/i, category: "DevOps",        icon: "🚀" },
+  { pattern: /\b(system.?design|microservice|api.?gateway|cdn|sharding|distributed|load.?balanc|message.?queue|kafka|redis|postgres|database|cqrs|event.?sourcing)\b/i, category: "System Design", icon: "🏗" },
+  { pattern: /\b(algorithm|leetcode|data.?structure|graph.?(theory|algorithm)|tree|dynamic.?program|sorting|binary.?search|bfs|dfs|heap|trie|two.?pointer|sliding.?window)\b/i, category: "Algorithms",    icon: "🧮" },
 ];
 
 function detectCategory(text: string): { category: string; icon: string } {
@@ -96,6 +104,7 @@ async function fetchHN(): Promise<LiveTrendingTopic[]> {
       layout:     pickLayout(category, title),
       difficulty: pickDifficulty(title),
       source:     "hn",
+      score:      hit.points ?? 0,
     });
   }
 
@@ -145,6 +154,7 @@ async function fetchGitHubTrending(): Promise<LiveTrendingTopic[]> {
       layout:     pickLayout(category, topic),
       difficulty: "Beginner",
       source:     "github",
+      score:      repo.stargazers_count,
     });
   }
   return results.slice(0, 6);
@@ -176,6 +186,109 @@ async function fetchArxiv(): Promise<LiveTrendingTopic[]> {
   })).slice(0, 4);
 }
 
+// ── Source 4: Reddit hot posts (r/MachineLearning + r/Python + r/programming) ──
+async function fetchReddit(): Promise<LiveTrendingTopic[]> {
+  // Multireddit — combines top-upvoted posts across three relevant subs
+  const res = await fetch(
+    "https://www.reddit.com/r/MachineLearning+Python+programming+artificial+LocalLLaMA/hot.json?limit=25&t=week",
+    {
+      headers: { "User-Agent": "QuizBytesDaily/1.0 (educational quiz content)" },
+      next: { revalidate: 3600 },
+    }
+  );
+  if (!res.ok) throw new Error(`Reddit ${res.status}`);
+  const data = await res.json() as {
+    data?: { children?: Array<{ data: { title: string; score: number; selftext?: string } }> };
+  };
+
+  const results: LiveTrendingTopic[] = [];
+  for (const child of (data.data?.children ?? []).slice(0, 20)) {
+    const { title, score } = child.data;
+    if (score < 20 || !title) continue;
+    const cleaned = cleanTitle(title);
+    if (cleaned.length < 12) continue;
+    if (!CATEGORY_RULES.some((r) => r.pattern.test(cleaned))) continue;
+    const { category, icon } = detectCategory(cleaned);
+    results.push({
+      topic:      cleaned,
+      category,
+      icon,
+      layout:     pickLayout(category, cleaned),
+      difficulty: pickDifficulty(cleaned),
+      source:     "reddit",
+      score,
+    });
+  }
+  return results.slice(0, 8);
+}
+
+// ── Source 5: Dev.to trending articles ────────────────────────────────────────
+async function fetchDevTo(): Promise<LiveTrendingTopic[]> {
+  // Fetch top articles from the last week across AI, Python, JS tags
+  const [aiRes, pyRes, jsRes] = await Promise.all([
+    fetch("https://dev.to/api/articles?tags=ai,machinelearning,llm&top=7&per_page=8", { next: { revalidate: 3600 } }),
+    fetch("https://dev.to/api/articles?tags=python&top=7&per_page=6",                  { next: { revalidate: 3600 } }),
+    fetch("https://dev.to/api/articles?tags=javascript,typescript&top=7&per_page=5",   { next: { revalidate: 3600 } }),
+  ]);
+
+  type DevToArticle = { title: string; tag_list: string[]; positive_reactions_count: number };
+  const [aiArticles, pyArticles, jsArticles] = await Promise.all([
+    aiRes.ok ? (aiRes.json() as Promise<DevToArticle[]>) : Promise.resolve([] as DevToArticle[]),
+    pyRes.ok ? (pyRes.json() as Promise<DevToArticle[]>) : Promise.resolve([] as DevToArticle[]),
+    jsRes.ok ? (jsRes.json() as Promise<DevToArticle[]>) : Promise.resolve([] as DevToArticle[]),
+  ]);
+
+  const all = [...aiArticles, ...pyArticles, ...jsArticles];
+  const results: LiveTrendingTopic[] = [];
+  for (const article of all) {
+    if (!article.title || article.positive_reactions_count < 5) continue;
+    const cleaned = cleanTitle(article.title);
+    if (cleaned.length < 12) continue;
+    const { category, icon } = detectCategory(`${cleaned} ${article.tag_list.join(" ")}`);
+    results.push({
+      topic:      cleaned,
+      category,
+      icon,
+      layout:     pickLayout(category, cleaned),
+      difficulty: pickDifficulty(cleaned),
+      source:     "devto",
+      score:      article.positive_reactions_count,
+    });
+  }
+  return results.slice(0, 8);
+}
+
+// ── Source 6: Stack Overflow trending (hot questions, tech tags) ──────────────
+async function fetchStackOverflow(): Promise<LiveTrendingTopic[]> {
+  // No auth needed for this basic search
+  const tags = "python;javascript;machine-learning;llm;ai;typescript";
+  const res = await fetch(
+    `https://api.stackexchange.com/2.3/questions?order=desc&sort=hot&tagged=${tags}&site=stackoverflow&pagesize=15&filter=default`,
+    { next: { revalidate: 3600 } }
+  );
+  if (!res.ok) throw new Error(`SO ${res.status}`);
+  const data = await res.json() as {
+    items?: Array<{ title: string; score: number; tags: string[] }>;
+  };
+
+  const results: LiveTrendingTopic[] = [];
+  for (const q of (data.items ?? []).slice(0, 12)) {
+    if (!q.title || q.score < 3) continue;
+    const cleaned = cleanTitle(q.title);
+    if (cleaned.length < 12) continue;
+    const { category, icon } = detectCategory(`${cleaned} ${q.tags.join(" ")}`);
+    results.push({
+      topic:      cleaned,
+      category,
+      icon,
+      layout:     "code-example", // SO questions = code-focused
+      difficulty: pickDifficulty(cleaned),
+      source:     "stackoverflow",
+    });
+  }
+  return results.slice(0, 6);
+}
+
 // ── Static fallback ───────────────────────────────────────────────────────────
 function staticFallback(): LiveTrendingTopic[] {
   return (TRENDING_TOPICS["AI/ML"] ?? []).slice(0, 12).map((topic) => ({
@@ -200,16 +313,22 @@ function dedupe(topics: LiveTrendingTopic[]): LiveTrendingTopic[] {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export async function fetchLiveTrending(): Promise<LiveTrendingTopic[]> {
-  const [hn, github, arxiv] = await Promise.allSettled([
+  const [hn, github, arxiv, reddit, devto, stackoverflow] = await Promise.allSettled([
     fetchHN(),
     fetchGitHubTrending(),
     fetchArxiv(),
+    fetchReddit(),
+    fetchDevTo(),
+    fetchStackOverflow(),
   ]);
 
   const live: LiveTrendingTopic[] = [
-    ...(hn.status === "fulfilled" ? hn.value : []),
-    ...(github.status === "fulfilled" ? github.value : []),
-    ...(arxiv.status === "fulfilled" ? arxiv.value : []),
+    ...(hn.status           === "fulfilled" ? hn.value           : []),
+    ...(github.status       === "fulfilled" ? github.value       : []),
+    ...(arxiv.status        === "fulfilled" ? arxiv.value        : []),
+    ...(reddit.status       === "fulfilled" ? reddit.value       : []),
+    ...(devto.status        === "fulfilled" ? devto.value        : []),
+    ...(stackoverflow.status === "fulfilled" ? stackoverflow.value : []),
   ];
 
   const deduped = dedupe(live);

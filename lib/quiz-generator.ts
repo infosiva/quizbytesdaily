@@ -66,58 +66,194 @@ export type LayoutId = (typeof LAYOUTS)[number]["id"];
 // ── Trending topic seeds (used to pre-populate the generate form) ─────────────
 
 export const TRENDING_TOPICS: Record<string, string[]> = {
-  // AI/ML — pinned to hottest 2026 releases first, then evergreen concepts
+
+  // ─── AI/ML — models, tools, frameworks ────────────────────────────────────
   "AI/ML": [
-    // 🔥 Hottest right now (2026 releases & viral topics)
-    "Claude Sonnet 4.5 vs GPT-4o: Which is better?",
-    "Gemini 2.5 Flash explained: Google's fastest model",
+    // 🔥 Hottest model releases (2026)
+    "Claude Opus 4.6 vs GPT-4.5: Which wins in 2026?",
+    "Claude Sonnet 4.5 vs GPT-4o: Head-to-head comparison",
+    "Gemini 2.5 Flash: Google's fastest model explained",
+    "Llama 4 Scout and Maverick: Meta's open models",
+    "DeepSeek R2: China's reasoning model breakdown",
+    "OpenAI o3 vs o4-mini: When to use each",
+    "Vibe coding with AI: How it actually works",
+    // 🚀 Agentic AI frameworks
     "Model Context Protocol (MCP): The USB-C for AI agents",
-    "Claude Code vs Cursor vs Copilot: AI coding tools compared",
-    "Llama 4 Scout and Maverick: Meta's new open models",
-    "Vibe coding with AI: How it works",
-    "DeepSeek R2: China's new reasoning model",
-    "Gemini 2.5 Pro vs Claude 3.7: Benchmark breakdown",
-    // 🚀 Hot frameworks & tools
-    "LangGraph for AI agent workflows",
-    "CrewAI: Multi-agent orchestration explained",
+    "LangGraph for stateful AI agent workflows",
+    "CrewAI: Multi-agent orchestration in Python",
     "OpenAI Agents SDK: Build AI agents in Python",
-    "Vercel AI SDK: Streaming AI responses in Next.js",
-    "Pydantic AI: Type-safe AI agents",
-    "Ollama: Run LLMs locally for free",
-    // 💡 Core AI/ML concepts (evergreen)
-    "RAG vs Fine-tuning: When to use which",
-    "Mixture of Experts architecture",
-    "Context window limits in LLMs",
+    "Pydantic AI: Type-safe AI agents explained",
+    "Smolagents by HuggingFace: Minimal agent framework",
+    "AutoGen 0.4: Microsoft's async agent framework",
+    "Mastra: TypeScript-first AI agent framework",
+    // 💡 Core evergreen concepts
+    "RAG vs Fine-tuning: When to use which in 2026",
+    "Mixture of Experts: How GPT-4 and Mixtral scale",
     "Prompt caching: Cut your AI costs by 90%",
-    "Embedding models and semantic search",
-    "AI agents vs chatbots: Key differences",
-    "Function calling in LLMs",
-    "Structured outputs from AI models",
+    "Function calling in LLMs: The agent backbone",
+    "Structured outputs: Get reliable JSON from any LLM",
+    "Agentic loops: Reflection, planning, and tool use",
+    "Embedding models: Ada vs text-embedding-3 vs BGE",
+    "Context window tricks: Making the most of 1M tokens",
   ],
+
+  // ─── AI Evaluation — RAGAS, DeepEval, observability ───────────────────────
+  "AI Evaluation": [
+    // 🔥 Must-know eval tools (hot in 2026)
+    "RAGAS: Evaluate your RAG pipeline automatically",
+    "DeepEval: Unit testing for LLM applications",
+    "PromptFoo: Open-source LLM prompt testing",
+    "Braintrust: Eval + tracing for production AI",
+    "Langfuse: Open-source LLM observability explained",
+    "LangSmith: Trace and evaluate LangChain apps",
+    "Arize Phoenix: Visual LLM debugging and evals",
+    "Helicone: Proxy-based LLM monitoring",
+    "TruLens: RAG evaluation with TruEra",
+    // 📊 Evaluation concepts
+    "RAG evaluation metrics: Faithfulness, relevance, recall",
+    "RAGAS scores explained: What each metric means",
+    "Context recall vs context precision in RAG evals",
+    "LLM-as-judge: Use GPT-4 to evaluate GPT-4",
+    "Hallucination detection in LLM outputs",
+    "Answer relevancy scoring with embedding similarity",
+    "Benchmark your LLM: MMLU, HellaSwag, HumanEval",
+    "A/B testing prompts in production",
+    "Latency vs accuracy tradeoff in LLM systems",
+    "Red-teaming your AI: Safety evaluation basics",
+  ],
+
+  // ─── AI Engineering — Vector DBs, RAG, production LLM ────────────────────
+  "AI Engineering": [
+    // 🗄️ Vector databases: dev vs production
+    "Vector DB for dev: Chroma vs FAISS vs LanceDB",
+    "Vector DB for production: Pinecone vs Weaviate vs Qdrant",
+    "pgvector: Add vector search to your Postgres DB",
+    "Milvus vs Qdrant: Which vector DB scales better?",
+    "Chroma vs Pinecone: When to switch to managed DB",
+    "Hybrid search: BM25 + vector embeddings combined",
+    "Vector DB chunking strategies that actually work",
+    "Approximate nearest neighbor (ANN) search explained",
+    // 🚀 Advanced RAG patterns
+    "Advanced RAG: From naive to production-grade",
+    "Reranking with Cohere or cross-encoders in RAG",
+    "HyDE: Hypothetical Document Embeddings for better recall",
+    "Parent-child chunking for smarter RAG retrieval",
+    "Query expansion and decomposition in RAG",
+    "Multi-vector retrieval: ColBERT and late interaction",
+    "Graph RAG: Microsoft's knowledge graph retrieval",
+    "Self-RAG: LLM decides when to retrieve",
+    // ⚡ LLM in production
+    "vLLM: Serve LLMs 24x faster in production",
+    "Quantization: INT4 vs INT8 vs FP16 tradeoffs",
+    "LLM gateway: Rate limiting, caching, and routing",
+    "Token budgeting: Control LLM costs at scale",
+    "Streaming responses in production AI apps",
+    "Prompt versioning and management in production",
+  ],
+
+  // ─── Python ────────────────────────────────────────────────────────────────
   "Python": [
-    "Python type hints in 2026", "Async generators", "Dataclasses vs Pydantic",
-    "UV package manager", "Python 3.13 GIL removal", "Polars vs Pandas",
-    "FastAPI dependency injection", "Ruff linter",
+    "UV package manager: 10x faster than pip",
+    "Python 3.13 GIL removal: What actually changes",
+    "Pydantic v2: 5x faster validation in pure Rust",
+    "Async generators for streaming AI responses",
+    "Dataclasses vs Pydantic vs attrs: Which to choose",
+    "Polars vs Pandas: 10x faster dataframes",
+    "FastAPI async dependency injection deep-dive",
+    "Ruff: Replace flake8 + isort + pylint in one tool",
+    "Python __slots__ and memory optimization",
+    "httpx vs requests for async HTTP in Python",
+    "Typer: Build CLI tools with type hints",
+    "Python protocols vs ABCs: Structural subtyping",
   ],
+
+  // ─── Algorithms ────────────────────────────────────────────────────────────
   "Algorithms": [
-    "Two-pointer technique", "Sliding window pattern", "Binary search variants",
-    "Graph BFS vs DFS", "Dynamic programming tabulation", "Heap operations",
-    "Trie data structure", "Union-Find algorithm",
+    "Two-pointer technique: When and how to use it",
+    "Sliding window: Fixed vs dynamic window patterns",
+    "Binary search on answer space (not just arrays)",
+    "Graph BFS vs DFS: Choosing the right traversal",
+    "Dynamic programming: Tabulation vs memoization",
+    "Heap and priority queue patterns",
+    "Trie data structure for prefix search",
+    "Union-Find (Disjoint Set Union) explained",
+    "Monotonic stack: Next greater element patterns",
+    "Backtracking template for combinations and subsets",
+    "KMP algorithm for string pattern matching",
+    "Topological sort: Course schedule pattern",
   ],
+
+  // ─── System Design ─────────────────────────────────────────────────────────
   "System Design": [
-    "Event-driven architecture", "CQRS pattern", "Database sharding",
-    "Rate limiting strategies", "Consistent hashing", "CAP theorem",
-    "Circuit breaker pattern", "API gateway design",
+    "Event-driven architecture with Kafka",
+    "CQRS + event sourcing pattern explained",
+    "Database sharding: Range vs hash vs directory",
+    "Rate limiting: Token bucket vs sliding window",
+    "Consistent hashing for distributed caches",
+    "CAP theorem: Choosing CP vs AP systems",
+    "Circuit breaker pattern in microservices",
+    "API gateway vs service mesh (Istio/Envoy)",
+    "Distributed tracing with OpenTelemetry",
+    "Designing an LLM-powered search system",
+    "Multi-tenant SaaS database strategies",
+    "LLM system design: Cost, latency, reliability",
   ],
+
+  // ─── JavaScript ────────────────────────────────────────────────────────────
   "JavaScript": [
-    "JS temporal API", "React server components", "Web Workers explained",
-    "ES2025 features", "Signals in JavaScript", "Bun vs Node.js",
-    "Fetch streaming", "TypeScript 5 decorators",
+    "React 19 new features: useActionState and more",
+    "React server components vs client components",
+    "Next.js 15 caching model explained",
+    "Bun 1.x vs Node.js: Real benchmark comparison",
+    "Signals vs useState: Reactivity models compared",
+    "ES2025: Top new JavaScript features",
+    "Web Workers: Run AI inference in the browser",
+    "TypeScript 5.x decorators and metadata",
+    "Vercel AI SDK useChat and streaming patterns",
+    "tRPC: Type-safe APIs without code generation",
+    "Zod vs Valibot: TypeScript schema validation",
+    "Vite vs Turbopack: Build tool showdown 2026",
   ],
+
+  // ─── AI Productivity — MCP, Claude workflows, automation ─────────────────
+  "AI Productivity": [
+    // 🔧 MCP tooling
+    "MCP: Connect Claude to your tools in minutes",
+    "Build a custom MCP server from scratch",
+    "MCP filesystem server: Let AI access your files safely",
+    "MCP GitHub server: AI-powered code review automation",
+    "MCP for databases: Query Postgres with natural language",
+    "Best MCP servers for developers in 2026",
+    // 🤖 Claude workflows
+    "Claude.ai Projects: Organize your AI workflows",
+    "Claude Pro vs Free: What's actually different?",
+    "Claude system prompts: Custom instructions that save hours",
+    "Claude Code vs Cursor vs GitHub Copilot: Which wins?",
+    "Automate code reviews with Claude",
+    "Claude for technical documentation: 10x faster writing",
+    // ⚡ Task automation
+    "Automate your daily standups with AI",
+    "Automate PR descriptions with Claude",
+    "AI-powered email triage: Zero inbox in 10 minutes",
+    "Writing prompts that work for recurring tasks",
+    "Batch API: Process 1000 tasks overnight at 50% cost",
+    "Claude + Notion: Build your AI-powered second brain",
+  ],
+
+  // ─── DevOps ────────────────────────────────────────────────────────────────
   "DevOps": [
-    "Docker multi-stage builds", "Kubernetes HPA", "GitHub Actions caching",
-    "Terraform state management", "OpenTelemetry tracing", "Argo CD GitOps",
-    "Helm chart best practices", "Container security scanning",
+    "Docker multi-stage builds for smaller images",
+    "Kubernetes HPA: Auto-scale on CPU and custom metrics",
+    "GitHub Actions: Matrix builds and caching tricks",
+    "Terraform vs OpenTofu: State of IaC in 2026",
+    "OpenTelemetry: Traces, metrics, logs unified",
+    "Argo CD: GitOps for Kubernetes deployments",
+    "Helm 3 chart best practices",
+    "Trivy: Container and IaC security scanning",
+    "Dagger: Write your CI/CD in Python or Go",
+    "Pulumi vs Terraform: Typed IaC comparison",
+    "K3s vs K8s: Lightweight Kubernetes for AI workloads",
+    "GPU cluster setup for LLM inference",
   ],
 };
 
@@ -184,6 +320,13 @@ OPTIONAL SLIDES to insert between slide 3 and Quick Quiz (include based on topic
 - "Common Pitfalls" — mistakes and how to avoid them (definition-steps)
 - "Comparison" — vs alternatives or similar tools (definition-steps)
 - "Architecture / Data Flow" — system diagram with connected steps (flowchart) — USE for topics that have a clear pipeline: RAG, transformers, CI/CD, microservices, OAuth, etc.
+- "Code Check!" — a code-based quiz question (code-quiz) — USE for coding topics (Python, JS, algorithms, data structures). Show a real, runnable code snippet and ask "What does this output?", "What's the bug?", or "What is the time complexity?". The code must be short (4–10 lines), use only standard library, and have one clearly correct answer.
+
+QUIZ QUESTION UPGRADE RULE:
+- For coding topics (Python, JavaScript, TypeScript, algorithms, data structures, async programming, etc.):
+  * REPLACE the standard "definition-steps" quiz question with a "code-quiz" slide.
+  * Also ADD a "Code Check!" optional slide BEFORE the main quiz when the topic has ≥8 slides.
+  * This gives viewers a deeper, hands-on challenge instead of a text-only question.
 
 Return ONLY raw JSON — no markdown fences, no extra text.
 Copy and expand this structure for "${topic}":
@@ -307,10 +450,26 @@ Copy and expand this structure for "${topic}":
         "body": "Pick the best answer ↓"
       },
       "cards": [
-        { "color": "cyan",   "icon": "opt_a", "title": "A)  Option A text (max 36 chars)", "body": " " },
-        { "color": "purple", "icon": "opt_b", "title": "B)  Option B text (max 36 chars)", "body": " " },
-        { "color": "green",  "icon": "opt_c", "title": "C)  Option C text (max 36 chars)", "body": " " },
-        { "color": "pink",   "icon": "opt_d", "title": "D)  Option D text (max 36 chars)", "body": " " }
+        { "color": "cyan",   "icon": "opt_a", "title": "Option A text (max 36 chars)", "body": " " },
+        { "color": "purple", "icon": "opt_b", "title": "Option B text (max 36 chars)", "body": " " },
+        { "color": "green",  "icon": "opt_c", "title": "Option C text (max 36 chars)", "body": " " },
+        { "color": "pink",   "icon": "opt_d", "title": "Option D text (max 36 chars)", "body": " " }
+      ]
+    },
+    {
+      "_comment": "USE THIS TEMPLATE instead of definition-steps quiz for code-based topics. Replace the quiz slide above with this.",
+      "template": "code-quiz",
+      "heading": "Code Check! 💻",
+      "slideNum": 7,
+      "totalSlides": 8,
+      "language": "python",
+      "code": "def mystery(n):\n    if n <= 1:\n        return n\n    return mystery(n-1) + mystery(n-2)\n\nprint(mystery(6))",
+      "question": "What does this code print?",
+      "cards": [
+        { "color": "cyan",   "icon": "opt_a", "title": "5", "body": " " },
+        { "color": "purple", "icon": "opt_b", "title": "8", "body": " " },
+        { "color": "green",  "icon": "opt_c", "title": "13", "body": " " },
+        { "color": "pink",   "icon": "opt_d", "title": "RecursionError", "body": " " }
       ]
     },
     {
@@ -342,6 +501,14 @@ STRICT RULES:
   — exactly one option should be clearly correct
 - Answer slide: definition.title MUST start with the correct letter: "A)  " or "B)  " or "C)  " or "D)  "
   — cards: 3 reinforcing takeaways with "check" icon in green/cyan/purple
+- code-quiz slide rules:
+  — template MUST be "code-quiz", heading "Code Check! 💻", heading "Quick Quiz! 🎯" comes AFTER it
+  — code field: actual runnable code, max 10 lines, use \\n for line breaks in JSON
+  — language field: "python", "javascript", "typescript", "go", "sql", or similar
+  — question field: "What does this code output?", "What is the bug?", "What is the time complexity?", etc.
+  — cards: 4 options with icons opt_a..opt_d; exactly one clearly correct; body MUST be a single space " "
+  — options should be short and specific (actual values, error names, or O() notation)
+  — DO NOT include "A) " prefix in card titles — the letter badge is rendered automatically
 - colors MUST be one of: "cyan", "purple", "green", "pink", "amber"
 - icons MUST be one of: "search", "gear", "database", "book", "brain", "robot", "plus", "lock", "lightning", "check", "warning", "clock", "code", "layers", "opt_a", "opt_b", "opt_c", "opt_d"
 - Return ONLY raw JSON`;
