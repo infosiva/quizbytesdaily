@@ -1,4 +1,4 @@
-"use client";
+<div id="sponsored-content"></div>"use client";
 
 import Image from "next/image";
 import Link from "next/link";

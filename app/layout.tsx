@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   },
   verification: {
     // Add your Google Search Console verification token here when ready:
-    // google: "YOUR_VERIFICATION_TOKEN",
+    google: "YOUR_VERIFICATION_TOKEN", // Replace with actual token
   },
 };
 
