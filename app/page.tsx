@@ -1,4 +1,4 @@
-<div id="sponsored-content"></div>"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -680,7 +680,11 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                 boxShadow: "0 4px 20px rgba(168,85,247,0.35)" }}>
               Play Again →
             </button>
-            <p className="text-[11px] text-slate-700 mt-1">Change area or level above to explore more</p>
+            <button onClick={() => document.getElementById("question-bank")?.scrollIntoView({ behavior: "smooth" })}
+              className="text-[11px] font-bold transition-colors hover:text-slate-300 mt-1"
+              style={{ color: "#22d3ee" }}>
+              Browse all Q&amp;A ↓
+            </button>
           </div>
         ) : (
           <>
@@ -822,6 +826,162 @@ function EmptyState({ message }: { message: string }) {
         style={{ background: `${CYN}12`, border: `1px solid ${CYN}30` }}>🎬</div>
       <p className="text-base font-bold text-white mb-1">No quizzes found</p>
       <p className="text-sm text-slate-500 max-w-xs">{message}</p>
+    </div>
+  );
+}
+
+// ── Question Bank Browser ─────────────────────────────────────────────────────
+// Shows ALL questions in a browseable grid. Clicking a card reveals the answer.
+function QuestionBrowser() {
+  const [allQs,     setAllQs]     = useState<QuizQ[]>([]);
+  const [activeCat, setActiveCat] = useState("All");
+  const [loading,   setLoading]   = useState(true);
+  const [expanded,  setExpanded]  = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/quiz")
+      .then((r) => r.json())
+      .then((d: { questions?: QuizQ[] }) => setAllQs(d.questions ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const cats = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = ["All"];
+    for (const q of allQs) {
+      if (!seen.has(q.cat)) { seen.add(q.cat); result.push(q.cat); }
+    }
+    return result;
+  }, [allQs]);
+
+  const filtered = activeCat === "All" ? allQs : allQs.filter((q) => q.cat === activeCat);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-10">
+        <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"/>
+        <span className="text-xs text-slate-600">Loading questions…</span>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Category tabs */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-5"
+        style={{ scrollbarWidth: "none" } as React.CSSProperties}>
+        {cats.map((cat) => {
+          const isActive = activeCat === cat;
+          const col      = cat === "All" ? { text: "#e2e8f0", badge: "#334155" } : getCatColor(cat);
+          const count    = cat === "All" ? allQs.length : allQs.filter((q) => q.cat === cat).length;
+          return (
+            <button key={cat}
+              onClick={() => { setActiveCat(cat); setExpanded(null); }}
+              className="inline-flex items-center gap-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 shrink-0"
+              style={{
+                padding: "5px 12px",
+                background: isActive ? col.badge : "#0e0e1c",
+                color: isActive ? col.text : "#4b5563",
+                border: `1.5px solid ${isActive ? col.badge : "#1c1c2e"}`,
+                boxShadow: isActive ? `0 0 10px ${col.badge}40` : "none",
+              }}>
+              <span>{cat === "All" ? "🌐" : (CAT_EMOJI[cat] ?? "💡")}</span>
+              <span className="font-black">{cat === "All" ? "All Topics" : cat}</span>
+              <span className="font-mono text-[9px]" style={{ opacity: 0.55 }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Questions grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "10px" }}>
+        {filtered.map((q, idx) => {
+          const id      = q.id ?? `q-${idx}`;
+          const isOpen  = expanded === id;
+          const col     = getCatColor(q.cat);
+          return (
+            <div key={id} className="rounded-xl border transition-all overflow-hidden"
+              style={{
+                background: "#0d0d1a",
+                borderColor: isOpen ? `${col.badge}80` : "#1c1c2e",
+                boxShadow: isOpen ? `0 0 20px ${col.badge}20` : "none",
+              }}>
+
+              {/* Question row — click to toggle */}
+              <button className="w-full text-left px-4 py-3.5 flex items-start justify-between gap-3"
+                onClick={() => setExpanded(isOpen ? null : id)}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded"
+                      style={{ background: `${col.badge}30`, color: col.text }}>
+                      {CAT_EMOJI[q.cat] ?? "💡"} {q.cat}
+                    </span>
+                    <span className="text-[10px] font-bold"
+                      style={{ color: DIFF_COLOR[q.diff] ?? "#94a3b8" }}>
+                      {q.diff}
+                    </span>
+                    {q.live && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded"
+                        style={{ background: "#22d3ee18", color: "#22d3ee" }}>LIVE</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-slate-200 leading-snug">{q.q}</p>
+                </div>
+                <span className="shrink-0 text-xs mt-1 transition-colors"
+                  style={{ color: isOpen ? col.text : "#374151" }}>
+                  {isOpen ? "▲" : "▼"}
+                </span>
+              </button>
+
+              {/* Answer reveal */}
+              {isOpen && (
+                <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: "#1a1a2a" }}>
+                  {q.type === "code" && q.code && (
+                    <pre className="text-xs leading-5 px-3 py-2.5 mb-3 rounded-lg overflow-x-auto text-slate-300 font-mono whitespace-pre"
+                      style={{ background: "#060c14", border: "1px solid #1e3a5f" }}>
+                      {q.code}
+                    </pre>
+                  )}
+                  <div className="flex flex-col gap-1.5 mb-3">
+                    {q.opts.map((opt, i) => {
+                      const isCorrect = i === q.ans;
+                      return (
+                        <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm"
+                          style={{
+                            background: isCorrect ? "#4ade8014" : "#090912",
+                            border: `1px solid ${isCorrect ? "#4ade8040" : "#131325"}`,
+                            color: isCorrect ? "#4ade80" : "#475569",
+                          }}>
+                          <span className="w-5 h-5 flex items-center justify-center rounded-full shrink-0 text-[10px] font-black"
+                            style={{
+                              border: `2px solid ${isCorrect ? "#4ade80" : "#1e1e2e"}`,
+                              color: isCorrect ? "#4ade80" : "#2d3748",
+                            }}>
+                            {LABELS[i]}
+                          </span>
+                          <span className="flex-1 leading-snug">{opt}</span>
+                          {isCorrect && <span className="text-xs shrink-0">✓</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {q.exp && (
+                    <div className="rounded-lg px-3 py-2.5 text-xs leading-relaxed"
+                      style={{ background: "#071410", border: "1px solid #4ade8020", color: "#94a3b8" }}>
+                      <span className="font-black text-green-400">Why: </span>{q.exp}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="text-center py-10 text-xs text-slate-600">No questions in this category yet — check back soon!</p>
+      )}
     </div>
   );
 }
@@ -1127,6 +1287,22 @@ export default function Home() {
         style={{ borderColor: BORD, background: "#07070f" }}>
         <p className="text-sm font-black text-white mb-3">🧩 Play the Quiz</p>
         <QuizWidget onStreak={setStreak} />
+      </div>
+
+      {/* ── Question Bank browser ── */}
+      <div id="question-bank" className="border-b py-8 px-6"
+        style={{ borderColor: BORD, background: "#08080f" }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto" }}>
+          <div className="flex items-baseline justify-between mb-5">
+            <div>
+              <h2 className="text-lg font-black text-white">🧩 Question Bank</h2>
+              <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                Browse all questions — click any card to reveal the answer &amp; explanation
+              </p>
+            </div>
+          </div>
+          <QuestionBrowser />
+        </div>
       </div>
 
       {/* ── Ad unit: between hero and content ── */}
