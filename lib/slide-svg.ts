@@ -946,6 +946,183 @@ function buildCodeQuizSvg(data: CodeQuizData, category?: string): string {
   return svgWrapper(parts.join("\n"), category);
 }
 
+// ── comparison-table slide ─────────────────────────────────────────────────────
+// Portrait cheat-sheet table: tool/option names in left col + 2-3 attr cols.
+// Each cell is color-coded: good (green ✓) | bad (red ✗) | warn (amber ⚠) | info (gray text)
+
+export interface ComparisonTableRow {
+  name: string;
+  cells: Array<{ value: string; type: "good" | "bad" | "warn" | "info" }>;
+}
+
+export interface ComparisonTableData {
+  heading:    string;
+  subtitle?:  string;
+  columns:    string[];              // 2-3 attribute column headers
+  rows:       ComparisonTableRow[];  // 5-7 rows
+  accentColor?: string;
+  slideNum?:  number;
+  totalSlides?: number;
+}
+
+const CELL_STYLE: Record<string, { bg: string; stroke: string; fg: string }> = {
+  good: { bg: "#14532d28", stroke: "#4ade8044", fg: "#4ade80" },
+  bad:  { bg: "#7f1d1d28", stroke: "#f8717144", fg: "#f87171" },
+  warn: { bg: "#78350f28", stroke: "#fbbf2444", fg: "#fbbf24" },
+  info: { bg: "#1a1a2c",   stroke: "#2a2a3e",   fg: "#94a3b8" },
+};
+
+function buildComparisonTableSvg(data: ComparisonTableData, category?: string): string {
+  const PAD    = 52;
+  const tableW = W - PAD * 2;  // 976px
+  const theme  = getTheme(category);
+  const accent = data.accentColor ?? theme.accent;
+
+  const cols   = (data.columns ?? []).slice(0, 3);
+  const rows   = (data.rows    ?? []).slice(0, 7);
+  const nCols  = cols.length || 2;
+
+  // Column widths (tool col wider when fewer attr cols)
+  const TOOL_W = nCols <= 2 ? 390 : 330;
+  const ATTR_W = Math.floor((tableW - TOOL_W) / nCols);
+
+  // Title layout
+  const titleFs   = 68;
+  const titleLH   = Math.round(titleFs * 1.22);
+  const titleLines = wrapText(data.heading ?? "", tableW, titleFs).slice(0, 2);
+  const titleH    = titleLines.length * titleLH;
+
+  const subFs  = 38;
+  const subH   = data.subtitle ? Math.round(subFs * 1.4) + 12 : 0;
+
+  // Table vertical layout
+  const TABLE_TOP = 64 + titleH + 28 + subH;
+  const HEADER_H  = 110;
+  const TABLE_BOT = H - 190;
+  const DATA_H    = TABLE_BOT - (TABLE_TOP + HEADER_H);
+  const ROW_H     = Math.max(158, Math.min(250, Math.floor(DATA_H / Math.max(rows.length, 1))));
+  const tableH    = HEADER_H + rows.length * ROW_H;
+
+  const parts: string[] = [];
+  parts.push(progressBar(data.slideNum ?? 1, data.totalSlides ?? 1, accent));
+
+  // ── Title ──
+  let ty = 80 + titleLH * 0;  // baseline of first line
+  titleLines.forEach((line, i) => {
+    parts.push(svgPath(line, PAD, 80 + i * titleLH, titleFs, "url(#hg)"));
+  });
+  ty = 80 + titleLines.length * titleLH + 20;
+
+  // ── Subtitle ──
+  if (data.subtitle) {
+    parts.push(svgPath(data.subtitle, PAD, ty + subFs, subFs, "#64748b"));
+  }
+
+  // ── Header row ──
+  parts.push(roundRect(PAD, TABLE_TOP, tableW, HEADER_H, 14, "#191926"));
+  parts.push(roundRect(PAD, TABLE_TOP, tableW, HEADER_H, 14, `${accent}15`));
+  // Accent left tab
+  parts.push(roundRect(PAD, TABLE_TOP + 12, 6, HEADER_H - 24, 3, accent));
+
+  const hMid = TABLE_TOP + HEADER_H / 2 + 14;  // text baseline at vertical center
+  parts.push(svgPath("Tool", PAD + 22, hMid, 40, accent));
+  cols.forEach((col, i) => {
+    const cx = PAD + TOOL_W + i * ATTR_W + ATTR_W / 2;
+    const cLines = wrapText(col, ATTR_W - 20, 36).slice(0, 2);
+    const cLH    = Math.round(36 * 1.2);
+    const startY = hMid - ((cLines.length - 1) * cLH) / 2;
+    cLines.forEach((ln, li) => parts.push(svgPath(ln, cx, startY + li * cLH, 36, accent, "middle")));
+  });
+
+  // ── Data rows ──
+  rows.forEach((row, ri) => {
+    const rowY   = TABLE_TOP + HEADER_H + ri * ROW_H;
+    const isEven = ri % 2 === 0;
+
+    // Row stripe
+    parts.push(`<rect x="${PAD}" y="${rowY}" width="${tableW}" height="${ROW_H}" fill="${isEven ? "#111118" : "#0e0e1a"}"/>`);
+    parts.push(`<line x1="${PAD}" y1="${rowY}" x2="${PAD + tableW}" y2="${rowY}" stroke="#1a1a2e" stroke-width="1"/>`);
+
+    // Tool name (left col)
+    const nameLines = wrapText(row.name ?? "", TOOL_W - 44, 40).slice(0, 2);
+    const nameLH    = Math.round(40 * 1.24);
+    const nameBase  = rowY + ROW_H / 2 - ((nameLines.length - 1) * nameLH) / 2 + 14;
+    nameLines.forEach((ln, li) => {
+      parts.push(svgPath(ln, PAD + 22, nameBase + li * nameLH, 40, "#e2e8f0"));
+    });
+
+    // Attribute cells
+    row.cells.slice(0, nCols).forEach((cell, ci) => {
+      const cs   = CELL_STYLE[cell.type] ?? CELL_STYLE.info;
+      const cellX = PAD + TOOL_W + ci * ATTR_W;
+      const midX  = cellX + ATTR_W / 2;
+      const midY  = rowY + ROW_H / 2;
+
+      // Cell bg
+      parts.push(roundRect(cellX + 6, rowY + 8, ATTR_W - 12, ROW_H - 16, 10, cs.bg, cs.stroke));
+
+      const ICON  = 48;
+      const vLines = wrapText(cell.value ?? "", ATTR_W - 28, 31).slice(0, 2);
+      const hasVal = (cell.value ?? "").trim().length > 0;
+      const hasIcon = cell.type !== "info";
+
+      if (hasIcon && hasVal) {
+        // Icon upper-half, value lower
+        const iconCY = midY - 20;
+        const textY  = iconCY + ICON / 2 + 34;
+        if (cell.type === "good") {
+          parts.push(iconSvg("check", cs.fg, midX, iconCY, ICON));
+        } else if (cell.type === "warn") {
+          parts.push(iconSvg("warning", cs.fg, midX, iconCY, ICON));
+        } else {
+          // bad — draw X circle
+          const r = ICON / 2;
+          parts.push(`<circle cx="${midX}" cy="${iconCY}" r="${r}" fill="${cs.fg}18" stroke="${cs.fg}" stroke-width="2"/>`);
+          parts.push(`<line x1="${midX - r * 0.45}" y1="${iconCY - r * 0.45}" x2="${midX + r * 0.45}" y2="${iconCY + r * 0.45}" stroke="${cs.fg}" stroke-width="3" stroke-linecap="round"/>`);
+          parts.push(`<line x1="${midX + r * 0.45}" y1="${iconCY - r * 0.45}" x2="${midX - r * 0.45}" y2="${iconCY + r * 0.45}" stroke="${cs.fg}" stroke-width="3" stroke-linecap="round"/>`);
+        }
+        const valLH = 35;
+        const valStart = textY - ((vLines.length - 1) * valLH) / 2;
+        vLines.forEach((vl, vli) => parts.push(svgPath(vl, midX, valStart + vli * valLH, 31, cs.fg, "middle")));
+
+      } else if (hasVal) {
+        // Info: just centered text
+        const valLH = 38;
+        const valStart = midY - ((vLines.length - 1) * valLH) / 2 + 14;
+        vLines.forEach((vl, vli) => parts.push(svgPath(vl, midX, valStart + vli * valLH, 34, cs.fg, "middle")));
+
+      } else if (hasIcon) {
+        // Icon only, centered
+        const r = (ICON + 10) / 2;
+        if (cell.type === "good") {
+          parts.push(iconSvg("check", cs.fg, midX, midY, ICON + 10));
+        } else if (cell.type === "warn") {
+          parts.push(iconSvg("warning", cs.fg, midX, midY, ICON + 10));
+        } else {
+          parts.push(`<circle cx="${midX}" cy="${midY}" r="${r}" fill="${cs.fg}18" stroke="${cs.fg}" stroke-width="2"/>`);
+          parts.push(`<line x1="${midX - r*0.45}" y1="${midY - r*0.45}" x2="${midX + r*0.45}" y2="${midY + r*0.45}" stroke="${cs.fg}" stroke-width="3.5" stroke-linecap="round"/>`);
+          parts.push(`<line x1="${midX + r*0.45}" y1="${midY - r*0.45}" x2="${midX - r*0.45}" y2="${midY + r*0.45}" stroke="${cs.fg}" stroke-width="3.5" stroke-linecap="round"/>`);
+        }
+      }
+    });
+  });
+
+  // ── Table outline + column dividers ──
+  parts.push(`<rect x="${PAD}" y="${TABLE_TOP}" width="${tableW}" height="${tableH}" rx="14" fill="none" stroke="${accent}30" stroke-width="2"/>`);
+  // Tool col divider
+  parts.push(`<line x1="${PAD + TOOL_W}" y1="${TABLE_TOP}" x2="${PAD + TOOL_W}" y2="${TABLE_TOP + tableH}" stroke="${accent}22" stroke-width="1.5"/>`);
+  // Attr col dividers
+  for (let i = 1; i < nCols; i++) {
+    const dx = PAD + TOOL_W + i * ATTR_W;
+    parts.push(`<line x1="${dx}" y1="${TABLE_TOP}" x2="${dx}" y2="${TABLE_TOP + tableH}" stroke="${accent}22" stroke-width="1.5"/>`);
+  }
+
+  // ── Handle ──
+  parts.push(svgPath("@QuizBytesDaily", W / 2, H - 62, 34, "#374151", "middle"));
+
+  return svgWrapper(parts.join("\n"), category);
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export function slideToSvg(template: string, data: Record<string, unknown>, category?: string): string {
@@ -962,6 +1139,8 @@ export function slideToSvg(template: string, data: Record<string, unknown>, cate
       return buildFlowchartSvg(data as unknown as FlowchartData, category);
     case "code-quiz":
       return buildCodeQuizSvg(data as unknown as CodeQuizData, category);
+    case "comparison-table":
+      return buildComparisonTableSvg(data as unknown as ComparisonTableData, category);
     default:
       return buildDefinitionStepsSvg({
         heading:     String(data.heading ?? template),
@@ -985,9 +1164,10 @@ export function slideToSvg(template: string, data: Record<string, unknown>, cate
 export function slideToRevealFrames(template: string, data: Record<string, unknown>, category?: string): string[] {
   if (template === "cta") return [buildCtaSvg(data as unknown as CtaData, category)];
   // single static frames for templates that don't need reveal animation
-  if (template === "grid-overview") return [buildGridOverviewSvg(data as unknown as GridOverviewData, category)];
-  if (template === "flowchart")     return [buildFlowchartSvg(data as unknown as FlowchartData, category)];
-  if (template === "code-quiz")     return [buildCodeQuizSvg(data as unknown as CodeQuizData, category)];
+  if (template === "grid-overview")      return [buildGridOverviewSvg(data as unknown as GridOverviewData, category)];
+  if (template === "flowchart")          return [buildFlowchartSvg(data as unknown as FlowchartData, category)];
+  if (template === "code-quiz")          return [buildCodeQuizSvg(data as unknown as CodeQuizData, category)];
+  if (template === "comparison-table")   return [buildComparisonTableSvg(data as unknown as ComparisonTableData, category)];
 
   if (template === "pipeline") {
     // single full frame, all text upfront

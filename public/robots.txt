@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Block admin and API routes from public indexing
+Disallow: /admin
+Disallow: /api/
+
+# Allow Google AdSense crawler
+User-agent: Mediapartners-Google
+Allow: /
+
+Sitemap: https://quizbytes.dev/sitemap.xml

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { channelConfig, CAT_EMOJI } from "@/lib/config";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -78,33 +78,10 @@ const DIFF_COLOR: Record<string, string> = {
 function seriesUrl(s: SeriesItem): string {
   return s.youtube_url ?? channelConfig.youtubeUrl;
 }
-// Prompt map for Pollinations — maps categories to vivid dark-tech prompts
-const POLL_PROMPTS: Record<string, string> = {
-  "AI/ML":          "neural network artificial intelligence dark abstract glowing blue circuits minimal tech",
-  "AI Evaluation":  "AI testing metrics charts dashboard dark neon glow precision accuracy minimal",
-  "AI Engineering": "vector database embeddings geometric nodes dark purple cyan minimal tech art",
-  "AI Productivity":"workflow automation tools dark minimal neon glowing productivity tech abstract",
-  "Python":         "python programming code dark green terminal minimal abstract tech illustration",
-  "Algorithms":     "algorithm graph nodes tree dark purple minimal geometric abstract tech",
-  "JavaScript":     "javascript code browser dark yellow neon minimal tech abstract react",
-  "TypeScript":     "typescript code dark blue neon minimal abstract tech illustration",
-  "System Design":  "system architecture microservices cloud dark minimal geometric tech illustration",
-  "DevOps":         "kubernetes docker containers cloud dark minimal neon tech abstract",
-  "React":          "react components UI dark cyan neon minimal abstract tech",
-  "Docker":         "docker containers whale dark blue minimal tech abstract",
-  "Database":       "database tables SQL dark orange neon minimal tech abstract",
-  "Data Structures":"linked list binary tree stack dark minimal geometric abstract tech",
-  "Machine Learning":"machine learning model training dark minimal neon abstract tech",
-};
-
 function seriesThumbnail(s: SeriesItem): string {
-  if (s.youtube_id) return `https://i.ytimg.com/vi/${s.youtube_id}/mqdefault.jpg`;
-  // Use Pollinations.ai for AI-generated thumbnails — free, no API key, CDN-cached
-  const base   = POLL_PROMPTS[s.category] ?? `${s.category} tech dark minimal abstract`;
-  const prompt = encodeURIComponent(`${base}, quiz question, high quality`);
-  // Seed from series ID makes it deterministic (same series = same image always)
-  const seed   = s.id % 9999;
-  return `https://image.pollinations.ai/prompt/${prompt}?width=640&height=360&nologo=true&seed=${seed}`;
+  // Always use the locally-generated thumbnail (clean dark design with bold title + ? mark).
+  // This is consistent across all series regardless of YouTube thumbnail upload status.
+  return `/api/thumbnail/${s.slug}/jpeg`;
 }
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -459,15 +436,23 @@ function recordStreak(): void {
 }
 
 function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
-  const [allQs,      setAllQs]      = useState<QuizQ[]>([]);
-  const [activeCat,  setActiveCat]  = useState("All");
-  const [activeDiff, setActiveDiff] = useState("All");
-  const [deck,       setDeck]       = useState<number[]>([]);
-  const [step,       setStep]       = useState(0);
-  const [chosen,     setChosen]     = useState<number | null>(null);
-  const [score,      setScore]      = useState(0);
-  const [roundDone,  setRoundDone]  = useState(false);
-  const [loading,    setLoading]    = useState(true);
+  const [allQs,        setAllQs]        = useState<QuizQ[]>([]);
+  const [activeCat,    setActiveCat]    = useState("All");
+  const [activeDiff,   setActiveDiff]   = useState("All");
+  const [deck,         setDeck]         = useState<number[]>([]);
+  const [step,         setStep]         = useState(0);
+  const [chosen,       setChosen]       = useState<number | null>(null);
+  const [score,        setScore]        = useState(0);
+  const [roundDone,    setRoundDone]    = useState(false);
+  const [loading,      setLoading]      = useState(true);
+  const [codeCountdown, setCodeCountdown] = useState<number | null>(null); // seconds before auto-reveal
+  const [advanceIn,    setAdvanceIn]    = useState<number | null>(null);   // seconds before auto-advance
+
+  // Stable refs so effects can always read the latest values without adding to effect deps
+  const qRef      = useRef<QuizQ | null>(null);
+  const stepRef   = useRef(0);
+  const totalRef  = useRef(0);
+  const chosenRef = useRef<number | null>(null);
 
   // Report streak to parent on mount
   useEffect(() => { onStreak(loadStreak()); }, [onStreak]);
@@ -502,6 +487,54 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
   const q      = allQs[qi] ?? allQs[0];
   const catCol = getCatColor(q?.cat ?? "AI/ML");
   const qNum   = step + 1;
+
+  // Keep refs in sync every render so effects can read latest values safely
+  qRef.current      = q ?? null;
+  stepRef.current   = step;
+  totalRef.current  = total;
+  chosenRef.current = chosen;
+
+  // ── Auto-reveal for code questions (10-second countdown before showing answer) ──
+  useEffect(() => {
+    if (!q || q.type !== "code" || chosen !== null || roundDone) {
+      setCodeCountdown(null);
+      return;
+    }
+    const SECS = 10;
+    setCodeCountdown(SECS);
+    let remaining = SECS;
+    const interval = setInterval(() => {
+      remaining -= 1;
+      setCodeCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        // Timeout: reveal correct answer without recording a stat (user didn't answer)
+        if (chosenRef.current === null) setChosen(qRef.current?.ans ?? 0);
+      }
+    }, 1000);
+    return () => { clearInterval(interval); setCodeCountdown(null); };
+  }, [step, q, chosen, roundDone]); // restarts when question changes, user picks, or round ends
+
+  // ── Auto-advance after picking (3-second countdown then move to next) ─────────
+  useEffect(() => {
+    if (chosen === null || roundDone) { setAdvanceIn(null); return; }
+    const SECS = 3;
+    setAdvanceIn(SECS);
+    let remaining = SECS;
+    const interval = setInterval(() => {
+      remaining -= 1;
+      setAdvanceIn(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        setAdvanceIn(null);
+        // Advance to next or finish round
+        const nxt = stepRef.current + 1;
+        setChosen(null);
+        if (nxt >= totalRef.current) setRoundDone(true); else setStep(nxt);
+      }
+    }, 1000);
+    return () => { clearInterval(interval); setAdvanceIn(null); };
+  }, [chosen, roundDone]); // restarts each time an answer is picked
 
   // Dynamic category list derived from full pool — no hardcoding
   // Categories with any DB (live) question are marked as live
@@ -540,12 +573,13 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
   }
   function next() {
     const nxt = step + 1;
-    setChosen(null);
+    setChosen(null); setCodeCountdown(null); setAdvanceIn(null);
     if (nxt >= total) setRoundDone(true); else setStep(nxt);
   }
   function startNewRound() {
     setDeck(filterAndShuffle(allQs, activeCat, activeDiff));
     setStep(0); setChosen(null); setScore(0); setRoundDone(false);
+    setCodeCountdown(null); setAdvanceIn(null);
   }
 
   return (
@@ -685,8 +719,24 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70"/>
                   <span className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
                   <span className="text-[10px] font-mono text-slate-500 ml-1.5">{q.language ?? "code"}</span>
+                  {chosen === null && codeCountdown !== null && (
+                    <span className="ml-auto text-[10px] font-mono" style={{ color: codeCountdown <= 3 ? "#f87171" : "#475569" }}>
+                      answer reveals in {codeCountdown}s
+                    </span>
+                  )}
                 </div>
                 <pre className="text-xs leading-5 p-3.5 overflow-x-auto text-slate-300 font-mono whitespace-pre">{q.code}</pre>
+                {/* Countdown bar — depletes as timer ticks down */}
+                {chosen === null && codeCountdown !== null && (
+                  <div style={{ height: 3, background: "#0a1525" }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${(codeCountdown / 10) * 100}%`,
+                      background: codeCountdown <= 3 ? "#f87171" : "#22d3ee",
+                      transition: "width 1s linear, background 0.3s",
+                    }}/>
+                  </div>
+                )}
               </div>
             )}
 
@@ -745,10 +795,15 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                   <span className="font-black text-green-400">Why: </span>{q.exp}
                 </div>
                 <button onClick={next}
-                  className="w-full py-2.5 rounded-xl text-sm font-black tracking-wide transition-all hover:opacity-85"
+                  className="w-full py-2.5 rounded-xl text-sm font-black tracking-wide transition-all hover:opacity-85 relative overflow-hidden"
                   style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff",
                     boxShadow: "0 4px 16px rgba(168,85,247,0.3)" }}>
-                  Next Question →
+                  {advanceIn !== null ? `Next in ${advanceIn}s →` : "Next Question →"}
+                  {/* Auto-advance progress bar */}
+                  {advanceIn !== null && (
+                    <span className="absolute bottom-0 left-0 h-0.5 bg-white/40"
+                      style={{ width: `${((3 - advanceIn) / 3) * 100}%`, transition: "width 1s linear" }}/>
+                  )}
                 </button>
               </div>
             )}
@@ -767,6 +822,30 @@ function EmptyState({ message }: { message: string }) {
         style={{ background: `${CYN}12`, border: `1px solid ${CYN}30` }}>🎬</div>
       <p className="text-base font-bold text-white mb-1">No quizzes found</p>
       <p className="text-sm text-slate-500 max-w-xs">{message}</p>
+    </div>
+  );
+}
+
+// ── AdSense Ad Unit ───────────────────────────────────────────────────────────
+// Slot IDs are set via NEXT_PUBLIC_ADSENSE_SLOT_1 / NEXT_PUBLIC_ADSENSE_SLOT_2 env vars.
+// Without a slot ID the component renders nothing (Auto Ads still runs from layout.tsx).
+function AdUnit({ slot }: { slot?: string }) {
+  useEffect(() => {
+    if (!slot) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+    } catch { /* noop */ }
+  }, [slot]);
+  if (!slot) return null;
+  return (
+    <div style={{ textAlign: "center", overflow: "hidden" }}>
+      <ins className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client="ca-pub-4237294630161176"
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true" />
     </div>
   );
 }
@@ -1043,6 +1122,22 @@ export default function Home() {
         );
       })()}
 
+      {/* ── Mobile quiz (replaces right-column widget on small screens) ── */}
+      <div id="mobile-quiz" className="lg:hidden border-b px-6 py-6"
+        style={{ borderColor: BORD, background: "#07070f" }}>
+        <p className="text-sm font-black text-white mb-3">🧩 Play the Quiz</p>
+        <QuizWidget onStreak={setStreak} />
+      </div>
+
+      {/* ── Ad unit: between hero and content ── */}
+      {process.env.NEXT_PUBLIC_ADSENSE_SLOT_1 && (
+        <div className="border-b py-3 px-6" style={{ borderColor: BORD, background: "#080810" }}>
+          <div style={{ maxWidth: 1440, margin: "0 auto" }}>
+            <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_1} />
+          </div>
+        </div>
+      )}
+
       {/* ── Stats + Search strip ── */}
       <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
         <div className="flex items-center gap-3 px-6 py-2.5 overflow-x-auto"
@@ -1140,6 +1235,9 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Ad unit: above content grid */}
+        <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_2} />
 
         {/* Results count */}
         {(searchQuery || activeCategory !== "All") && filtered.length > 0 && (

@@ -1,8 +1,16 @@
 // ── Live Trending Topic Fetcher ────────────────────────────────────────────────
 // Fetches real-time AI/tech trends from:
-//   1. HN Algolia API  — search "AI LLM Python" in top stories (single fast call)
-//   2. GitHub Search API — repos created last 7 days, sorted by stars (no auth)
-//   3. ArXiv RSS        — latest cs.AI + cs.LG papers
+//   1. HN Algolia API      — search "AI LLM Python" in top stories (single fast call)
+//   2. GitHub Search API   — repos created last 7 days, sorted by stars (no auth)
+//   3. ArXiv RSS           — latest cs.AI + cs.LG papers
+//   4. Reddit              — hot posts from ML/Python/programming subs
+//   5. Dev.to              — top articles by tag
+//   6. Stack Overflow      — hot questions on tech tags
+//   7. Product Hunt        — new AI/dev tool launches (RSS)
+//   8. Lobste.rs           — tech link aggregator hottest posts (JSON API)
+//   9. Hugging Face        — trending open-source models (public API)
+//  10. Papers With Code    — latest ML papers with code (public API)
+//  11. TechCrunch          — tech industry news (RSS)
 // Falls back to curated static list if all live sources return nothing useful.
 
 import { TRENDING_TOPICS, type LayoutId } from "@/lib/quiz-generator";
@@ -13,8 +21,11 @@ export interface LiveTrendingTopic {
   layout: LayoutId;
   difficulty: string;
   icon: string;
-  source: "hn" | "github" | "arxiv" | "reddit" | "devto" | "stackoverflow" | "static";
-  score?: number;   // HN points, GitHub stars, Reddit upvotes, or DevTo reactions
+  source:
+    | "hn" | "github" | "arxiv" | "reddit" | "devto" | "stackoverflow"
+    | "producthunt" | "lobsters" | "huggingface" | "paperswithcode" | "techcrunch"
+    | "static";
+  score?: number;   // HN points, GitHub stars, Reddit upvotes, HF likes, etc.
 }
 
 // ── Category detection ────────────────────────────────────────────────────────
@@ -289,6 +300,175 @@ async function fetchStackOverflow(): Promise<LiveTrendingTopic[]> {
   return results.slice(0, 6);
 }
 
+// ── Source 7: Product Hunt — new AI/dev tool launches (RSS) ──────────────────
+async function fetchProductHunt(): Promise<LiveTrendingTopic[]> {
+  const res = await fetch("https://www.producthunt.com/feed", {
+    headers: { "User-Agent": "QuizBytesDaily/1.0 (educational quiz content)" },
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) throw new Error(`ProductHunt RSS ${res.status}`);
+  const xml = await res.text();
+
+  // Parse <title> from each <item>
+  const items = [...xml.matchAll(/<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<\/item>/g)];
+  const results: LiveTrendingTopic[] = [];
+
+  for (const m of items.slice(0, 20)) {
+    const raw = m[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+    const cleaned = cleanTitle(raw);
+    if (cleaned.length < 10) continue;
+    if (!CATEGORY_RULES.some((r) => r.pattern.test(cleaned))) continue;
+    const { category, icon } = detectCategory(cleaned);
+    results.push({
+      topic:      cleaned,
+      category,
+      icon,
+      layout:     "quick-tips",   // product launches → "here's what it does" style
+      difficulty: "Beginner",
+      source:     "producthunt",
+    });
+  }
+  return results.slice(0, 6);
+}
+
+// ── Source 8: Lobste.rs — tech link aggregator hottest (JSON API) ─────────────
+async function fetchLobsters(): Promise<LiveTrendingTopic[]> {
+  const res = await fetch("https://lobste.rs/hottest.json", {
+    headers: { "User-Agent": "QuizBytesDaily/1.0 (educational quiz content)" },
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) throw new Error(`Lobsters ${res.status}`);
+  const data = await res.json() as Array<{
+    title: string;
+    score: number;
+    tags: string[];
+  }>;
+
+  const results: LiveTrendingTopic[] = [];
+  for (const item of data.slice(0, 25)) {
+    if (!item.title || item.score < 3) continue;
+    const text = `${item.title} ${item.tags.join(" ")}`;
+    if (!CATEGORY_RULES.some((r) => r.pattern.test(text))) continue;
+    const cleaned = cleanTitle(item.title);
+    if (cleaned.length < 12) continue;
+    const { category, icon } = detectCategory(text);
+    results.push({
+      topic:      cleaned,
+      category,
+      icon,
+      layout:     pickLayout(category, cleaned),
+      difficulty: pickDifficulty(cleaned),
+      source:     "lobsters",
+      score:      item.score,
+    });
+  }
+  return results.slice(0, 6);
+}
+
+// ── Source 9: Hugging Face — trending open-source models (public API) ─────────
+async function fetchHuggingFace(): Promise<LiveTrendingTopic[]> {
+  const res = await fetch(
+    "https://huggingface.co/api/models?sort=trending&direction=-1&limit=20",
+    {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 3600 },
+    }
+  );
+  if (!res.ok) throw new Error(`HuggingFace ${res.status}`);
+  const models = await res.json() as Array<{
+    id: string;
+    tags?: string[];
+    likes?: number;
+    pipeline_tag?: string;
+  }>;
+
+  const results: LiveTrendingTopic[] = [];
+  for (const model of models.slice(0, 15)) {
+    if (!model.id) continue;
+    const name = model.id.split("/").pop() ?? model.id;
+    // "Llama-3.1-8B-Instruct" → "Llama 3.1 8B Instruct"
+    const readable = name.replace(/[-_]/g, " ").replace(/\s{2,}/g, " ").trim();
+    const pipelineLabel = model.pipeline_tag ?? "";
+    const tags = (model.tags ?? []).slice(0, 6).join(" ");
+    const text = `${readable} ${pipelineLabel} ${tags}`;
+
+    // Only keep models that are tech-relevant (most HF models are)
+    const isTechRelevant = CATEGORY_RULES.some((r) => r.pattern.test(text))
+      || /llm|language.?model|transformer|diffusion|vision|speech|text.?gen|chat|instruct/i.test(text);
+    if (!isTechRelevant) continue;
+
+    const topic = pipelineLabel
+      ? `${readable} (${pipelineLabel.replace(/-/g, " ")}): trending on Hugging Face`
+      : `${readable}: trending open-source AI model`;
+
+    results.push({
+      topic:      topic.slice(0, 85),
+      category:   "AI/ML",
+      icon:       "🤗",
+      layout:     "explainer",
+      difficulty: "Intermediate",
+      source:     "huggingface",
+      score:      model.likes ?? 0,
+    });
+  }
+  return results.slice(0, 5);
+}
+
+// ── Source 10: Papers With Code — latest ML papers (public API) ───────────────
+async function fetchPapersWithCode(): Promise<LiveTrendingTopic[]> {
+  const res = await fetch(
+    "https://paperswithcode.com/api/v1/papers/?ordering=-date&items_per_page=12",
+    { next: { revalidate: 3600 } }
+  );
+  if (!res.ok) throw new Error(`PapersWithCode ${res.status}`);
+  const data = await res.json() as {
+    results?: Array<{ title: string; abstract?: string }>;
+  };
+
+  return (data.results ?? [])
+    .filter((p) => p.title && p.title.length > 15)
+    .slice(0, 8)
+    .map((paper) => ({
+      topic:      cleanTitle(paper.title).slice(0, 70) + " (research)",
+      category:   "AI/ML" as const,
+      icon:       "📄",
+      layout:     "explainer" as LayoutId,
+      difficulty: "Advanced" as const,
+      source:     "paperswithcode" as const,
+    }));
+}
+
+// ── Source 11: TechCrunch — tech industry news (RSS) ─────────────────────────
+async function fetchTechCrunch(): Promise<LiveTrendingTopic[]> {
+  const res = await fetch("https://techcrunch.com/feed/", {
+    headers: { "User-Agent": "QuizBytesDaily/1.0 (educational quiz content)" },
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) throw new Error(`TechCrunch RSS ${res.status}`);
+  const xml = await res.text();
+
+  const items = [...xml.matchAll(/<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<\/item>/g)];
+  const results: LiveTrendingTopic[] = [];
+
+  for (const m of items.slice(0, 20)) {
+    const raw = m[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+    const cleaned = cleanTitle(raw);
+    if (cleaned.length < 12) continue;
+    // Only include items that match a known tech category
+    if (!CATEGORY_RULES.some((r) => r.pattern.test(cleaned))) continue;
+    const { category, icon } = detectCategory(cleaned);
+    results.push({
+      topic:      cleaned,
+      category,
+      icon,
+      layout:     pickLayout(category, cleaned),
+      difficulty: pickDifficulty(cleaned),
+      source:     "techcrunch",
+    });
+  }
+  return results.slice(0, 5);
+}
+
 // ── Static fallback ───────────────────────────────────────────────────────────
 function staticFallback(): LiveTrendingTopic[] {
   return (TRENDING_TOPICS["AI/ML"] ?? []).slice(0, 12).map((topic) => ({
@@ -313,30 +493,43 @@ function dedupe(topics: LiveTrendingTopic[]): LiveTrendingTopic[] {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export async function fetchLiveTrending(): Promise<LiveTrendingTopic[]> {
-  const [hn, github, arxiv, reddit, devto, stackoverflow] = await Promise.allSettled([
+  const [
+    hn, github, arxiv, reddit, devto, stackoverflow,
+    producthunt, lobsters, huggingface, paperswithcode, techcrunch,
+  ] = await Promise.allSettled([
     fetchHN(),
     fetchGitHubTrending(),
     fetchArxiv(),
     fetchReddit(),
     fetchDevTo(),
     fetchStackOverflow(),
+    fetchProductHunt(),
+    fetchLobsters(),
+    fetchHuggingFace(),
+    fetchPapersWithCode(),
+    fetchTechCrunch(),
   ]);
 
   const live: LiveTrendingTopic[] = [
-    ...(hn.status           === "fulfilled" ? hn.value           : []),
-    ...(github.status       === "fulfilled" ? github.value       : []),
-    ...(arxiv.status        === "fulfilled" ? arxiv.value        : []),
-    ...(reddit.status       === "fulfilled" ? reddit.value       : []),
-    ...(devto.status        === "fulfilled" ? devto.value        : []),
+    ...(hn.status            === "fulfilled" ? hn.value            : []),
+    ...(github.status        === "fulfilled" ? github.value        : []),
+    ...(arxiv.status         === "fulfilled" ? arxiv.value         : []),
+    ...(reddit.status        === "fulfilled" ? reddit.value        : []),
+    ...(devto.status         === "fulfilled" ? devto.value         : []),
     ...(stackoverflow.status === "fulfilled" ? stackoverflow.value : []),
+    ...(producthunt.status   === "fulfilled" ? producthunt.value   : []),
+    ...(lobsters.status      === "fulfilled" ? lobsters.value      : []),
+    ...(huggingface.status   === "fulfilled" ? huggingface.value   : []),
+    ...(paperswithcode.status=== "fulfilled" ? paperswithcode.value: []),
+    ...(techcrunch.status    === "fulfilled" ? techcrunch.value    : []),
   ];
 
   const deduped = dedupe(live);
-  if (deduped.length >= 4) return deduped.slice(0, 20);
+  if (deduped.length >= 4) return deduped.slice(0, 30);
 
   // Supplement with static if live sources are thin
   const combined = dedupe([...deduped, ...staticFallback()]);
-  return combined.slice(0, 20);
+  return combined.slice(0, 30);
 }
 
 // ── Pick ONE topic for daily cron ─────────────────────────────────────────────

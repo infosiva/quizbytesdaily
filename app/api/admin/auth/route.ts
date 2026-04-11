@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ADMIN_COOKIE, deriveToken } from "@/lib/admin-auth";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) throw new Error("ADMIN_PASSWORD env var is not set");
 const COOKIE_OPTS = {
   httpOnly: true,
   sameSite: "lax" as const,

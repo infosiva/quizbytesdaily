@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ADMIN_COOKIE, deriveToken } from "@/lib/admin-auth";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) throw new Error("ADMIN_PASSWORD env var is not set");
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,7 +19,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const expectedToken   = await deriveToken(ADMIN_PASSWORD);
+  const expectedToken   = await deriveToken(ADMIN_PASSWORD!);
   const cookie          = request.cookies.get(ADMIN_COOKIE);
   const isAuthenticated = cookie?.value === expectedToken;
 

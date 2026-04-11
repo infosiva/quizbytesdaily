@@ -927,59 +927,51 @@ STRICT RULES:
 - Return ONLY raw JSON`;
 }
 
-// ── Prompt: Cheat Sheet (3 slides: intro + grid-overview + CTA) ───────────────
+// ── Prompt: Cheat Sheet (2 slides: comparison-table + CTA) ────────────────────
 function buildCheatSheetPrompt(topic: string, category: string, difficulty: string): string {
   const diffNote = difficultyNote(difficulty);
-  return `Create a ${category} cheat-sheet series about: "${topic}"
-(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field and throughout the content.)
+  return `Create a ${category} cheat-sheet comparison table about: "${topic}"
+(If the topic contains typos or is phrased as a question/sentence, interpret the intent as a clean tech topic title and use that normalized form in the "title" field.)
 Difficulty: ${difficulty} (${diffNote})
 
-CONTENT QUALITY: use specific technical details, real tool names, numbers, and code concepts — not generic descriptions.
+The output is a VISUAL COMPARISON TABLE rendered as a vertical phone reel (like "Agent Browser Cheat Sheet" style).
+Use REAL tool/library/concept names — no placeholders. Be specific and accurate.
 
-Generate exactly 2 slides (the CTA will be added automatically):
+Generate exactly 1 slide (the CTA is added automatically):
 
-Slide 1: a definition-steps intro slide — what the topic is + 3 key aspects
-Slide 2: a grid-overview cheat-sheet slide — 6 to 8 numbered items, each a concrete, actionable thing to know/do
+Slide 1: a comparison-table — compare 5-6 real tools/options/concepts on 2-3 key attributes.
+- columns: 2-3 attribute names that matter most for this topic (e.g. "Free Tier", "Ease of Use", "Best For")
+- rows: 5-6 real named tools or options being compared
+- cells: each cell has a "value" (short label, max 3 words) and a "type":
+  - "good"  → green  (positive: free, fast, easy, built-in, yes)
+  - "bad"   → red    (negative: paid, slow, complex, manual, no)
+  - "warn"  → amber  (partial: limited, manual config, trial)
+  - "info"  → gray   (neutral info: a number, a label, a use case)
 
 STRICT RULES:
-- Slide 1 template MUST be "definition-steps"
-- Slide 2 template MUST be "grid-overview"
-- slideNum: 1 and 2, totalSlides: 3 (CTA will be slide 3)
-- grid-overview items: 6 to 8 items — pick the number based on topic richness
-  - title: max 4 words — ultra-concise
-  - body: max 8 words — one concrete takeaway
-- definition-steps: definition + 3 cards (color: cyan/purple/green)
-- colors: "cyan","purple","green","pink","amber" only
-- icons: "search","gear","database","book","brain","robot","plus","lock","lightning","check","warning","clock","code","layers" only
+- template MUST be "comparison-table"
+- slideNum: 1, totalSlides: 2 (CTA will be slide 2)
+- columns: exactly 2 or 3 items — pick the most informative attributes
+- rows: exactly 5 or 6 items — real names only, no "Tool A / Option B" placeholders
+- cell value: max 3 words, ultra-concise ("Free", "High", "$20/mo", "Built-in")
+- Do NOT use "info" type for things that are clearly good or bad — be opinionated
 
 Return ONLY raw JSON:
 {
-  "title": "N ${topic} Things You Must Know",
+  "title": "${topic} Cheat Sheet",
   "slides": [
     {
-      "template": "definition-steps",
-      "heading": "What is ${topic}?",
-      "slideNum": 1, "totalSlides": 3,
-      "definition": { "color": "cyan", "title": "Core concept (max 6 words)", "body": "What it is and why it matters (max 280 chars)" },
-      "cards": [
-        { "color": "cyan",   "icon": "search", "title": "Key point 1 (max 22 chars)", "body": "Concise explanation (max 100 chars)" },
-        { "color": "purple", "icon": "gear",   "title": "Key point 2 (max 22 chars)", "body": "Concise explanation (max 100 chars)" },
-        { "color": "green",  "icon": "check",  "title": "Key point 3 (max 22 chars)", "body": "Concise explanation (max 100 chars)" }
-      ]
-    },
-    {
-      "template": "grid-overview",
-      "heading": "8 ${topic} Things Every Dev Should Know",
-      "slideNum": 2, "totalSlides": 3,
-      "items": [
-        { "title": "Item 1 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 2 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 3 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 4 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 5 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 6 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 7 (max 4 words)", "body": "One concrete takeaway (max 8 words)" },
-        { "title": "Item 8 (max 4 words)", "body": "One concrete takeaway (max 8 words)" }
+      "template": "comparison-table",
+      "heading": "${topic} Cheat Sheet",
+      "subtitle": "Key factors compared",
+      "slideNum": 1, "totalSlides": 2,
+      "columns": ["Free Tier", "Ease of Use", "Best For"],
+      "rows": [
+        { "name": "Tool A", "cells": [{"value": "Yes",     "type": "good"}, {"value": "Easy",    "type": "good"}, {"value": "Beginners", "type": "info"}] },
+        { "name": "Tool B", "cells": [{"value": "$20/mo",  "type": "bad"},  {"value": "High",    "type": "good"}, {"value": "Teams",     "type": "info"}] },
+        { "name": "Tool C", "cells": [{"value": "Limited", "type": "warn"}, {"value": "Medium",  "type": "warn"}, {"value": "Research",  "type": "info"}] },
+        { "name": "Tool D", "cells": [{"value": "No",      "type": "bad"},  {"value": "Complex", "type": "bad"},  {"value": "Enterprise","type": "info"}] },
+        { "name": "Tool E", "cells": [{"value": "Yes",     "type": "good"}, {"value": "Easy",    "type": "good"}, {"value": "Hobbyists", "type": "info"}] }
       ]
     }
   ]

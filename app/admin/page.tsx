@@ -188,6 +188,44 @@ function SlidePreview({ slide }: { slide: SlideData }) {
     );
   }
 
+  if (template === "comparison-table") {
+    const columns = (data.columns as string[]) ?? [];
+    const rows    = (data.rows as Array<{ name: string; cells: Array<{ value: string; type: string }> }>) ?? [];
+    const TYPE_COLOR: Record<string, string> = { good: "#4ade80", bad: "#f87171", warn: "#fbbf24", info: "#64748b" };
+    const TYPE_BG:    Record<string, string> = { good: "#14532d20", bad: "#7f1d1d20", warn: "#78350f20", info: "#1e1e2e" };
+    return (
+      <div style={{ background: "#111118", border: "1px solid #1e1e2e", borderRadius: 8, padding: "0.5rem", fontSize: "0.58rem", overflow: "hidden" }}>
+        <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: "0.65rem", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {String(data.heading ?? "Comparison Table")}
+        </div>
+        {/* Header row */}
+        <div style={{ display: "grid", gridTemplateColumns: `1.6fr ${columns.map(() => "1fr").join(" ")}`, gap: 2, marginBottom: 2 }}>
+          <div style={{ color: "#a855f7", fontWeight: 700, padding: "2px 4px" }}>Tool</div>
+          {columns.map((col, i) => (
+            <div key={i} style={{ color: "#a855f7", fontWeight: 700, textAlign: "center", padding: "2px 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{col}</div>
+          ))}
+        </div>
+        {/* Data rows */}
+        {rows.slice(0, 6).map((row, ri) => (
+          <div key={ri} style={{ display: "grid", gridTemplateColumns: `1.6fr ${columns.map(() => "1fr").join(" ")}`, gap: 2, marginBottom: 2 }}>
+            <div style={{ color: "#e2e8f0", fontWeight: 600, padding: "2px 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</div>
+            {(row.cells ?? []).slice(0, columns.length).map((cell, ci) => {
+              const fg = TYPE_COLOR[cell.type] ?? "#64748b";
+              const bg = TYPE_BG[cell.type]    ?? "#1e1e2e";
+              const sym = cell.type === "good" ? "✓" : cell.type === "bad" ? "✗" : cell.type === "warn" ? "△" : "";
+              return (
+                <div key={ci} style={{ background: bg, borderRadius: 3, color: fg, fontWeight: 600, textAlign: "center", padding: "2px 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {sym ? `${sym} ` : ""}{cell.value}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {rows.length > 6 && <div style={{ color: "#374151", fontSize: "0.52rem", paddingTop: 2 }}>+{rows.length - 6} more rows</div>}
+      </div>
+    );
+  }
+
   // Legacy template: title
   if (template === "title") {
     return (
@@ -513,7 +551,12 @@ export default function AdminPage() {
       .then((d) => {
         if (Array.isArray(d.topics) && d.topics.length > 0) {
           // Sort: AI/ML first, then by source priority (hn/reddit > github > devto/so > arxiv/static)
-          const SOURCE_PRIORITY: Record<string, number> = { hn: 5, reddit: 4, github: 3, devto: 2, stackoverflow: 2, arxiv: 1, static: 0 };
+          const SOURCE_PRIORITY: Record<string, number> = {
+            hn: 5, reddit: 4, lobsters: 4,
+            github: 3, producthunt: 3, huggingface: 3,
+            devto: 2, stackoverflow: 2, techcrunch: 2, paperswithcode: 2,
+            arxiv: 1, static: 0,
+          };
           const sorted = [...d.topics].sort((a: { category: string; source: string }, b: { category: string; source: string }) => {
             if (a.category === "AI/ML" && b.category !== "AI/ML") return -1;
             if (b.category === "AI/ML" && a.category !== "AI/ML") return 1;
@@ -985,12 +1028,24 @@ export default function AdminPage() {
                   {liveTrending.length > 0 && (
                     <div style={{ marginBottom: "1rem" }}>
                       <div style={{ fontSize: "0.68rem", color: "#4a4a5a", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 }}>
-                        🔥 Live — HN · Reddit · GitHub · Dev.to · SO · arXiv
+                        🔥 Live — HN · Reddit · Lobsters · GitHub · PH · HF · Dev.to · SO · PWC · TC · arXiv
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                        {liveTrending.slice(0, 18).map((t) => {
-                          const sourceColor = t.source === "hn" ? "#f97316" : t.source === "github" ? "#4ade80" : t.source === "reddit" ? "#ef4444" : t.source === "devto" ? "#a855f7" : t.source === "stackoverflow" ? "#f59e0b" : "#22d3ee";
-                          const sourceLabel = t.source === "hn" ? "HN" : t.source === "github" ? "GH" : t.source === "reddit" ? "Reddit" : t.source === "devto" ? "Dev.to" : t.source === "stackoverflow" ? "SO" : "arXiv";
+                        {liveTrending.slice(0, 28).map((t) => {
+                          const SRC_COLOR: Record<string, string> = {
+                            hn: "#f97316", reddit: "#ef4444", lobsters: "#ec4899",
+                            github: "#4ade80", producthunt: "#fb923c", huggingface: "#fbbf24",
+                            devto: "#a855f7", stackoverflow: "#f59e0b", techcrunch: "#86efac",
+                            paperswithcode: "#14b8a6", arxiv: "#22d3ee", static: "#475569",
+                          };
+                          const SRC_LABEL: Record<string, string> = {
+                            hn: "HN", reddit: "Reddit", lobsters: "Lobsters",
+                            github: "GH", producthunt: "PH", huggingface: "HF",
+                            devto: "Dev.to", stackoverflow: "SO", techcrunch: "TC",
+                            paperswithcode: "PWC", arxiv: "arXiv", static: "curated",
+                          };
+                          const sourceColor = SRC_COLOR[t.source] ?? "#22d3ee";
+                          const sourceLabel = SRC_LABEL[t.source] ?? t.source;
                           const scoreLabel  = t.score == null ? null : t.score >= 1000 ? `${(t.score / 1000).toFixed(1)}k` : `${t.score}`;
                           const isSelected  = topic === t.topic;
                           return (
