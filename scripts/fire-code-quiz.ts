@@ -23,6 +23,18 @@ import { createSeries, insertSlides, getSeriesBySlug } from "../lib/db";
 import { renderSeries }                    from "../lib/video-renderer";
 import { buildThumbnailJpeg }              from "../lib/thumbnail-svg";
 
+function extractFirstQuestion(slides: Array<unknown>): string | undefined {
+  for (const raw of slides) {
+    const slide = raw as Record<string, unknown>;
+    const d = (slide.data ?? slide) as Record<string, unknown>;
+    const tpl = String(slide.template ?? "");
+    if (tpl === "code-quiz" && typeof d.question === "string" && d.question.trim()) return d.question.trim();
+    if (tpl === "definition-steps" && typeof d.title === "string" && d.title.trim().endsWith("?")) return d.title.trim();
+    if (typeof d.q === "string" && d.q.trim()) return d.q.trim();
+  }
+  return undefined;
+}
+
 // ── Topic config ──────────────────────────────────────────────────────────────
 
 const CODE_TOPICS = [
@@ -154,13 +166,19 @@ async function main() {
 
   let series: { id: number; slug: string; title: string; category: string; difficulty: string };
 
+  let firstQuestion: string | undefined;
+
   if (existingId) {
     log(`♻️  Re-using existing series id=${existingId}`);
-    const { getSeriesById } = await import("../lib/db");
+    const { getSeriesById, getSlides } = await import("../lib/db");
     const s = await getSeriesById(existingId);
     if (!s) throw new Error(`Series id=${existingId} not found`);
     series = s;
     log(`   "${series.title}" (${series.category} · ${series.difficulty})`);
+    try {
+      const dbSlides = await getSlides(existingId);
+      firstQuestion = extractFirstQuestion(dbSlides as unknown[]);
+    } catch { /* non-fatal */ }
   } else {
     const { topic, category, difficulty } = pickTopic();
     log(`📚 Topic:      ${topic}`);
@@ -171,6 +189,7 @@ async function main() {
     log("⚙️  Generating quiz series with LLM…");
     const generated = await generateQuizSeries(topic, category, difficulty, "quiz-reveal");
     log(`✓  Generated "${generated.title}" — ${generated.slides.length} slides`);
+    firstQuestion = extractFirstQuestion(generated.slides as unknown as Array<Record<string, unknown>>);
 
     // 2. Save to DB
     log("💾 Saving to database…");
@@ -197,14 +216,16 @@ async function main() {
     log(`   Slide templates: ${templates.join(", ")}`);
   }
 
+  if (firstQuestion) log(`🎯 Question for thumbnail: ${firstQuestion.slice(0, 80)}`);
+
   // 3. Render MP4
   log("🎬 Rendering MP4…");
   const outFile = await renderSeries(series.id, (msg) => log(`   [ffmpeg] ${msg}`));
   log(`✓  Rendered: ${outFile} (${(fs.statSync(outFile).size / 1024 / 1024).toFixed(1)} MB)`);
 
-  // 4. Build thumbnail
+  // 4. Build thumbnail — now includes the actual quiz question for context-aware design
   log("🖼  Building thumbnail…");
-  const thumbBuffer = await buildThumbnailJpeg(series.title, series.category, series.difficulty);
+  const thumbBuffer = await buildThumbnailJpeg(series.title, series.category, series.difficulty, firstQuestion);
 
   // 5. Upload to YouTube
   log("📤 Uploading to YouTube…");

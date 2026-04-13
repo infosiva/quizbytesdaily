@@ -146,13 +146,26 @@ function SeriesCard({ series }: { series: SeriesItem }) {
   const isLive  = Boolean(series.youtube_id);
   const diffCol = DIFF_COLOR[series.difficulty] ?? "#94a3b8";
   const slides  = series.slide_count ?? 0;
+  // Mark as "NEW" if published in last 10 days
+  const isNew   = (Date.now() - new Date(series.created_at).getTime()) < 10 * 86_400_000;
+
+  function handleShare(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const shareUrl = isLive ? url : `https://quizbytes.dev`;
+    navigator.clipboard?.writeText(shareUrl).catch(() => {});
+    const btn = e.currentTarget as HTMLButtonElement;
+    const prev = btn.textContent;
+    btn.textContent = "✓";
+    setTimeout(() => { btn.textContent = prev; }, 1200);
+  }
 
   return (
     <div className="group flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1"
       style={{ background: CARD, borderColor: BORD, boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = `${CYN}40`;
-        e.currentTarget.style.boxShadow   = `0 8px 32px rgba(34,211,238,0.12)`;
+        e.currentTarget.style.borderColor = `${col.badge}60`;
+        e.currentTarget.style.boxShadow   = `0 8px 32px ${col.badge}18`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = BORD;
@@ -175,11 +188,17 @@ function SeriesCard({ series }: { series: SeriesItem }) {
           style={{ background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)" }} />
         <div className="absolute inset-0"
           style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 40%)" }} />
-        <div className="absolute top-2.5 left-2.5">
+        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
           <span className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-md uppercase"
             style={{ background: `${col.badge}ee`, color: col.text }}>
-            {series.category}
+            {CAT_EMOJI[series.category] ?? "💡"} {series.category}
           </span>
+          {isNew && (
+            <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded-md uppercase animate-pulse"
+              style={{ background: "#4ade8022", color: "#4ade80", border: "1px solid #4ade8050" }}>
+              NEW
+            </span>
+          )}
         </div>
         <div className="absolute top-2.5 right-2.5">
           <span className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase"
@@ -243,22 +262,30 @@ function SeriesCard({ series }: { series: SeriesItem }) {
           )}
         </div>
 
-        {isLive ? (
-          <a href={url} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase transition-all hover:gap-3"
-            style={{ color: CYN }}>
-            <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: `${CYN}20`, border: `1px solid ${CYN}50` }}>
-              <Ico.Play />
+        <div className="flex items-center justify-between gap-2">
+          {isLive ? (
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase transition-all hover:gap-3"
+              style={{ color: col.text }}>
+              <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: `${col.badge}25`, border: `1px solid ${col.badge}60` }}>
+                <Ico.Play />
+              </span>
+              Watch Short
+            </a>
+          ) : (
+            <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              Coming Soon
             </span>
-            Watch on YouTube
-          </a>
-        ) : (
-          <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-slate-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            Coming Soon
-          </span>
-        )}
+          )}
+          {/* Share button */}
+          <button onClick={handleShare} title="Copy link"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all hover:scale-110 shrink-0"
+            style={{ background: "#1c1c2e", color: "#475569", border: "1px solid #2a2a3e" }}>
+            ↗
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1248,17 +1275,17 @@ export default function Home() {
                   })}
               </div>
 
-              {/* Feature highlight cards — fills left panel vertical gap */}
+              {/* Feature highlight cards */}
               <div className="grid grid-cols-3 gap-2 mt-4">
                 {([
-                  { icon: "🧩", title: "Interactive",  desc: "Pick answers, get instant explanations" },
-                  { icon: "📹", title: "New Daily",    desc: "Fresh quiz Short on YouTube every day" },
-                  { icon: "⌨️", title: "Keyboard",     desc: "Press 1–4 to pick, Enter for next" },
-                ] as const).map(({ icon, title, desc }) => (
-                  <div key={title} className="rounded-xl p-3 border transition-colors"
-                    style={{ background: "#0d0d18", borderColor: "#1c1c2e" }}>
-                    <div className="text-xl mb-1.5 leading-none">{icon}</div>
-                    <div className="text-[11px] font-black text-white leading-none mb-1">{title}</div>
+                  { icon: "🎯", title: "Quiz + Answer", desc: "Instant explanations for every question", color: "#a855f7" },
+                  { icon: "🔥", title: "Streak Mode",   desc: "Answer daily — build your winning streak", color: "#f97316" },
+                  { icon: "📹", title: "Shorts Daily",  desc: "YouTube Short every day on @QuizBytesDaily", color: "#dc2626" },
+                ] as const).map(({ icon, title, desc, color }) => (
+                  <div key={title} className="rounded-xl p-3 border transition-all hover:border-opacity-60"
+                    style={{ background: "#0d0d18", borderColor: `${color}25` }}>
+                    <div className="text-lg mb-1.5 leading-none">{icon}</div>
+                    <div className="text-[11px] font-black leading-none mb-1" style={{ color }}>{title}</div>
                     <div className="text-[10px] leading-snug" style={{ color: "#475569" }}>{desc}</div>
                   </div>
                 ))}
@@ -1362,15 +1389,18 @@ export default function Home() {
             {dynCategories.map((cat) => {
               const active = activeCategory === cat;
               const col    = getCatColor(cat);
+              const cnt    = cat === "All" ? allSeries.length : (apiStats?.categories.find(c => c.name === cat)?.count ?? 0);
               return (
                 <button key={cat} onClick={() => handleCat(cat)}
-                  className="text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-xl border transition-all"
                   style={active
                     ? cat === "All"
                       ? { background: accent, borderColor: accent, color: "#000" }
-                      : { background: col.badge, borderColor: col.badge, color: col.text }
+                      : { background: col.badge, borderColor: col.badge, color: col.text, boxShadow: `0 0 12px ${col.badge}40` }
                     : { background: "transparent", borderColor: BORD, color: "#64748b" }}>
-                  {cat === "All" ? `All (${allSeries.length})` : cat}
+                  {cat !== "All" && <span>{CAT_EMOJI[cat] ?? "💡"}</span>}
+                  {cat === "All" ? "All" : cat}
+                  <span className="font-mono text-[10px] opacity-60">{cnt}</span>
                 </button>
               );
             })}
@@ -1494,15 +1524,86 @@ export default function Home() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t mt-12 py-8 text-center" style={{ borderColor: BORD }}>
-        <p className="text-sm text-slate-600">
-          <span className="font-bold" style={{ color: accent }}>QuizBytesDaily</span>
-          {" · "}
-          <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
-            className="hover:text-slate-400 transition-colors">YouTube</a>
-          {" · "}
-          One quiz every day
-        </p>
+      <footer className="border-t mt-16" style={{ borderColor: BORD, background: "#06060e" }}>
+        <div className="px-6 py-10" style={{ maxWidth: 1440, margin: "0 auto" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+
+            {/* Brand column */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg font-black" style={{ color: accent }}>QuizBytes Daily</span>
+              </div>
+              <p className="text-xs leading-relaxed mb-4" style={{ color: "#475569" }}>
+                Bite-sized tech quiz Shorts every day. Python, AI/ML, Algorithms, System Design — sharpen your edge in 60 seconds.
+              </p>
+              <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-85"
+                style={{ background: "#dc2626" }}>
+                <Ico.YT /> Subscribe on YouTube
+              </a>
+            </div>
+
+            {/* Topics column */}
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#334155" }}>Topics</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(apiStats?.categories ?? []).slice(0, 10).map((c) => {
+                  const col = getCatColor(c.name);
+                  return (
+                    <button key={c.name}
+                      onClick={() => { handleCat(c.name); document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
+                      className="text-[11px] px-2 py-0.5 rounded-md transition-colors hover:opacity-80"
+                      style={{ background: `${col.badge}20`, color: col.text, border: `1px solid ${col.badge}30` }}>
+                      {CAT_EMOJI[c.name] ?? "💡"} {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Stats column */}
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#334155" }}>Stats</p>
+              <div className="space-y-1.5">
+                {published > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-black text-white">{published}</span>
+                    <span style={{ color: "#475569" }}>quizzes published</span>
+                  </div>
+                )}
+                {(dynCategories.length - 1) > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-black text-white">{dynCategories.length - 1}</span>
+                    <span style={{ color: "#475569" }}>topic categories</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block shrink-0" />
+                  <span style={{ color: "#475569" }}>New quiz every day</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-black text-white">Free</span>
+                  <span style={{ color: "#475569" }}>forever — no signup needed</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-6"
+            style={{ borderTop: `1px solid ${BORD}` }}>
+            <p className="text-[11px]" style={{ color: "#334155" }}>
+              © {new Date().getFullYear()} QuizBytes Daily · quizbytes.dev
+            </p>
+            <div className="flex items-center gap-4 text-[11px]" style={{ color: "#334155" }}>
+              <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                className="hover:text-slate-400 transition-colors flex items-center gap-1">
+                <Ico.YT /> YouTube
+              </a>
+              <a href="https://quizbytes.dev" className="hover:text-slate-400 transition-colors">quizbytes.dev</a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );
