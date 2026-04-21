@@ -19,6 +19,9 @@ import {
   scheduleSeriesForDate,
   getBotState,
   setBotState,
+  resetStuckPublishing,
+  getQueuedForUpload,
+  setSeriesStatus,
 } from "@/lib/db";
 import { generateQuizSeries, type LayoutId } from "@/lib/quiz-generator";
 import {
@@ -314,6 +317,46 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
 
+      // ── /queue — show all queued + stuck series ───────────────────────────
+      if (text.startsWith("/queue")) {
+        const queued = await getQueuedForUpload();
+        if (queued.length === 0) {
+          await sendMessage("📭 <b>No series queued for upload.</b>\n\nApprove a quiz first or check if any are stuck with /fixstuck");
+        } else {
+          const lines = queued.map(
+            (s, i) => `${i + 1}. #${s.id} <b>${s.title}</b>\n   ${s.category} · ${s.difficulty} · ${s.scheduled_at ?? "no time set"}`
+          );
+          await sendMessage(`📋 <b>${queued.length} series queued for upload:</b>\n\n${lines.join("\n\n")}`);
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // ── /fixstuck — reset series stuck in 'publishing' ────────────────────
+      if (text.startsWith("/fixstuck")) {
+        const count = await resetStuckPublishing(0); // reset ALL stuck, regardless of age
+        if (count === 0) {
+          await sendMessage("✅ <b>No stuck series found.</b> Nothing to fix.");
+        } else {
+          await sendMessage(
+            `♻️ <b>Fixed ${count} stuck series</b> — reset from 'publishing' → 'queued'.\n\n` +
+            `They'll be uploaded at the next cron run (10 AM UTC), or you can trigger upload now from the admin panel.`
+          );
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      // ── /requeue ID — force a series back to 'queued' ─────────────────────
+      if (text.startsWith("/requeue")) {
+        const id = Number(text.slice("/requeue".length).trim());
+        if (!id) {
+          await sendMessage("Usage: /requeue 123\n\nForces a series back to 'queued' status so it will be picked up by the upload cron.");
+        } else {
+          await setSeriesStatus(id, "queued");
+          await sendMessage(`♻️ Series #${id} reset to 'queued'. It will upload at the next cron run (10 AM UTC).`);
+        }
+        return NextResponse.json({ ok: true });
+      }
+
       // ── /help or /start ───────────────────────────────────────────────────
       if (text.startsWith("/help") || text === "/start") {
         await sendMessage(
@@ -326,6 +369,9 @@ export async function POST(req: NextRequest) {
           `<b>Commands:</b>\n` +
           `/approve 123 — approve a specific series by ID\n` +
           `/status 123 — check upload status of a series\n` +
+          `/queue — list all series waiting to upload\n` +
+          `/fixstuck — reset any series stuck in 'publishing'\n` +
+          `/requeue 123 — force a specific series back to 'queued'\n` +
           `/topics — show hot topic suggestions\n` +
           `/help — show this message\n\n` +
           `<b>Custom topic:</b> Just type any topic text to generate it.\n` +

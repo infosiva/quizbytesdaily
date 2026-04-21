@@ -283,6 +283,25 @@ export async function setSeriesStatus(id: number, status: string): Promise<void>
   });
 }
 
+/**
+ * Reset series stuck in 'publishing' status back to 'queued'.
+ * This happens when a Vercel function hard-times-out mid-upload — the catch
+ * block never runs so the series is never reverted automatically.
+ * Call this at the top of each upload-scheduled cron run.
+ */
+export async function resetStuckPublishing(olderThanMinutes = 20): Promise<number> {
+  await ensureSchema();
+  const c = getClient();
+  const rs = await c.execute({
+    sql: `UPDATE series
+          SET status = 'queued', updated_at = datetime('now')
+          WHERE status = 'publishing'
+            AND updated_at <= datetime('now', '-${olderThanMinutes} minutes')`,
+    args: [],
+  });
+  return rs.rowsAffected ?? 0;
+}
+
 /** Get series that are queued and due for upload (scheduled_at <= now) */
 export async function getQueuedForUpload(): Promise<SeriesRow[]> {
   await ensureSchema();

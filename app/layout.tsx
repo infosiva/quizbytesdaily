@@ -1,4 +1,4 @@
-"video": { "url": `${SITE_URL}/og-video.mp4`, "width": 1920, "height": 1080, "type": "video/mp4" },import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";

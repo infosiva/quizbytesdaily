@@ -1,10 +1,11 @@
 // GET /api/cron/upload-scheduled
-// Vercel cron: runs hourly (9 AM – 4 PM UTC).
-// Finds the next queued series due for upload, renders it to MP4, and uploads to YouTube.
+// Vercel cron: runs at 10 AM UTC every day.
+// 1. Resets any series stuck in 'publishing' (from a previous timed-out run)
+// 2. Finds the next queued series due for upload, renders it to MP4, and uploads to YouTube.
 // Processes one video per invocation to stay within Vercel's function time limits.
 
 import { NextRequest, NextResponse } from "next/server";
-import { getQueuedForUpload, setSeriesStatus, updateSeriesYouTube } from "@/lib/db";
+import { getQueuedForUpload, setSeriesStatus, updateSeriesYouTube, resetStuckPublishing } from "@/lib/db";
 import { renderSeries } from "@/lib/video-renderer";
 import { sendMessage } from "@/lib/telegram";
 import fs from "fs";
@@ -109,7 +110,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Find the first series due for upload
+  // Step 1: Reset any series stuck in 'publishing' from a previous timed-out run
+  const reset = await resetStuckPublishing(20);
+  if (reset > 0) {
+    console.log(`[upload-scheduled] ♻️  Reset ${reset} stuck 'publishing' series back to 'queued'`);
+    await sendMessage(
+      `♻️ <b>Reset ${reset} stuck series</b> back to 'queued' — they were stuck in 'publishing' from a previous failed run. Will upload now.`
+    ).catch(() => {});
+  }
+
+  // Step 2: Find the first series due for upload
   const queue = await getQueuedForUpload();
   if (queue.length === 0) {
     return NextResponse.json({ ok: true, message: "No queued videos" });
