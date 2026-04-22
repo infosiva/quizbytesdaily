@@ -370,6 +370,7 @@ export default function SlidesPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [dbSeriesList, setDbSeriesList] = useState<DbSeriesMeta[]>([]);
   const [dbSlidesCache, setDbSlidesCache] = useState<Record<number, QuizSlide[]>>({});
+  const [slideScale, setSlideScale] = useState(1);
 
   // Static series
   const staticUnified: UnifiedSeries[] = ALL_SERIES.map((s) => ({
@@ -393,6 +394,17 @@ export default function SlidesPage() {
       .then((r) => r.json())
       .then((j) => setDbSeriesList(j.series ?? []))
       .catch(() => {/* silently ignore if DB not available */});
+  }, []);
+
+  // Responsive slide scaling — shrink the 360×640 slide preview on small screens
+  useEffect(() => {
+    const update = () => {
+      const available = window.innerWidth - 80; // subtract nav/padding
+      setSlideScale(Math.min(1, available / W));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   // Fetch + convert DB slides when a DB series is selected
@@ -555,27 +567,31 @@ export default function SlidesPage() {
             )}
           </div>
 
-          {/* Slide canvas */}
-          <div style={{
-            width: W, height: H, borderRadius: 20, overflow: "hidden",
-            boxShadow: isQuiz
-              ? "0 0 50px rgba(251,191,36,0.2), 0 0 0 1px #1e1e2e"
-              : isAnswer
-              ? "0 0 50px rgba(74,222,128,0.2), 0 0 0 1px #1e1e2e"
-              : isCta
-              ? "0 0 50px rgba(34,211,238,0.2), 0 0 0 1px #1e1e2e"
-              : "0 0 50px rgba(168,85,247,0.15), 0 0 0 1px #1e1e2e",
-          }}>
-            {currentSlide
-              ? <SlideRenderer slide={currentSlide} />
-              : <div style={{ width: W, height: H, display: "flex", alignItems: "center", justifyContent: "center", background: "#0d0d20", color: "#374151", fontSize: 13 }}>
-                  {series.isDb ? "Loading…" : "No slides"}
-                </div>
-            }
+          {/* Slide canvas — scales down on small screens */}
+          <div style={{ width: W * slideScale, height: H * slideScale, position: "relative", flexShrink: 0 }}>
+            <div style={{
+              width: W, height: H, borderRadius: 20, overflow: "hidden",
+              position: "absolute", top: 0, left: 0,
+              transform: `scale(${slideScale})`, transformOrigin: "top left",
+              boxShadow: isQuiz
+                ? "0 0 50px rgba(251,191,36,0.2), 0 0 0 1px #1e1e2e"
+                : isAnswer
+                ? "0 0 50px rgba(74,222,128,0.2), 0 0 0 1px #1e1e2e"
+                : isCta
+                ? "0 0 50px rgba(34,211,238,0.2), 0 0 0 1px #1e1e2e"
+                : "0 0 50px rgba(168,85,247,0.15), 0 0 0 1px #1e1e2e",
+            }}>
+              {currentSlide
+                ? <SlideRenderer slide={currentSlide} />
+                : <div style={{ width: W, height: H, display: "flex", alignItems: "center", justifyContent: "center", background: "#0d0d20", color: "#374151", fontSize: 13 }}>
+                    {series.isDb ? "Loading…" : "No slides"}
+                  </div>
+              }
+            </div>
           </div>
 
           {/* Progress bar — only visible while playing */}
-          <div style={{ width: W, height: 3, background: "#1e1e2e", borderRadius: 99, overflow: "hidden" }}>
+          <div style={{ width: W * slideScale, height: 3, background: "#1e1e2e", borderRadius: 99, overflow: "hidden" }}>
             {isPlaying && (
               <div
                 key={`${seriesIdx}-${slideIdx}`}
