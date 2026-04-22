@@ -1600,6 +1600,9 @@ export default function Home() {
                 className="hover:text-[#1A1A18] transition-colors flex items-center gap-1">
                 <Ico.YT /> YouTube
               </a>
+              <a href="/about" className="hover:text-[#1A1A18] transition-colors">About</a>
+              <a href="/privacy" className="hover:text-[#1A1A18] transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-[#1A1A18] transition-colors">Terms</a>
               <a href="https://quizbytes.dev" className="hover:text-[#1A1A18] transition-colors">quizbytes.dev</a>
             </div>
           </div>

@@ -455,6 +455,18 @@ export default function PlayPage() {
             </>
           )}
         </div>
+
+        {/* Footer */}
+        <div className="mt-12 pt-6 flex items-center justify-between flex-wrap gap-3" style={{ borderTop: "1px solid #1a1a28" }}>
+          <p className="text-[11px] text-slate-700">
+            © {new Date().getFullYear()} QuizBytes Daily · quizbytes.dev
+          </p>
+          <div className="flex items-center gap-4 text-[11px] text-slate-700">
+            <Link href="/about" className="hover:text-slate-400 transition-colors">About</Link>
+            <Link href="/privacy" className="hover:text-slate-400 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-slate-400 transition-colors">Terms</Link>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -10,8 +10,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now  = new Date().toISOString();
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: base,          lastModified: now, changeFrequency: "daily",  priority: 1.0 },
-    { url: `${base}/play`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: base,                          lastModified: now, changeFrequency: "daily",   priority: 1.0 },
+    { url: `${base}/play`,                lastModified: now, changeFrequency: "weekly",  priority: 0.9 },
+    { url: `${base}/quiz/python`,         lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/quiz/ai-ml`,          lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/quiz/algorithms`,     lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/quiz/javascript`,     lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/quiz/system-design`,  lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/quiz/typescript`,     lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/about`,               lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/privacy`,             lastModified: now, changeFrequency: "yearly",  priority: 0.5 },
+    { url: `${base}/terms`,               lastModified: now, changeFrequency: "yearly",  priority: 0.5 },
   ];
 
   // One entry per published series
