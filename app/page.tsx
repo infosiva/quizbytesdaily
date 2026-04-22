@@ -38,31 +38,31 @@ interface SiteSettings {
 type SortBy = "newest" | "oldest" | "az" | "za" | "category";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
-const BG   = "#0b0b12";
-const CARD = "#111118";
-const BORD = "#1c1c2e";
-const CYN  = "#22d3ee"; // module-level fallback used by sub-components
+const BG   = "#FAF9F6";
+const CARD = "#FFFFFF";
+const BORD = "#E8E0D5";
+const CYN  = "#D97757"; // primary accent (orange-coral)
 
-// ── Category colours ───────────────────────────────────────────────────────────
+// ── Category colours — light-mode badges (dark text on light badge) ─────────────
 const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
-  "Python":           { text: "#60a5fa", badge: "#1d4ed8" },
-  "Algorithms":       { text: "#c084fc", badge: "#6d28d9" },
-  "JavaScript":       { text: "#fbbf24", badge: "#b45309" },
-  "TypeScript":       { text: "#38bdf8", badge: "#0369a1" },
-  "AI/ML":            { text: "#22d3ee", badge: "#0e7490" },
-  "AI":               { text: "#22d3ee", badge: "#0e7490" },
-  "System Design":    { text: "#4ade80", badge: "#166534" },
-  "React":            { text: "#22d3ee", badge: "#164e63" },
-  "Docker":           { text: "#60a5fa", badge: "#1e3a8a" },
-  "Database":         { text: "#fb923c", badge: "#9a3412" },
-  "Machine Learning": { text: "#a78bfa", badge: "#4c1d95" },
-  "DevOps":           { text: "#34d399", badge: "#064e3b" },
-  "Data Structures":  { text: "#f472b6", badge: "#831843" },
+  "Python":           { text: "#1d4ed8", badge: "#dbeafe" },
+  "Algorithms":       { text: "#6d28d9", badge: "#ede9fe" },
+  "JavaScript":       { text: "#92400e", badge: "#fef3c7" },
+  "TypeScript":       { text: "#0369a1", badge: "#e0f2fe" },
+  "AI/ML":            { text: "#0e7490", badge: "#cffafe" },
+  "AI":               { text: "#0e7490", badge: "#cffafe" },
+  "System Design":    { text: "#166534", badge: "#dcfce7" },
+  "React":            { text: "#164e63", badge: "#cffafe" },
+  "Docker":           { text: "#1e3a8a", badge: "#dbeafe" },
+  "Database":         { text: "#7c2d12", badge: "#ffedd5" },
+  "Machine Learning": { text: "#4c1d95", badge: "#f5f3ff" },
+  "DevOps":           { text: "#064e3b", badge: "#d1fae5" },
+  "Data Structures":  { text: "#831843", badge: "#fce7f3" },
 };
 const _FALLBACK = [
-  { text: "#f472b6", badge: "#831843" }, { text: "#fb923c", badge: "#7c2d12" },
-  { text: "#a78bfa", badge: "#4c1d95" }, { text: "#34d399", badge: "#064e3b" },
-  { text: "#38bdf8", badge: "#0c4a6e" }, { text: "#fde047", badge: "#713f12" },
+  { text: "#831843", badge: "#fce7f3" }, { text: "#7c2d12", badge: "#ffedd5" },
+  { text: "#4c1d95", badge: "#f5f3ff" }, { text: "#064e3b", badge: "#d1fae5" },
+  { text: "#0c4a6e", badge: "#e0f2fe" }, { text: "#713f12", badge: "#fef9c3" },
 ];
 function getCatColor(name: string) {
   if (name in KNOWN_CAT) return KNOWN_CAT[name];
@@ -71,7 +71,7 @@ function getCatColor(name: string) {
 }
 
 const DIFF_COLOR: Record<string, string> = {
-  Beginner: "#4ade80", Intermediate: "#fbbf24", Advanced: "#f87171",
+  Beginner: "#059669", Intermediate: "#B45309", Advanced: "#DC2626",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -162,19 +162,19 @@ function SeriesCard({ series }: { series: SeriesItem }) {
 
   return (
     <div className="group flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1"
-      style={{ background: CARD, borderColor: BORD, boxShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
+      style={{ background: CARD, borderColor: BORD, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = `${col.badge}60`;
-        e.currentTarget.style.boxShadow   = `0 8px 32px ${col.badge}18`;
+        e.currentTarget.style.borderColor = `${col.badge}80`;
+        e.currentTarget.style.boxShadow   = `0 8px 24px rgba(0,0,0,0.10)`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = BORD;
-        e.currentTarget.style.boxShadow   = "0 2px 12px rgba(0,0,0,0.4)";
+        e.currentTarget.style.boxShadow   = "0 2px 8px rgba(0,0,0,0.06)";
       }}>
 
       {/* Thumbnail */}
       <a href={url} target="_blank" rel="noopener noreferrer"
-        className="block relative overflow-hidden bg-[#07070e]" style={{ aspectRatio: "16/9" }}>
+        className="block relative overflow-hidden bg-[#F4F0EB]" style={{ aspectRatio: "16/9" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={seriesThumbnail(series)} alt={series.title}
           className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
@@ -195,7 +195,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
           </span>
           {isNew && (
             <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded-md uppercase animate-pulse"
-              style={{ background: "#4ade8022", color: "#4ade80", border: "1px solid #4ade8050" }}>
+              style={{ background: "#dcfce7", color: "#059669", border: "1px solid #bbf7d0" }}>
               NEW
             </span>
           )}
@@ -237,24 +237,24 @@ function SeriesCard({ series }: { series: SeriesItem }) {
       {/* Card body */}
       <div className="flex flex-col flex-1 p-4">
         <a href={url} target="_blank" rel="noopener noreferrer" className="group/title">
-          <h3 className="text-[17px] font-extrabold text-white leading-snug line-clamp-2 mb-2 transition-colors group-hover/title:text-cyan-300">
+          <h3 className="text-[17px] font-extrabold text-[#1A1A18] leading-snug line-clamp-2 mb-2 transition-colors group-hover/title:text-[#D97757]">
             {series.title}
           </h3>
         </a>
 
         {series.topic && (
-          <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2 mb-3 flex-1">
+          <p className="text-[12px] text-[#6B6460] leading-relaxed line-clamp-2 mb-3 flex-1">
             {series.topic}
           </p>
         )}
 
-        <div className="flex items-center gap-3 text-[11px] text-slate-600 mb-3">
+        <div className="flex items-center gap-3 text-[11px] text-[#9B9490] mb-3">
           <span className="flex items-center gap-1">
             <Ico.Cal />{fmtDate(series.created_at)}
           </span>
           {slides > 0 && (
             <>
-              <span className="text-slate-700">·</span>
+              <span className="text-[#C8C2BB]">·</span>
               <span className="flex items-center gap-1">
                 <Ico.Slides />{slides} slides
               </span>
@@ -274,7 +274,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
               Watch Short
             </a>
           ) : (
-            <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-slate-600">
+            <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-[#6B6460]">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
               Coming Soon
             </span>
@@ -282,7 +282,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
           {/* Share button */}
           <button onClick={handleShare} title="Copy link"
             className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all hover:scale-110 shrink-0"
-            style={{ background: "#1c1c2e", color: "#475569", border: "1px solid #2a2a3e" }}>
+            style={{ background: "#F4F0EB", color: "#9B9490", border: "1px solid #E8E0D5" }}>
             ↗
           </button>
         </div>
@@ -300,19 +300,19 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
   const slides  = series.slide_count ?? 0;
 
   return (
-    <tr style={{ background: even ? "#0e0e18" : "#111118" }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "#14141f"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = even ? "#0e0e18" : "#111118"; }}>
+    <tr style={{ background: even ? "#F8F7F5" : "#FFFFFF" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "#F4F0EB"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = even ? "#F8F7F5" : "#FFFFFF"; }}>
 
       {/* Rank */}
-      <td className="text-center font-mono text-[12px] font-bold text-slate-700 py-3 pl-4 pr-2" style={{ width: 36 }}>
+      <td className="text-center font-mono text-[12px] font-bold text-[#9B9490] py-3 pl-4 pr-2" style={{ width: 36 }}>
         {rank}
       </td>
 
       {/* Thumbnail */}
       <td className="py-3 pr-3" style={{ width: 110 }}>
         <a href={url} target="_blank" rel="noopener noreferrer"
-          className="group/thumb relative block overflow-hidden rounded-lg bg-[#07070e]"
+          className="group/thumb relative block overflow-hidden rounded-lg bg-[#F4F0EB]"
           style={{ width: 104, aspectRatio: "16/9" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={seriesThumbnail(series)} alt={series.title}
@@ -333,12 +333,12 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
       {/* Title + topic */}
       <td className="py-3 pr-4">
         <a href={url} target="_blank" rel="noopener noreferrer" className="group/title">
-          <div className="text-[14px] font-bold text-slate-100 group-hover/title:text-cyan-300 transition-colors leading-snug line-clamp-1">
+          <div className="text-[14px] font-bold text-[#1A1A18] group-hover/title:text-[#D97757] transition-colors leading-snug line-clamp-1">
             {series.title}
           </div>
         </a>
         {series.topic && (
-          <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-1">{series.topic}</div>
+          <div className="text-[11px] text-[#9B9490] mt-0.5 line-clamp-1">{series.topic}</div>
         )}
       </td>
 
@@ -361,15 +361,15 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
       {/* Slides */}
       <td className="py-3 pr-4 hidden lg:table-cell text-center" style={{ width: 70 }}>
         {slides > 0 ? (
-          <span className="text-[12px] font-mono font-bold text-slate-500">{slides}</span>
+          <span className="text-[12px] font-mono font-bold text-[#6B6460]">{slides}</span>
         ) : (
-          <span className="text-[12px] text-slate-800">—</span>
+          <span className="text-[12px] text-[#C8C2BB]">—</span>
         )}
       </td>
 
       {/* Date */}
       <td className="py-3 pr-4 hidden sm:table-cell whitespace-nowrap" style={{ width: 90 }}>
-        <span className="text-[11px] font-mono text-slate-600">{fmtDateShort(series.created_at)}</span>
+        <span className="text-[11px] font-mono text-[#9B9490]">{fmtDateShort(series.created_at)}</span>
       </td>
 
       {/* Watch */}
@@ -382,8 +382,8 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
             <span className="hidden xl:inline"><Ico.External /></span>
           </a>
         ) : (
-          <span className="text-[10px] font-semibold px-2.5 py-1.5 rounded-lg text-amber-400/60"
-            style={{ background: "#451a0320", border: "1px solid #451a0340" }}>
+          <span className="text-[10px] font-semibold px-2.5 py-1.5 rounded-lg text-amber-600"
+            style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
             Soon
           </span>
         )}
@@ -409,14 +409,14 @@ interface QuizQ {
 }
 
 const LABELS       = ["A", "B", "C", "D"];
-const LABEL_COLORS = ["#22d3ee", "#a855f7", "#4ade80", "#f472b6"];
+const LABEL_COLORS = ["#2563EB", "#7C3AED", "#059669", "#DB2777"];
 // CAT_EMOJI is imported from @/lib/config — shared source of truth across all pages
 
 const QUIZ_DIFFS = [
-  { id: "All",          label: "All",       dot: "#94a3b8" },
-  { id: "Beginner",     label: "Beginner",  dot: "#4ade80" },
-  { id: "Intermediate", label: "Mid",       dot: "#fbbf24" },
-  { id: "Advanced",     label: "Adv",       dot: "#f87171" },
+  { id: "All",          label: "All",       dot: "#9B9490" },
+  { id: "Beginner",     label: "Beginner",  dot: "#059669" },
+  { id: "Intermediate", label: "Mid",       dot: "#B45309" },
+  { id: "Advanced",     label: "Adv",       dot: "#DC2626" },
 ];
 
 function filterAndShuffle(qs: QuizQ[], cat: string, diff: string): number[] {
@@ -620,23 +620,23 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
           {availCats.map((c) => {
             const cnt      = cCount(c.id);
             const isActive = activeCat === c.id;
-            const col      = c.id === "All" ? { text: "#e2e8f0", badge: "#334155" } : getCatColor(c.id);
+            const col      = c.id === "All" ? { text: "#1A1A18", badge: "#E8E0D5" } : getCatColor(c.id);
             if (cnt === 0 && c.id !== "All") return null;
             return (
               <button key={c.id} onClick={() => setActiveCat(c.id)}
                 className="inline-flex items-center gap-1 rounded-lg text-[11px] font-bold transition-all duration-150 shrink-0"
                 style={{
                   padding: "5px 11px",
-                  background: isActive ? col.badge : "#0e0e1c",
-                  color: isActive ? col.text : "#4b5563",
-                  border: `1.5px solid ${isActive ? col.badge : "#1c1c2e"}`,
-                  boxShadow: isActive ? `0 0 10px ${col.badge}40` : "none",
+                  background: isActive ? col.badge : "#F4F0EB",
+                  color: isActive ? col.text : "#6B6460",
+                  border: `1.5px solid ${isActive ? col.badge : "#E8E0D5"}`,
+                  boxShadow: "none",
                 }}>
                 <span className="text-xs leading-none">{c.emoji}</span>
                 <span className="font-black">{c.id === "All" ? "All" : c.id}</span>
                 {c.hasLive && (
                   <span className="text-[8px] font-black px-1 py-0.5 rounded"
-                    style={{ background: isActive ? "rgba(255,255,255,0.2)" : "#22d3ee18", color: isActive ? col.text : "#22d3ee" }}>
+                    style={{ background: isActive ? "rgba(255,255,255,0.5)" : "#dbeafe", color: isActive ? col.text : "#1d4ed8" }}>
                     LIVE
                   </span>
                 )}
@@ -657,14 +657,14 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                 className="inline-flex items-center gap-1.5 rounded-lg text-[11px] font-bold transition-all duration-150"
                 style={{
                   padding: "5px 11px",
-                  background: isActive ? `${d.dot}22` : "#0e0e1c",
-                  color: isActive ? d.dot : "#4b5563",
-                  border: `1.5px solid ${isActive ? d.dot : "#1c1c2e"}`,
-                  boxShadow: isActive ? `0 0 8px ${d.dot}30` : "none",
+                  background: isActive ? `${d.dot}18` : "#F4F0EB",
+                  color: isActive ? d.dot : "#6B6460",
+                  border: `1.5px solid ${isActive ? d.dot : "#E8E0D5"}`,
+                  boxShadow: "none",
                 }}>
                 {d.id !== "All" && (
                   <span className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: isActive ? d.dot : "#374151" }}/>
+                    style={{ background: isActive ? d.dot : "#D1CEC9" }}/>
                 )}
                 <span className="font-black">{d.label}</span>
                 <span className="font-mono text-[9px]" style={{ opacity: isActive ? 0.65 : 0.3 }}>{cnt}</span>
@@ -676,40 +676,40 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
 
       {/* ── Quiz card ── */}
       <div className="rounded-2xl border overflow-hidden flex flex-col"
-        style={{ background: "#0d0d1a", borderColor: "#1e1e30", boxShadow: "0 4px 40px rgba(168,85,247,0.15)" }}>
+        style={{ background: CARD, borderColor: BORD, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16">
-            <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"/>
-            <p className="text-xs text-slate-600">Loading questions…</p>
+            <div className="w-6 h-6 border-2 border-[#D97757]/30 border-t-[#D97757] rounded-full animate-spin"/>
+            <p className="text-xs text-[#9B9490]">Loading questions…</p>
           </div>
         ) : allQs.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
             <p className="text-2xl">🧩</p>
-            <p className="text-sm font-bold text-slate-400">Questions loading…</p>
-            <p className="text-xs text-slate-700">Check back in a moment.</p>
+            <p className="text-sm font-bold text-[#6B6460]">Questions loading…</p>
+            <p className="text-xs text-[#9B9490]">Check back in a moment.</p>
           </div>
         ) : roundDone ? (
           <div className="flex flex-col items-center justify-center py-10 px-6 text-center gap-2">
             <div className="text-5xl mb-2">{score === total ? "🏆" : score >= Math.ceil(total * 0.7) ? "🎉" : "💪"}</div>
-            <p className="text-lg font-black text-white">Round Complete!</p>
-            <p className="text-sm text-slate-300 font-bold">{score}/{total} correct
-              <span className="ml-2 font-mono text-xs px-2 py-0.5 rounded" style={{ background: "#4ade8015", color: "#4ade80" }}>
+            <p className="text-lg font-black text-[#1A1A18]">Round Complete!</p>
+            <p className="text-sm text-[#1A1A18] font-bold">{score}/{total} correct
+              <span className="ml-2 font-mono text-xs px-2 py-0.5 rounded" style={{ background: "#dcfce7", color: "#059669" }}>
                 {Math.round((score / total) * 100)}%
               </span>
             </p>
-            <p className="text-xs text-slate-600 mb-4">
+            <p className="text-xs text-[#9B9490] mb-4">
               {activeCat === "All" ? "All topics" : activeCat}{activeDiff !== "All" ? ` · ${activeDiff}` : ""}
             </p>
             <button onClick={startNewRound}
               className="px-7 py-2.5 rounded-xl text-sm font-black transition-all hover:opacity-85 hover:scale-105"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff",
-                boxShadow: "0 4px 20px rgba(168,85,247,0.35)" }}>
+              style={{ background: "linear-gradient(135deg,#D97757,#C5653F)", color: "#fff",
+                boxShadow: "0 4px 20px rgba(217,119,87,0.30)" }}>
               Play Again →
             </button>
             <button onClick={() => document.getElementById("question-bank")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-[11px] font-bold transition-colors hover:text-slate-300 mt-1"
-              style={{ color: "#22d3ee" }}>
+              className="text-[11px] font-bold transition-colors hover:text-[#1A1A18] mt-1"
+              style={{ color: CYN }}>
               Browse all Q&amp;A ↓
             </button>
           </div>
@@ -717,7 +717,7 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
           <>
             {/* Header bar */}
             <div className="flex items-center justify-between px-4 py-3 border-b"
-              style={{ borderColor: "#1a1a28", background: "#09091550" }}>
+              style={{ borderColor: BORD, background: "#F8F7F5" }}>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg"
                   style={{ background: `${catCol.badge}35`, color: catCol.text, border: `1px solid ${catCol.badge}55` }}>
@@ -730,40 +730,40 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
               <div className="flex items-center gap-2.5">
                 {score > 0 && (
                   <span className="text-xs font-black font-mono px-2 py-0.5 rounded-lg"
-                    style={{ background: "#4ade8018", color: "#4ade80", border: "1px solid #4ade8035" }}>
+                    style={{ background: "#dcfce7", color: "#059669", border: "1px solid #bbf7d0" }}>
                     {score} ✓
                   </span>
                 )}
-                <span className="text-xs font-black font-mono" style={{ color: "#475569" }}>
+                <span className="text-xs font-black font-mono" style={{ color: "#9B9490" }}>
                   Q {qNum}/{total}
                 </span>
                 <button onClick={startNewRound} title="Restart" aria-label="Restart round"
-                  className="text-slate-700 hover:text-slate-400 transition-colors text-sm px-1">↺</button>
+                  className="text-[#9B9490] hover:text-[#6B6460] transition-colors text-sm px-1">↺</button>
               </div>
             </div>
 
             {/* Code block */}
             {q.type === "code" && q.code && (
-              <div className="mx-4 mt-3 rounded-xl overflow-hidden border" style={{ borderColor: "#1e3a5f", background: "#060c14" }}>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 border-b" style={{ borderColor: "#0e2040", background: "#0a1020" }}>
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/70"/>
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70"/>
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500/70"/>
-                  <span className="text-[10px] font-mono text-slate-500 ml-1.5">{q.language ?? "code"}</span>
+              <div className="mx-4 mt-3 rounded-xl overflow-hidden border" style={{ borderColor: "#E8E0D5", background: "#F4F0EB" }}>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 border-b" style={{ borderColor: "#E8E0D5", background: "#EEEBE6" }}>
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400"/>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400"/>
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500"/>
+                  <span className="text-[10px] font-mono text-[#9B9490] ml-1.5">{q.language ?? "code"}</span>
                   {chosen === null && codeCountdown !== null && (
-                    <span className="ml-auto text-[10px] font-mono" style={{ color: codeCountdown <= 3 ? "#f87171" : "#475569" }}>
+                    <span className="ml-auto text-[10px] font-mono" style={{ color: codeCountdown <= 3 ? "#DC2626" : "#9B9490" }}>
                       answer reveals in {codeCountdown}s
                     </span>
                   )}
                 </div>
-                <pre className="text-xs leading-5 p-3.5 overflow-x-auto text-slate-300 font-mono whitespace-pre">{q.code}</pre>
+                <pre className="text-xs leading-5 p-3.5 overflow-x-auto text-[#1A1A18] font-mono whitespace-pre">{q.code}</pre>
                 {/* Countdown bar — depletes as timer ticks down */}
                 {chosen === null && codeCountdown !== null && (
-                  <div style={{ height: 3, background: "#0a1525" }}>
+                  <div style={{ height: 3, background: "#E8E0D5" }}>
                     <div style={{
                       height: "100%",
                       width: `${(codeCountdown / 10) * 100}%`,
-                      background: codeCountdown <= 3 ? "#f87171" : "#22d3ee",
+                      background: codeCountdown <= 3 ? "#DC2626" : "#D97757",
                       transition: "width 1s linear, background 0.3s",
                     }}/>
                   </div>
@@ -773,9 +773,9 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
 
             {/* Question */}
             <div className="px-4 pt-4 pb-3">
-              <p className="text-base font-black text-white leading-snug">{q.q}</p>
+              <p className="text-base font-black text-[#1A1A18] leading-snug">{q.q}</p>
               {chosen === null && (
-                <p className="text-[11px] text-slate-600 mt-1.5">Pick the best answer</p>
+                <p className="text-[11px] text-[#9B9490] mt-1.5">Pick the best answer</p>
               )}
             </div>
 
@@ -786,27 +786,27 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                 const isChosen  = i === chosen;
                 const revealed  = chosen !== null;
                 const lColor    = LABEL_COLORS[i];
-                let bg = "#111120", bord = "#1e1e2e", txt = "#cbd5e1";
+                let bg = "#FAFAF8", bord = "#E8E0D5", txt = "#1A1A18";
                 if (!revealed) {
                   // nothing extra
                 } else if (isCorrect) {
-                  bg = "#4ade8014"; bord = "#4ade8055"; txt = "#4ade80";
+                  bg = "#dcfce7"; bord = "#86efac"; txt = "#059669";
                 } else if (isChosen) {
-                  bg = "#f8717114"; bord = "#f8717155"; txt = "#f87171";
+                  bg = "#fee2e2"; bord = "#fca5a5"; txt = "#DC2626";
                 } else {
-                  bg = "#0a0a16"; bord = "#13131f"; txt = "#334155";
+                  bg = "#F8F7F5"; bord = "#E8E0D5"; txt = "#9B9490";
                 }
                 return (
                   <button key={i} onClick={() => pick(i)} disabled={revealed}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all"
                     style={{ background: bg, border: `1px solid ${bord}`, color: txt,
                       cursor: revealed ? "default" : "pointer",
-                      boxShadow: !revealed ? "none" : isCorrect ? "0 0 12px #4ade8020" : isChosen ? "0 0 12px #f8717120" : "none" }}>
+                      boxShadow: "none" }}>
                     <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black"
                       style={{
-                        background: revealed ? "transparent" : `${lColor}18`,
-                        border: `2px solid ${revealed ? (isCorrect ? "#4ade80" : isChosen ? "#f87171" : "#1e1e2e") : lColor}`,
-                        color:   revealed ? (isCorrect ? "#4ade80" : isChosen ? "#f87171" : "#334155") : lColor,
+                        background: revealed ? "transparent" : `${lColor}12`,
+                        border: `2px solid ${revealed ? (isCorrect ? "#059669" : isChosen ? "#DC2626" : "#E8E0D5") : lColor}`,
+                        color:   revealed ? (isCorrect ? "#059669" : isChosen ? "#DC2626" : "#9B9490") : lColor,
                       }}>
                       {LABELS[i]}
                     </span>
@@ -822,13 +822,13 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
             {chosen !== null && (
               <div className="px-4 pb-4 pt-1 space-y-2.5">
                 <div className="rounded-xl px-4 py-3 text-xs leading-relaxed"
-                  style={{ background: "#071410", border: "1px solid #4ade8025", color: "#94a3b8" }}>
-                  <span className="font-black text-green-400">Why: </span>{q.exp}
+                  style={{ background: "#F0FDF4", border: "1px solid #bbf7d0", color: "#6B6460" }}>
+                  <span className="font-black text-[#059669]">Why: </span>{q.exp}
                 </div>
                 <button onClick={next}
                   className="w-full py-2.5 rounded-xl text-sm font-black tracking-wide transition-all hover:opacity-85 relative overflow-hidden"
-                  style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff",
-                    boxShadow: "0 4px 16px rgba(168,85,247,0.3)" }}>
+                  style={{ background: "linear-gradient(135deg,#D97757,#C5653F)", color: "#fff",
+                    boxShadow: "0 4px 16px rgba(217,119,87,0.25)" }}>
                   {advanceIn !== null ? `Next in ${advanceIn}s →` : "Next Question →"}
                   {/* Auto-advance progress bar */}
                   {advanceIn !== null && (
@@ -851,8 +851,8 @@ function EmptyState({ message }: { message: string }) {
     <div className="flex flex-col items-center justify-center py-24 text-center px-6">
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
         style={{ background: `${CYN}12`, border: `1px solid ${CYN}30` }}>🎬</div>
-      <p className="text-base font-bold text-white mb-1">No quizzes found</p>
-      <p className="text-sm text-slate-500 max-w-xs">{message}</p>
+      <p className="text-base font-bold text-[#1A1A18] mb-1">No quizzes found</p>
+      <p className="text-sm text-[#6B6460] max-w-xs">{message}</p>
     </div>
   );
 }
@@ -887,8 +887,8 @@ function QuestionBrowser() {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-10">
-        <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"/>
-        <span className="text-xs text-slate-600">Loading questions…</span>
+        <div className="w-4 h-4 border-2 border-[#D97757]/30 border-t-[#D97757] rounded-full animate-spin"/>
+        <span className="text-xs text-[#9B9490]">Loading questions…</span>
       </div>
     );
   }
@@ -900,7 +900,7 @@ function QuestionBrowser() {
         style={{ scrollbarWidth: "none" } as React.CSSProperties}>
         {cats.map((cat) => {
           const isActive = activeCat === cat;
-          const col      = cat === "All" ? { text: "#e2e8f0", badge: "#334155" } : getCatColor(cat);
+          const col      = cat === "All" ? { text: "#1A1A18", badge: "#E8E0D5" } : getCatColor(cat);
           const count    = cat === "All" ? allQs.length : allQs.filter((q) => q.cat === cat).length;
           return (
             <button key={cat}
@@ -908,10 +908,10 @@ function QuestionBrowser() {
               className="inline-flex items-center gap-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 shrink-0"
               style={{
                 padding: "5px 12px",
-                background: isActive ? col.badge : "#0e0e1c",
-                color: isActive ? col.text : "#4b5563",
-                border: `1.5px solid ${isActive ? col.badge : "#1c1c2e"}`,
-                boxShadow: isActive ? `0 0 10px ${col.badge}40` : "none",
+                background: isActive ? col.badge : "#F4F0EB",
+                color: isActive ? col.text : "#6B6460",
+                border: `1.5px solid ${isActive ? col.badge : "#E8E0D5"}`,
+                boxShadow: "none",
               }}>
               <span>{cat === "All" ? "🌐" : (CAT_EMOJI[cat] ?? "💡")}</span>
               <span className="font-black">{cat === "All" ? "All Topics" : cat}</span>
@@ -930,9 +930,9 @@ function QuestionBrowser() {
           return (
             <div key={id} className="rounded-xl border transition-all overflow-hidden"
               style={{
-                background: "#0d0d1a",
-                borderColor: isOpen ? `${col.badge}80` : "#1c1c2e",
-                boxShadow: isOpen ? `0 0 20px ${col.badge}20` : "none",
+                background: CARD,
+                borderColor: isOpen ? `${col.badge}80` : BORD,
+                boxShadow: isOpen ? `0 2px 12px rgba(0,0,0,0.08)` : "none",
               }}>
 
               {/* Question row — click to toggle */}
@@ -950,23 +950,23 @@ function QuestionBrowser() {
                     </span>
                     {q.live && (
                       <span className="text-[9px] font-black px-1.5 py-0.5 rounded"
-                        style={{ background: "#22d3ee18", color: "#22d3ee" }}>LIVE</span>
+                        style={{ background: "#dbeafe", color: "#1d4ed8" }}>LIVE</span>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-slate-200 leading-snug">{q.q}</p>
+                  <p className="text-sm font-semibold text-[#1A1A18] leading-snug">{q.q}</p>
                 </div>
                 <span className="shrink-0 text-xs mt-1 transition-colors"
-                  style={{ color: isOpen ? col.text : "#374151" }}>
+                  style={{ color: isOpen ? col.text : "#9B9490" }}>
                   {isOpen ? "▲" : "▼"}
                 </span>
               </button>
 
               {/* Answer reveal */}
               {isOpen && (
-                <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: "#1a1a2a" }}>
+                <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: BORD }}>
                   {q.type === "code" && q.code && (
-                    <pre className="text-xs leading-5 px-3 py-2.5 mb-3 rounded-lg overflow-x-auto text-slate-300 font-mono whitespace-pre"
-                      style={{ background: "#060c14", border: "1px solid #1e3a5f" }}>
+                    <pre className="text-xs leading-5 px-3 py-2.5 mb-3 rounded-lg overflow-x-auto text-[#1A1A18] font-mono whitespace-pre"
+                      style={{ background: "#F4F0EB", border: "1px solid #E8E0D5" }}>
                       {q.code}
                     </pre>
                   )}
@@ -976,14 +976,14 @@ function QuestionBrowser() {
                       return (
                         <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm"
                           style={{
-                            background: isCorrect ? "#4ade8014" : "#090912",
-                            border: `1px solid ${isCorrect ? "#4ade8040" : "#131325"}`,
-                            color: isCorrect ? "#4ade80" : "#475569",
+                            background: isCorrect ? "#dcfce7" : "#F8F7F5",
+                            border: `1px solid ${isCorrect ? "#86efac" : "#E8E0D5"}`,
+                            color: isCorrect ? "#059669" : "#6B6460",
                           }}>
                           <span className="w-5 h-5 flex items-center justify-center rounded-full shrink-0 text-[10px] font-black"
                             style={{
-                              border: `2px solid ${isCorrect ? "#4ade80" : "#1e1e2e"}`,
-                              color: isCorrect ? "#4ade80" : "#2d3748",
+                              border: `2px solid ${isCorrect ? "#059669" : "#E8E0D5"}`,
+                              color: isCorrect ? "#059669" : "#9B9490",
                             }}>
                             {LABELS[i]}
                           </span>
@@ -995,8 +995,8 @@ function QuestionBrowser() {
                   </div>
                   {q.exp && (
                     <div className="rounded-lg px-3 py-2.5 text-xs leading-relaxed"
-                      style={{ background: "#071410", border: "1px solid #4ade8020", color: "#94a3b8" }}>
-                      <span className="font-black text-green-400">Why: </span>{q.exp}
+                      style={{ background: "#F0FDF4", border: "1px solid #bbf7d0", color: "#6B6460" }}>
+                      <span className="font-black text-[#059669]">Why: </span>{q.exp}
                     </div>
                   )}
                 </div>
@@ -1007,7 +1007,7 @@ function QuestionBrowser() {
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center py-10 text-xs text-slate-600">No questions in this category yet — check back soon!</p>
+        <p className="text-center py-10 text-xs text-[#9B9490]">No questions in this category yet — check back soon!</p>
       )}
     </div>
   );
@@ -1118,7 +1118,7 @@ export default function Home() {
   const published = apiStats?.published ?? 0;
 
   return (
-    <div className="min-h-screen" style={{ background: BG, color: "#e2e8f0" }}>
+    <div className="min-h-screen" style={{ background: BG, color: "#1A1A18" }}>
 
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 border-b"
@@ -1177,7 +1177,7 @@ export default function Home() {
               {/* Daily focus chip + live badge */}
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black tracking-widest uppercase"
-                  style={{ borderColor: "#22d3ee30", background: "#22d3ee0e", color: "#22d3ee" }}>
+                  style={{ borderColor: `${CYN}40`, background: `${CYN}10`, color: CYN }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>
                   New quiz every day
                 </div>
@@ -1190,18 +1190,18 @@ export default function Home() {
               {/* Headline */}
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none mb-2">
                 <span style={{
-                  background: `linear-gradient(135deg, ${hCol.text} 0%, #a855f7 50%, #f472b6 100%)`,
+                  background: `linear-gradient(135deg, ${CYN} 0%, ${hCol.text} 100%)`,
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
                   transition: "all 0.5s",
                 }}>
                   Test Your Tech
                 </span>
                 {" "}
-                <span className="text-white">Knowledge Daily</span>
+                <span className="text-[#1A1A18]">Knowledge Daily</span>
               </h1>
 
               {/* Tagline — category-aware */}
-              <p className="text-sm text-slate-400 mb-3 leading-relaxed max-w-sm">
+              <p className="text-sm text-[#6B6460] mb-3 leading-relaxed max-w-sm">
                 {tagline}
                 <br />60 seconds to sharpen your edge.
               </p>
@@ -1211,30 +1211,30 @@ export default function Home() {
                 {published > 0 && (
                   <>
                     <span className="flex items-center gap-1">
-                      <span className="font-black" style={{ color: "#22d3ee" }}>{published}</span>
-                      <span className="text-slate-600">Quizzes</span>
+                      <span className="font-black" style={{ color: CYN }}>{published}</span>
+                      <span className="text-[#9B9490]">Quizzes</span>
                     </span>
-                    <span className="text-slate-800">·</span>
+                    <span className="text-[#C8C2BB]">·</span>
                   </>
                 )}
                 {dynCategories.length > 1 && (
                   <>
                     <span className="flex items-center gap-1">
-                      <span className="font-black text-white">{dynCategories.length - 1}</span>
-                      <span className="text-slate-600">Topic{dynCategories.length - 1 !== 1 ? "s" : ""}</span>
+                      <span className="font-black text-[#1A1A18]">{dynCategories.length - 1}</span>
+                      <span className="text-[#9B9490]">Topic{dynCategories.length - 1 !== 1 ? "s" : ""}</span>
                     </span>
-                    <span className="text-slate-800">·</span>
+                    <span className="text-[#C8C2BB]">·</span>
                   </>
                 )}
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />
+                <span className="flex items-center gap-1.5 text-[#9B9490]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
                   Daily uploads
                 </span>
-                <span className="text-slate-800">·</span>
-                <span className="text-slate-600">Free</span>
+                <span className="text-[#C8C2BB]">·</span>
+                <span className="text-[#9B9490]">Free</span>
                 {streak > 0 && (
                   <>
-                    <span className="text-slate-800">·</span>
+                    <span className="text-[#C8C2BB]">·</span>
                     <span className="flex items-center gap-1 font-bold" style={{ color: "#f97316" }}>
                       🔥 {streak} day{streak !== 1 ? "s" : ""} streak
                     </span>
@@ -1251,7 +1251,7 @@ export default function Home() {
                 </a>
                 <button onClick={() => { document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105"
-                  style={{ borderColor: "#22d3ee40", color: "#22d3ee", background: "#22d3ee0e" }}>
+                  style={{ borderColor: `${CYN}50`, color: CYN, background: `${CYN}10` }}>
                   Browse Quizzes ↓
                 </button>
               </div>
@@ -1283,10 +1283,10 @@ export default function Home() {
                   { icon: "📹", title: "Shorts Daily",  desc: "YouTube Short every day on @QuizBytesDaily", color: "#dc2626" },
                 ] as const).map(({ icon, title, desc, color }) => (
                   <div key={title} className="rounded-xl p-3 border transition-all hover:border-opacity-60"
-                    style={{ background: "#0d0d18", borderColor: `${color}25` }}>
+                    style={{ background: "#FAFAF8", borderColor: `${color}30` }}>
                     <div className="text-lg mb-1.5 leading-none">{icon}</div>
                     <div className="text-[11px] font-black leading-none mb-1" style={{ color }}>{title}</div>
-                    <div className="text-[10px] leading-snug" style={{ color: "#475569" }}>{desc}</div>
+                    <div className="text-[10px] leading-snug" style={{ color: "#6B6460" }}>{desc}</div>
                   </div>
                 ))}
               </div>
@@ -1294,7 +1294,7 @@ export default function Home() {
               {/* Mobile quiz CTA — only below md (quiz is hidden on mobile in right col) */}
               <button onClick={() => { document.getElementById("mobile-quiz")?.scrollIntoView({ behavior: "smooth" }); }}
                 className="lg:hidden mt-4 w-full py-2.5 rounded-xl text-sm font-black border transition-all hover:scale-105"
-                style={{ borderColor: "#a855f740", color: "#a855f7", background: "#a855f712" }}>
+                style={{ borderColor: `${CYN}40`, color: CYN, background: `${CYN}10` }}>
                 🧩 Play Quiz Now ↓
               </button>
             </div>
@@ -1311,19 +1311,19 @@ export default function Home() {
 
       {/* ── Mobile quiz (replaces right-column widget on small screens) ── */}
       <div id="mobile-quiz" className="lg:hidden border-b px-6 py-6"
-        style={{ borderColor: BORD, background: "#07070f" }}>
-        <p className="text-sm font-black text-white mb-3">🧩 Play the Quiz</p>
+        style={{ borderColor: BORD, background: CARD }}>
+        <p className="text-sm font-black text-[#1A1A18] mb-3">🧩 Play the Quiz</p>
         <QuizWidget onStreak={setStreak} />
       </div>
 
       {/* ── Question Bank browser ── */}
       <div id="question-bank" className="border-b py-8 px-6"
-        style={{ borderColor: BORD, background: "#08080f" }}>
+        style={{ borderColor: BORD, background: BG }}>
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="flex items-baseline justify-between mb-5">
             <div>
-              <h2 className="text-lg font-black text-white">🧩 Question Bank</h2>
-              <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
+              <h2 className="text-lg font-black text-[#1A1A18]">🧩 Question Bank</h2>
+              <p className="text-xs mt-0.5" style={{ color: "#6B6460" }}>
                 Browse all questions — click any card to reveal the answer &amp; explanation
               </p>
             </div>
@@ -1334,7 +1334,7 @@ export default function Home() {
 
       {/* ── Ad unit: between hero and content ── */}
       {process.env.NEXT_PUBLIC_ADSENSE_SLOT_1 && (
-        <div className="border-b py-3 px-6" style={{ borderColor: BORD, background: "#080810" }}>
+        <div className="border-b py-3 px-6" style={{ borderColor: BORD, background: BG }}>
           <div style={{ maxWidth: 1440, margin: "0 auto" }}>
             <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_1} />
           </div>
@@ -1342,7 +1342,7 @@ export default function Home() {
       )}
 
       {/* ── Stats + Search strip ── */}
-      <div className="border-b" style={{ borderColor: BORD, background: "#07071088" }}>
+      <div className="border-b" style={{ borderColor: BORD, background: "#F4F0EB" }}>
         <div className="flex items-center gap-3 px-6 py-2.5 overflow-x-auto"
           style={{ maxWidth: 1440, margin: "0 auto" }}>
           {showStats && published > 0 && (
@@ -1350,24 +1350,24 @@ export default function Home() {
               <span className="flex items-center gap-1 text-xs font-semibold whitespace-nowrap shrink-0" style={{ color: accent }}>
                 <span className="font-black">{published}</span> Videos
               </span>
-              <span className="text-slate-800 shrink-0">·</span>
-              <span className="text-xs text-slate-600 whitespace-nowrap shrink-0">Daily quiz Shorts</span>
-              <span className="text-slate-800 shrink-0">·</span>
+              <span className="text-[#C8C2BB] shrink-0">·</span>
+              <span className="text-xs text-[#9B9490] whitespace-nowrap shrink-0">Daily quiz Shorts</span>
+              <span className="text-[#C8C2BB] shrink-0">·</span>
             </>
           )}
           {/* Inline search */}
           <div className="flex items-center gap-2 rounded-lg px-3 py-0 border flex-1 min-w-0 transition-colors"
-            style={{ background: "#0d0d1a", borderColor: searchQuery ? `${accent}60` : "#1c1c2e",
+            style={{ background: CARD, borderColor: searchQuery ? `${accent}60` : BORD,
               boxShadow: searchQuery ? `0 0 0 2px ${accent}10` : "none", height: 36 }}>
-            <span style={{ color: searchQuery ? accent : "#374151", transition: "color 0.15s", flexShrink: 0 }}>
+            <span style={{ color: searchQuery ? accent : "#9B9490", transition: "color 0.15s", flexShrink: 0 }}>
               <Ico.Search />
             </span>
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search — Python, RAG, binary search…"
-              className="bg-transparent text-sm text-white placeholder-slate-700 outline-none flex-1 min-w-0" />
+              className="bg-transparent text-sm text-[#1A1A18] placeholder-[#C8C2BB] outline-none flex-1 min-w-0" />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")}
-                className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-500 hover:text-white text-xs">✕</button>
+                className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-black/5 text-[#9B9490] hover:text-[#1A1A18] text-xs">✕</button>
             )}
           </div>
           <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
@@ -1397,7 +1397,7 @@ export default function Home() {
                     ? cat === "All"
                       ? { background: accent, borderColor: accent, color: "#000" }
                       : { background: col.badge, borderColor: col.badge, color: col.text, boxShadow: `0 0 12px ${col.badge}40` }
-                    : { background: "transparent", borderColor: BORD, color: "#64748b" }}>
+                    : { background: "transparent", borderColor: BORD, color: "#9B9490" }}>
                   {cat !== "All" && <span>{CAT_EMOJI[cat] ?? "💡"}</span>}
                   {cat === "All" ? "All" : cat}
                   <span className="font-mono text-[10px] opacity-60">{cnt}</span>
@@ -1410,13 +1410,13 @@ export default function Home() {
           <div className="flex items-center gap-2 shrink-0">
 
             {/* Sort dropdown */}
-            <div className="flex items-center gap-1.5 text-slate-500">
+            <div className="flex items-center gap-1.5 text-[#9B9490]">
               <Ico.Sort />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortBy)}
                 className="text-[12px] font-semibold outline-none rounded-xl border px-2.5 py-1.5 appearance-none cursor-pointer transition-colors"
-                style={{ background: CARD, borderColor: BORD, color: "#94a3b8", minWidth: 130 }}>
+                style={{ background: CARD, borderColor: BORD, color: "#9B9490", minWidth: 130 }}>
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="az">A → Z</option>
@@ -1427,15 +1427,15 @@ export default function Home() {
 
             {/* View toggle */}
             <div className="flex items-center gap-1 rounded-xl border p-1"
-              style={{ borderColor: BORD, background: "#080810" }}>
+              style={{ borderColor: BORD, background: "#F4F0EB" }}>
               <button onClick={() => setViewMode("table")} className="p-2 rounded-lg transition-all"
                 title="Table view"
-                style={viewMode === "table" ? { background: `${accent}20`, color: accent } : { color: "#475569" }}>
+                style={viewMode === "table" ? { background: `${accent}20`, color: accent } : { color: "#9B9490" }}>
                 <Ico.Table />
               </button>
               <button onClick={() => setViewMode("grid")} className="p-2 rounded-lg transition-all"
                 title="Grid view"
-                style={viewMode === "grid" ? { background: `${accent}20`, color: accent } : { color: "#475569" }}>
+                style={viewMode === "grid" ? { background: `${accent}20`, color: accent } : { color: "#9B9490" }}>
                 <Ico.Grid />
               </button>
             </div>
@@ -1447,7 +1447,7 @@ export default function Home() {
 
         {/* Results count */}
         {(searchQuery || activeCategory !== "All") && filtered.length > 0 && (
-          <p className="text-sm text-slate-500 mb-4">
+          <p className="text-sm text-[#6B6460] mb-4">
             {filtered.length} quiz{filtered.length !== 1 ? "zes" : ""}
             {searchQuery && ` matching "${searchQuery}"`}
             {activeCategory !== "All" && ` in ${activeCategory}`}
@@ -1473,15 +1473,15 @@ export default function Home() {
           <div className="rounded-2xl border overflow-hidden" style={{ borderColor: BORD }}>
             <table className="w-full border-collapse">
               <thead>
-                <tr style={{ background: "#0d0d1a", borderBottom: `1px solid ${BORD}` }}>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pl-4 pr-2" style={{ width: 36 }}>#</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-3" style={{ width: 110 }}>Thumb</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4">Title</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden sm:table-cell" style={{ width: 130 }}>Category</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden md:table-cell" style={{ width: 110 }}>Difficulty</th>
-                  <th className="text-center text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden lg:table-cell" style={{ width: 70 }}>Slides</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4 hidden sm:table-cell" style={{ width: 90 }}>Date</th>
-                  <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-700 py-2.5 pr-4" style={{ width: 120 }}>Watch</th>
+                <tr style={{ background: "#F4F0EB", borderBottom: `1px solid ${BORD}` }}>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pl-4 pr-2" style={{ width: 36 }}>#</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-3" style={{ width: 110 }}>Thumb</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4">Title</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden sm:table-cell" style={{ width: 130 }}>Category</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden md:table-cell" style={{ width: 110 }}>Difficulty</th>
+                  <th className="text-center text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden lg:table-cell" style={{ width: 70 }}>Slides</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden sm:table-cell" style={{ width: 90 }}>Date</th>
+                  <th className="text-right text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4" style={{ width: 120 }}>Watch</th>
                 </tr>
               </thead>
               <tbody style={{ borderTop: `1px solid ${BORD}` }}>
@@ -1497,7 +1497,7 @@ export default function Home() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors disabled:opacity-30"
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[#9B9490] hover:text-[#1A1A18] transition-colors disabled:opacity-30"
               style={{ background: CARD, border: `1px solid ${BORD}` }}>←</button>
             {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
               // Show pages around current page
@@ -1512,19 +1512,19 @@ export default function Home() {
                 className="w-9 h-9 rounded-xl text-sm font-bold font-mono transition-all"
                 style={page === n
                   ? { background: accent, color: "#000" }
-                  : { background: CARD, color: "#64748b", border: `1px solid ${BORD}` }}>
+                  : { background: CARD, color: "#9B9490", border: `1px solid ${BORD}` }}>
                 {n}
               </button>
             ))}
             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-colors disabled:opacity-30"
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[#9B9490] hover:text-[#1A1A18] transition-colors disabled:opacity-30"
               style={{ background: CARD, border: `1px solid ${BORD}` }}>→</button>
           </div>
         )}
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t mt-16" style={{ borderColor: BORD, background: "#06060e" }}>
+      <footer className="border-t mt-16" style={{ borderColor: BORD, background: "#F4F0EB" }}>
         <div className="px-6 py-10" style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
 
@@ -1533,7 +1533,7 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-lg font-black" style={{ color: accent }}>QuizBytes Daily</span>
               </div>
-              <p className="text-xs leading-relaxed mb-4" style={{ color: "#475569" }}>
+              <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B6460" }}>
                 Bite-sized tech quiz Shorts every day. Python, AI/ML, Algorithms, System Design — sharpen your edge in 60 seconds.
               </p>
               <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
@@ -1545,7 +1545,7 @@ export default function Home() {
 
             {/* Topics column */}
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#334155" }}>Topics</p>
+              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#9B9490" }}>Topics</p>
               <div className="flex flex-wrap gap-1.5">
                 {(apiStats?.categories ?? []).slice(0, 10).map((c) => {
                   const col = getCatColor(c.name);
@@ -1563,27 +1563,27 @@ export default function Home() {
 
             {/* Stats column */}
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#334155" }}>Stats</p>
+              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#9B9490" }}>Stats</p>
               <div className="space-y-1.5">
                 {published > 0 && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-black text-white">{published}</span>
-                    <span style={{ color: "#475569" }}>quizzes published</span>
+                    <span className="font-black text-[#1A1A18]">{published}</span>
+                    <span style={{ color: "#6B6460" }}>quizzes published</span>
                   </div>
                 )}
                 {(dynCategories.length - 1) > 0 && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-black text-white">{dynCategories.length - 1}</span>
-                    <span style={{ color: "#475569" }}>topic categories</span>
+                    <span className="font-black text-[#1A1A18]">{dynCategories.length - 1}</span>
+                    <span style={{ color: "#6B6460" }}>topic categories</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block shrink-0" />
-                  <span style={{ color: "#475569" }}>New quiz every day</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block shrink-0" />
+                  <span style={{ color: "#6B6460" }}>New quiz every day</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-black text-white">Free</span>
-                  <span style={{ color: "#475569" }}>forever — no signup needed</span>
+                  <span className="font-black text-[#1A1A18]">Free</span>
+                  <span style={{ color: "#6B6460" }}>forever — no signup needed</span>
                 </div>
               </div>
             </div>
@@ -1592,15 +1592,15 @@ export default function Home() {
           {/* Bottom bar */}
           <div className="flex items-center justify-between flex-wrap gap-3 pt-6"
             style={{ borderTop: `1px solid ${BORD}` }}>
-            <p className="text-[11px]" style={{ color: "#334155" }}>
+            <p className="text-[11px]" style={{ color: "#9B9490" }}>
               © {new Date().getFullYear()} QuizBytes Daily · quizbytes.dev
             </p>
-            <div className="flex items-center gap-4 text-[11px]" style={{ color: "#334155" }}>
+            <div className="flex items-center gap-4 text-[11px]" style={{ color: "#9B9490" }}>
               <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                className="hover:text-slate-400 transition-colors flex items-center gap-1">
+                className="hover:text-[#1A1A18] transition-colors flex items-center gap-1">
                 <Ico.YT /> YouTube
               </a>
-              <a href="https://quizbytes.dev" className="hover:text-slate-400 transition-colors">quizbytes.dev</a>
+              <a href="https://quizbytes.dev" className="hover:text-[#1A1A18] transition-colors">quizbytes.dev</a>
             </div>
           </div>
         </div>

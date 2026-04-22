@@ -168,12 +168,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <meta name="theme-color" content="#FAF9F6" />
+        <meta name="color-scheme" content="light" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" style={{ backgroundColor: "#FAF9F6", color: "#1A1A18" }}>
         {children}
         {/* Google AdSense — afterInteractive ensures the script runs after hydration */}
         <Script
