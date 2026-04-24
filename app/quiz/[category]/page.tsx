@@ -185,6 +185,66 @@ export default async function CategoryPage({
           </div>
         </section>
 
+        {/* Sample Questions */}
+        <section style={{ marginBottom: 48 }}>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: TEXT, marginBottom: 8, letterSpacing: "-0.02em" }}>
+            Sample {data.name} Quiz Questions
+          </h2>
+          <p style={{ fontSize: "0.9rem", color: MUTED, marginBottom: 20 }}>
+            A taste of what you&apos;ll find in the {data.name} quiz series.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {data.sampleQuestions.map((q, qi) => (
+              <div key={qi} style={{ background: "#fff", border: `1px solid ${BORD}`, borderRadius: 12, padding: "22px 24px" }}>
+                {/* Question number + text */}
+                <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                  <span style={{ width: 26, height: 26, borderRadius: "50%", background: PRIMARY, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.78rem", flexShrink: 0 }}>
+                    {qi + 1}
+                  </span>
+                  <p style={{ fontSize: "0.95rem", fontWeight: 600, color: TEXT, lineHeight: 1.6, margin: 0, whiteSpace: "pre-line" }}>
+                    {q.question}
+                  </p>
+                </div>
+                {/* Options */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, paddingLeft: 38 }}>
+                  {q.options.map((opt, oi) => {
+                    const isCorrect = oi === q.correctIndex;
+                    return (
+                      <div
+                        key={oi}
+                        style={{
+                          display: "flex", gap: 10, alignItems: "flex-start",
+                          padding: "8px 12px", borderRadius: 8,
+                          background: isCorrect ? "#dcfce7" : "#f9f7f5",
+                          border: `1px solid ${isCorrect ? "#86efac" : BORD}`,
+                          fontSize: "0.88rem", color: isCorrect ? "#166534" : "#444",
+                          fontWeight: isCorrect ? 700 : 400,
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, flexShrink: 0, color: isCorrect ? "#16a34a" : MUTED }}>
+                          {String.fromCharCode(65 + oi)}.
+                        </span>
+                        {opt}
+                        {isCorrect && (
+                          <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: "0.78rem", background: "#16a34a", color: "#fff", padding: "1px 7px", borderRadius: 999, fontWeight: 700 }}>
+                            ✓ Correct
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Explanation */}
+                <div style={{ paddingLeft: 38 }}>
+                  <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.7, margin: 0, background: "#f3f4f6", borderRadius: 8, padding: "10px 14px", borderLeft: `3px solid ${PRIMARY}` }}>
+                    <strong style={{ color: TEXT }}>Explanation: </strong>{q.explanation}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* CTA */}
         <div style={{ textAlign: "center", background: "#fff", border: `1px solid ${BORD}`, borderRadius: 12, padding: "32px 24px" }}>
           <p style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>
