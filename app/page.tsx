@@ -1018,19 +1018,17 @@ function QuestionBrowser() {
 // Without a slot ID the component renders nothing (Auto Ads still runs from layout.tsx).
 function AdUnit({ slot }: { slot?: string }) {
   useEffect(() => {
-    if (!slot) return;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
     } catch { /* noop */ }
-  }, [slot]);
-  if (!slot) return null;
+  }, []);
   return (
-    <div style={{ textAlign: "center", overflow: "hidden" }}>
+    <div style={{ textAlign: "center", overflow: "hidden", minHeight: 90 }}>
       <ins className="adsbygoogle"
         style={{ display: "block" }}
         data-ad-client="ca-pub-4237294630161176"
-        data-ad-slot={slot}
+        {...(slot ? { 'data-ad-slot': slot } : {})}
         data-ad-format="auto"
         data-full-width-responsive="true" />
     </div>
@@ -1333,13 +1331,11 @@ export default function Home() {
       </div>
 
       {/* ── Ad unit: between hero and content ── */}
-      {process.env.NEXT_PUBLIC_ADSENSE_SLOT_1 && (
-        <div className="border-b py-3 px-6" style={{ borderColor: BORD, background: BG }}>
-          <div style={{ maxWidth: 1440, margin: "0 auto" }}>
-            <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_1} />
-          </div>
+      <div className="border-b py-3 px-6" style={{ borderColor: BORD, background: BG }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto" }}>
+          <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_1} />
         </div>
-      )}
+      </div>
 
       {/* ── Stats + Search strip ── */}
       <div className="border-b" style={{ borderColor: BORD, background: "#F4F0EB" }}>
