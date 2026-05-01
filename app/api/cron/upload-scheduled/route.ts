@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
   if (reset > 0) {
     console.log(`[upload-scheduled] ♻️  Reset ${reset} stuck 'publishing' series back to 'queued'`);
     await sendMessage(
-      `♻️ <b>Reset ${reset} stuck series</b> back to 'queued' — they were stuck in 'publishing' from a previous failed run. Will upload now.`
+      `🧩 <b>[QuizBytes]</b> ♻️ Reset ${reset} stuck series back to 'queued' — will upload now.`
     ).catch(() => {});
   }
 
@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
     // Telegram notification
     const cat = series.category;
     await sendMessage(
-      `✅ <b>Uploaded!</b> ${cat} quiz\n\n` +
+      `🧩 <b>[QuizBytes]</b> ✅ Uploaded! ${cat} quiz\n\n` +
       `📌 ${series.title}\n` +
       `🔗 <a href="${videoUrl}">${videoUrl}</a>`
     ).catch(() => {}); // Don't fail on Telegram error
@@ -184,7 +184,7 @@ export async function GET(req: NextRequest) {
 
     // Telegram error notification
     await sendMessage(
-      `⚠️ <b>Upload failed</b> for "${series.title}"\n\nError: ${msg.slice(0, 200)}`
+      `🧩 <b>[QuizBytes]</b> ⚠️ Upload failed for "${series.title}"\n\nError: ${msg.slice(0, 200)}`
     ).catch(() => {});
 
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

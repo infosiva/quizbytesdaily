@@ -125,7 +125,7 @@ async function runGenerate(
     const uploadTime = scheduledAt.slice(11, 16); // HH:MM
 
     const msg = [
-      `🎯 <b>Daily Quiz Ready — Your Approval Needed</b>`,
+      `🧩 <b>[QuizBytes]</b> Daily Quiz Ready — Your Approval Needed`,
       ``,
       `${t.icon} <b>${generated.title}</b>`,
       ``,
@@ -159,7 +159,7 @@ async function runGenerate(
     console.error("[daily-generate] Failed:", msg);
 
     await sendMessage(
-      `⚠️ <b>Daily quiz generation failed</b>\n\nError: ${msg.slice(0, 300)}\n\nYou can manually generate a quiz from the admin panel.`
+      `🧩 <b>[QuizBytes]</b> ⚠️ Daily quiz generation failed\n\nError: ${msg.slice(0, 300)}\n\nManually generate from the admin panel.`
     ).catch(() => {});
 
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
