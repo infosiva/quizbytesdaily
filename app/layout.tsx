@@ -177,12 +177,11 @@ export default function RootLayout({
       </head>
       <body className="antialiased" style={{ backgroundColor: "#FAF9F6", color: "#1A1A18" }}>
         {children}
-        {/* Google AdSense — afterInteractive ensures the script runs after hydration */}
+        {/* Adsterra — instant approval, no AdSense needed */}
         <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4237294630161176"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
+          src="https://epnzryrk.com/act/files/tag.min.js"
+          strategy="lazyOnload"
+          data-cfasync="false"
         />
       </body>
     </html>

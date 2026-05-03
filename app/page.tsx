@@ -1013,24 +1013,32 @@ function QuestionBrowser() {
   );
 }
 
-// ── AdSense Ad Unit ───────────────────────────────────────────────────────────
-// Slot IDs are set via NEXT_PUBLIC_ADSENSE_SLOT_1 / NEXT_PUBLIC_ADSENSE_SLOT_2 env vars.
-// Without a slot ID the component renders nothing (Auto Ads still runs from layout.tsx).
-function AdUnit({ slot }: { slot?: string }) {
+// ── Adsterra Ad Unit — instant approval, no AdSense needed ───────────────────
+const ADSTERRA_KEY_BANNER = 'ADSTERRA_BANNER_KEY';    // replace after signup at adsterra.com
+const ADSTERRA_KEY_RECT   = 'ADSTERRA_RECTANGLE_KEY'; // replace after signup at adsterra.com
+
+function AdUnit({ size = 'rectangle' }: { size?: 'banner' | 'rectangle'; slot?: string }) {
+  const key    = size === 'banner' ? ADSTERRA_KEY_BANNER : ADSTERRA_KEY_RECT;
+  const width  = size === 'banner' ? 728 : 300;
+  const height = size === 'banner' ? 90  : 250;
+
   useEffect(() => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+      // @ts-expect-error adsterra global
+      window.atOptions = { key, format: 'iframe', height, width, params: {} };
+      const s = document.createElement('script');
+      s.type  = 'text/javascript';
+      s.src   = 'https://epnzryrk.com/act/files/tag.min.js';
+      s.setAttribute('data-cfasync', 'false');
+      document.getElementById(`ad-${key}`)?.appendChild(s);
     } catch { /* noop */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   return (
-    <div style={{ textAlign: "center", overflow: "hidden", minHeight: 90 }}>
-      <ins className="adsbygoogle"
-        style={{ display: "block" }}
-        data-ad-client="ca-pub-4237294630161176"
-        {...(slot ? { 'data-ad-slot': slot } : {})}
-        data-ad-format="auto"
-        data-full-width-responsive="true" />
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', borderRadius: 12, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.07)', minHeight: height, position: 'relative' }}>
+      <span style={{ fontSize: 9, color: 'rgba(0,0,0,0.2)', position: 'absolute', top: 4, width: '100%', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ad</span>
+      <div id={`ad-${key}`} style={{ width, height }} />
     </div>
   );
 }
@@ -1333,7 +1341,7 @@ export default function Home() {
       {/* ── Ad unit: between hero and content ── */}
       <div className="border-b py-3 px-6" style={{ borderColor: BORD, background: BG }}>
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
-          <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_1} />
+          <AdUnit size="rectangle" />
         </div>
       </div>
 
@@ -1439,7 +1447,7 @@ export default function Home() {
         </div>
 
         {/* Ad unit: above content grid */}
-        <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_2} />
+        <AdUnit size="banner" />
 
         {/* Results count */}
         {(searchQuery || activeCategory !== "All") && filtered.length > 0 && (
