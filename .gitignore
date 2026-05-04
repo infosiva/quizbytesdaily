@@ -9,6 +9,7 @@ out/
 .env
 .env.local
 .env.*.local
+.env.trending
 
 # OS
 .DS_Store

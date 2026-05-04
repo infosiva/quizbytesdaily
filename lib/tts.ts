@@ -41,8 +41,10 @@ export function edgeTTS(
       `${ENDPOINT}?TrustedClientToken=${TOKEN}&ConnectionId=${connId}`,
       {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          "Origin":     "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
+          "User-Agent":                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+          "Origin":                    "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
+          "Pragma":                    "no-cache",
+          "Cache-Control":             "no-cache",
         },
       }
     );

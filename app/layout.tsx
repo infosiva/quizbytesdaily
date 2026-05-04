@@ -183,6 +183,13 @@ export default function RootLayout({
           strategy="lazyOnload"
           data-cfasync="false"
         />
+        {/* AdSense auto-ads — activates once approved */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4237294630161176"
+          crossOrigin="anonymous"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
