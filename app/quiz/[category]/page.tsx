@@ -155,6 +155,18 @@ export default async function CategoryPage({
           </div>
         </section>
 
+        {/* Ad — between sections */}
+        <div style={{ margin: "0 0 32px", textAlign: "center" }}>
+          <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Sponsored</div>
+          <ins
+            className="adsbygoogle"
+            style={{ display: "block" }}
+            data-ad-client="ca-pub-4237294630161176"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        </div>
+
         {/* All categories */}
         <section style={{ marginBottom: 48 }}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 14, letterSpacing: "-0.02em" }}>
@@ -244,6 +256,18 @@ export default async function CategoryPage({
             ))}
           </div>
         </section>
+
+        {/* Ad — between quiz preview and CTA */}
+        <div style={{ margin: "0 0 32px", textAlign: "center" }}>
+          <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Sponsored</div>
+          <ins
+            className="adsbygoogle"
+            style={{ display: "block" }}
+            data-ad-client="ca-pub-4237294630161176"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        </div>
 
         {/* CTA */}
         <div style={{ textAlign: "center", background: "#fff", border: `1px solid ${BORD}`, borderRadius: 12, padding: "32px 24px" }}>
