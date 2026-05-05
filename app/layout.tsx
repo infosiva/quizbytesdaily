@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { SocialBar } from '@/components/AdUnit'
 
 const inter = Inter({
   variable: "--font-inter",
@@ -176,6 +177,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased" style={{ backgroundColor: "#FAF9F6", color: "#1A1A18" }}>
+        <SocialBar />
         {children}
         {/* Adsterra — instant approval, no AdSense needed */}
         <Script
