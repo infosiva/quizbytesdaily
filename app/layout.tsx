@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 const SITE_URL  = "https://quizbytes.dev";
 const SITE_NAME = "QuizBytesDaily";
 const TITLE     = "QuizBytesDaily — Daily Tech Quiz Shorts";
-const DESC      = "Test your tech skills with daily quiz shorts in 60 seconds! Learn Python, AI, Algorithms, System Design & more.";
+const DESC      = "Daily 60-second tech quiz shorts. Test your skills in Python, AI, Algorithms, System Design & more. Learn something new every day!";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

@@ -28,7 +28,7 @@ export function SocialBar() {
 
 export default function AdUnit({ size = 'rectangle', className = '' }: AdUnitProps) {
   const adKey  = size === 'banner' ? ADSTERRA_KEY_BANNER : ADSTERRA_KEY_RECT
-  const width  = size === 'banner' ? 728 : 300
+  const width  = size === 'banner' ? 728 : 320
   const height = size === 'banner' ? 90  : 250
   const ref    = useRef<HTMLDivElement>(null)
   const loaded = useRef(false)
