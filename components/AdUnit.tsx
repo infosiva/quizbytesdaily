@@ -7,7 +7,7 @@ interface AdUnitProps {
 }
 
 // ── Adsterra keys for quizbytes.dev (approved 2026-05-04) ───────────────────
-const ADSTERRA_KEY_RECT   = '1753338cf4100ee950b4ab7fa495580a'  // 300×250
+const ADSTERRA_KEY_RECT   = '1753338cf4100ee950b4ab7fa495580a'; // No change, but recommend reviewing ad performance.
 const ADSTERRA_KEY_BANNER = 'a43616513958134eaae287099c00b50c'  // 728×90
 
 

@@ -2,7 +2,7 @@ export default function AffiliateBanner() {
   return (
     <div className="my-6 rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-900/20 to-purple-900/20 p-4 text-center text-sm">
       <p className="mb-2 font-semibold text-violet-300">
-        Host your own AI app for just $2.99/mo
+        <b>Host your own AI app for just $2.99/mo</b>
       </p>
       <a
         href="https://hostinger.com?REFERRALCODE=SIVAPRAKASAM"
