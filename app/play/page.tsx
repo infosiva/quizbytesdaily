@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { channelConfig } from "@/lib/config";
+import { useGate } from "@/lib/shared/useGate";
+import RegisterGate from "@/lib/shared/RegisterGate";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface QuizQ {
@@ -446,6 +448,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function PlayPage() {
+  const { count: gateCount, showGate, increment: gateIncrement, onRegistered, dismissGate } = useGate("quizbytes", 5);
   const [cat,      setCat]      = useState<string>("All");
   const [ageGroup, setAgeGroup] = useState<AgeGroup>("All");
   const [started,  setStart]    = useState(false);
@@ -470,7 +473,9 @@ export default function PlayPage() {
     for (const q of base) catCounts[q.cat] = (catCounts[q.cat] ?? 0) + 1;
   }
 
-  function start() {
+  async function start() {
+    const allowed = await gateIncrement();
+    if (!allowed) return;
     const d = shuffle(filtered).slice(0, 10);
     setDeck(d); setQi(0); setChosen(null); setScore(0); setDone(false);
     setStart(true);
@@ -747,6 +752,19 @@ export default function PlayPage() {
           </div>
         </div>
       </div>
+
+      {showGate && (
+        <RegisterGate
+          freeUsed={gateCount}
+          freeLimit={5}
+          freeFeature="quizzes"
+          lockedFeature="unlimited quiz sessions"
+          accentColor="#22d3ee"
+          site="quizbytes"
+          onSuccess={onRegistered}
+          onDismiss={dismissGate}
+        />
+      )}
     </div>
   );
 }
