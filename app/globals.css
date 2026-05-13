@@ -181,3 +181,6 @@ body {
   0%, 100% { opacity: 0.85; }
   50%       { opacity: 0; }
 }
+
+/* ── Mobile: prevent horizontal overflow on all devices ── */
+html, body { overflow-x: hidden; max-width: 100%; }
