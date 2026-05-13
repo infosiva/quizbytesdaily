@@ -45,7 +45,7 @@ export default function AdUnit({ size = 'rectangle', className = '' }: AdUnitPro
 
   return (
     <div className={className} style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.1)', textAlign: 'center', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Sponsored</div>
+      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.1)', textAlign: 'center', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ad · Sponsored Content</div>
       <div ref={ref} style={{ width, maxWidth: '100%', minHeight: height }} />
     </div>
   )
