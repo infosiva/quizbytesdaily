@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import CookieConsent from "../components/CookieConsent";
+import Footer from "../components/Footer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -185,6 +187,8 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         <Script src="http://31.97.56.148:3098/t.js" data-site="quizbytes.dev" strategy="lazyOnload" />
+        <Footer siteName="QuizBytesDaily" />
+      <CookieConsent />
       </body>
     </html>
   );
