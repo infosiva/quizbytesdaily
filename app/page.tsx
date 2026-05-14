@@ -372,21 +372,28 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
         <span className="text-[11px] font-mono text-[#9B9490]">{fmtDateShort(series.created_at)}</span>
       </td>
 
-      {/* Watch */}
-      <td className="py-3 pr-4 text-right" style={{ width: 120 }}>
-        {isLive ? (
-          <a href={url} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[11px] font-black tracking-wider uppercase px-3 py-1.5 rounded-lg transition-all hover:opacity-85"
-            style={{ background: `${CYN}15`, color: CYN, border: `1px solid ${CYN}35` }}>
-            <Ico.Play />Watch
-            <span className="hidden xl:inline"><Ico.External /></span>
+      {/* Watch + Play Quiz */}
+      <td className="py-3 pr-4 text-right" style={{ width: 160 }}>
+        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+          {isLive && (
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] font-black tracking-wider uppercase px-2.5 py-1.5 rounded-lg transition-all hover:opacity-85"
+              style={{ background: `${CYN}15`, color: CYN, border: `1px solid ${CYN}35` }}>
+              <Ico.Play />Watch
+            </a>
+          )}
+          <a href={`/quiz/${encodeURIComponent(series.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}`}
+            className="inline-flex items-center gap-1 text-[10px] font-black tracking-wider uppercase px-2.5 py-1.5 rounded-lg transition-all hover:opacity-85"
+            style={{ background: '#D97757', color: '#fff', border: `1px solid #D9775790` }}>
+            🎯 Quiz
           </a>
-        ) : (
-          <span className="text-[10px] font-semibold px-2.5 py-1.5 rounded-lg text-amber-600"
-            style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
-            Soon
-          </span>
-        )}
+          {!isLive && (
+            <span className="text-[9px] font-semibold px-2 py-1 rounded-lg text-amber-600"
+              style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
+              Soon
+            </span>
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -1055,7 +1062,17 @@ export default function Home() {
   const [page,           setPage]           = useState(1);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [heroCat,        setHeroCat]        = useState("AI/ML"); // driven by daily focus from quiz API
-  const [streak,         setStreak]         = useState(0);
+  const [streak,         setStreak]         = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const s = JSON.parse(localStorage.getItem('qb-streak') ?? '{"count":0,"last":""}');
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
+      if (s.last === today) return s.count;
+      if (s.last === yesterday) return s.count; // streak still active
+      return 0; // broken
+    } catch { return 0; }
+  });
 
   // Derived from settings (with fallbacks)
   // Note: sub-components use module-level CYN; accent here applies to root-level chrome
