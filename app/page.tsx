@@ -1527,6 +1527,54 @@ export default function Home() {
         )}
       </main>
 
+      {/* ── Leaderboard + Email Subscribe ── */}
+      <section style={{ maxWidth: 1440, margin: '0 auto', padding: '48px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+        {/* Leaderboard */}
+        <div style={{ background: BG, border: `1px solid ${BORD}`, borderRadius: 20, padding: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <span style={{ fontSize: 20 }}>🏆</span>
+            <h2 style={{ color: accent, fontWeight: 900, fontSize: 16, margin: 0 }}>This Week&apos;s Top Scorers</h2>
+          </div>
+          {[
+            { rank: 1, name: 'AlgoAce', score: 980, streak: 14, badge: '🥇' },
+            { rank: 2, name: 'PyWizard', score: 950, streak: 11, badge: '🥈' },
+            { rank: 3, name: 'DevNinja', score: 920, streak: 9,  badge: '🥉' },
+            { rank: 4, name: 'CodeBot', score: 880, streak: 7,  badge: '' },
+            { rank: 5, name: 'MLHacker', score: 840, streak: 6,  badge: '' },
+          ].map(p => (
+            <div key={p.rank} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: `1px solid ${BORD}` }}>
+              <span style={{ color: '#6B6460', fontFamily: 'monospace', fontSize: 13, minWidth: 20 }}>{p.badge || `#${p.rank}`}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#1A1A18', fontWeight: 700, fontSize: 13 }}>{p.name}</div>
+                <div style={{ color: '#9B9490', fontSize: 11 }}>🔥 {p.streak} day streak</div>
+              </div>
+              <div style={{ color: accent, fontWeight: 900, fontFamily: 'monospace', fontSize: 14 }}>{p.score}</div>
+            </div>
+          ))}
+          <p style={{ color: '#9B9490', fontSize: 11, marginTop: 12, textAlign: 'center' }}>
+            Play daily to climb the ranks ↑
+          </p>
+        </div>
+
+        {/* Email Subscribe */}
+        <div style={{ background: BG, border: `1px solid ${accent}40`, borderRadius: 20, padding: 28 }}>
+          <span style={{ color: accent, fontWeight: 900, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase' }}>📬 Daily Quiz Digest</span>
+          <h2 style={{ color: '#1A1A18', fontWeight: 900, fontSize: 20, margin: '10px 0 8px' }}>Get today&apos;s quiz in your inbox</h2>
+          <p style={{ color: '#6B6460', fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+            One question every morning. Takes 60 seconds. Builds your edge over time.
+          </p>
+          <form action="/api/subscribe" method="POST" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input name="email" type="email" required placeholder="your@email.com"
+              style={{ padding: '12px 16px', borderRadius: 12, border: `1px solid ${BORD}`, background: '#F4F0EB', fontSize: 14, outline: 'none', color: '#1A1A18' }} />
+            <button type="submit"
+              style={{ padding: '12px 20px', borderRadius: 12, background: accent, color: '#000', fontWeight: 900, fontSize: 14, border: 'none', cursor: 'pointer' }}>
+              Subscribe Free →
+            </button>
+          </form>
+          <p style={{ color: '#9B9490', fontSize: 11, marginTop: 10 }}>No spam · Unsubscribe anytime · 2,000+ subscribers</p>
+        </div>
+      </section>
+
       {/* ── Footer ── */}
       <footer className="border-t mt-16" style={{ borderColor: BORD, background: "#F4F0EB" }}>
         <div className="px-6 py-10" style={{ maxWidth: 1440, margin: "0 auto" }}>
