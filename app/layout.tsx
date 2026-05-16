@@ -170,14 +170,36 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <meta name="theme-color" content="#FAF9F6" />
-        <meta name="color-scheme" content="light" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        <meta name="theme-color" content="#0b0b12" />
+        <meta name="color-scheme" content="dark" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <style dangerouslySetInnerHTML={{ __html: `
+          :root {
+            --qb-bg: #0b0b12;
+            --qb-surface: #111118;
+            --qb-surface-2: #18181f;
+            --qb-border: #1c1c2e;
+            --qb-cyan: #22d3ee;
+            --qb-yellow: #fbbf24;
+            --qb-green: #4ade80;
+            --qb-red: #f87171;
+            --qb-text: #f0f0f5;
+            --qb-text-2: rgba(200,200,220,0.6);
+          }
+          /* Wordle-style correct/wrong colours */
+          .cell-correct { background: #4ade80 !important; color: #0b1a0b !important; }
+          .cell-wrong   { background: #6b7280 !important; }
+          .cell-close   { background: #fbbf24 !important; color: #1a1200 !important; }
+          /* Streak counter badge */
+          .streak-badge { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #1a1200; font-weight: 800; border-radius: 99px; padding: 3px 10px; font-size: 11px; }
+          /* Category badges sharper */
+          .cat-badge { border-radius: 6px !important; font-weight: 700 !important; font-size: 10px !important; letter-spacing: 0.04em !important; }
+          /* NYT-style card border */
+          .quiz-card { border: 2px solid #1c1c2e !important; }
+          .quiz-card:hover { border-color: #22d3ee !important; }
+        `}} />
       </head>
-      <body className="antialiased" style={{ backgroundColor: "#FAF9F6", color: "#1A1A18" }}>
+      <body className="antialiased" style={{ backgroundColor: "#0b0b12", color: "#f0f0f5", fontFamily: "var(--font-inter, system-ui)" }}>
         {children}
         {/* AdSense auto-ads — activates once approved */}
         <Script
