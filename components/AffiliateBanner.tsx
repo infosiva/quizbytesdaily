@@ -10,7 +10,7 @@ export default function AffiliateBanner() {
         rel="noopener noreferrer sponsored"
         className="inline-block rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 transition-colors"
       >
-        Launch with Hostinger — Starting at $2.99/mo →
+        Get started with Hostinger today — Starting at just $2.99/mo! →
       </a>
       <p className="mt-1 text-xs text-gray-500">Sponsored · We earn a commission</p>
     </div>
