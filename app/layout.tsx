@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
@@ -211,6 +212,7 @@ export default function RootLayout({
         <Script src="http://31.97.56.148:3098/t.js" data-site="quizbytes.dev" strategy="lazyOnload" />
         <Footer siteName="QuizBytesDaily" />
       <CookieConsent />
+            <Script async src="http://31.97.56.148:3100/script.js" data-website-id="cd172af6-136f-4b9f-ae09-26051589a730" strategy="afterInteractive" />
       </body>
     </html>
   );
