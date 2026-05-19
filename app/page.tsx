@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from 'framer-motion';
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
@@ -1141,7 +1142,22 @@ export default function Home() {
   const published = apiStats?.published ?? 0;
 
   return (
-    <div className="min-h-screen" style={{ background: BG, color: "#1A1A18" }}>
+    <div className="min-h-screen" style={{ background: BG, color: "#1A1A18", position: 'relative' }}>
+      {/* Animated blob bg */}
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }} aria-hidden>
+        <motion.div
+          style={{ position: 'absolute', top: '-15%', left: '-8%', width: 600, height: 600, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(34,211,238,0.08) 0%, transparent 70%)', filter: 'blur(80px)' }}
+          animate={{ x: [0, 40, 0], y: [0, -20, 0], scale: [1, 1.08, 1] }}
+          transition={{ duration: 14, ease: 'easeInOut', repeat: Infinity }}
+        />
+        <motion.div
+          style={{ position: 'absolute', bottom: '-10%', right: '-6%', width: 500, height: 500, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%)', filter: 'blur(90px)' }}
+          animate={{ x: [0, -25, 0], y: [0, 20, 0], scale: [1, 1.06, 1] }}
+          transition={{ duration: 18, ease: 'easeInOut', repeat: Infinity, delay: 2 }}
+        />
+      </div>
 
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 border-b"

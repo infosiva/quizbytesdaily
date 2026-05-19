@@ -1,10 +1,10 @@
 import Script from 'next/script'
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import CookieConsent from "../components/CookieConsent";
 import Footer from "../components/Footer";
+import FloatingChatWrapper from "@/components/FloatingChatWrapper";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -202,6 +202,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased" style={{ backgroundColor: "#0b0b12", color: "#f0f0f5", fontFamily: "var(--font-inter, system-ui)" }}>
         {children}
+        <FloatingChatWrapper />
         {/* AdSense auto-ads — activates once approved */}
         <Script
           async
