@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function FloatingChatWrapper() {
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<{ role: 'user' | 'bot'; text: string }[]>([
-    { role: 'bot', text: "Hi! Ask me anything — trivia, facts, or today's quiz topics 🎯" },
+    { role: 'bot', text: "Pick a topic — Python, AI/ML, System Design, or Algorithms. I'll quiz you right now." },
   ])
   const [input, setInput] = useState('')
 
