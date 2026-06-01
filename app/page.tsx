@@ -1171,11 +1171,9 @@ export default function Home() {
 
           <div className="flex-1" />
 
-          {/* YouTube subscribe */}
-          <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white transition-opacity hover:opacity-85"
-            style={{ background: "#dc2626" }}>
-            <Ico.YT /> Subscribe
+          <a href="https://quizbytes.dev" className="flex items-center gap-2 shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-85"
+            style={{ background: "#22d3ee15", border: "1px solid #22d3ee40", color: "#22d3ee" }}>
+            Daily Quizzes
           </a>
         </div>
       </header>
@@ -1283,15 +1281,15 @@ export default function Home() {
 
               {/* CTAs */}
               <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-                <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-white shadow-lg transition-all hover:scale-105 hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #dc2626, #ef4444)", boxShadow: "0 4px 16px #dc262630" }}>
-                  <Ico.YT />Subscribe
-                </a>
+                <button onClick={() => { document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all hover:scale-105"
+                  style={{ background: `linear-gradient(135deg, ${CYN}, #6366f1)`, color: "#000", boxShadow: `0 4px 16px ${CYN}30` }}>
+                  Browse Quizzes ↓
+                </button>
                 <button onClick={() => { document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105"
                   style={{ borderColor: `${CYN}50`, color: CYN, background: `${CYN}10` }}>
-                  Browse Quizzes ↓
+                  Play Today&#39;s Quiz
                 </button>
               </div>
 
@@ -1319,7 +1317,7 @@ export default function Home() {
                 {([
                   { icon: "🎯", title: "Quiz + Answer", desc: "Instant explanations for every question", color: "#a855f7" },
                   { icon: "🔥", title: "Streak Mode",   desc: "Answer daily — build your winning streak", color: "#f97316" },
-                  { icon: "📹", title: "Shorts Daily",  desc: "YouTube Short every day on @QuizBytesDaily", color: "#dc2626" },
+                  { icon: "📊", title: "Track Progress", desc: "See which topics you've mastered over time", color: "#10b981" },
                 ] as const).map(({ icon, title, desc, color }) => (
                   <div key={title} className="rounded-xl p-3 border transition-all hover:border-opacity-60"
                     style={{ background: "#FAFAF8", borderColor: `${color}30` }}>
@@ -1407,10 +1405,10 @@ export default function Home() {
                 className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-black/5 text-[#9B9490] hover:text-[#1A1A18] text-xs">✕</button>
             )}
           </div>
-          <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
+          <a href="/about"
             className="shrink-0 text-xs font-bold flex items-center gap-1 transition-opacity hover:opacity-80 whitespace-nowrap"
             style={{ color: accent }}>
-            <Ico.YT /> YouTube →
+            About →
           </a>
         </div>
       </div>
@@ -1621,10 +1619,10 @@ export default function Home() {
               <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B6460" }}>
                 Bite-sized tech quiz Shorts every day. Python, AI/ML, Algorithms, System Design — sharpen your edge in 60 seconds.
               </p>
-              <a href={channelConfig.youtubeSubscribeUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-opacity hover:opacity-85"
-                style={{ background: "#dc2626" }}>
-                <Ico.YT /> Subscribe on YouTube
+              <a href="/about"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-opacity hover:opacity-85"
+                style={{ background: `${CYN}15`, border: `1px solid ${CYN}40`, color: CYN }}>
+                About QuizBytes →
               </a>
             </div>
 
@@ -1681,10 +1679,7 @@ export default function Home() {
               © {new Date().getFullYear()} QuizBytes Daily · quizbytes.dev
             </p>
             <div className="flex items-center gap-4 text-[11px]" style={{ color: "#9B9490" }}>
-              <a href={channelConfig.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                className="hover:text-[#1A1A18] transition-colors flex items-center gap-1">
-                <Ico.YT /> YouTube
-              </a>
+              <a href="/about" className="hover:text-[#1A1A18] transition-colors">About</a>
               <a href="/about" className="hover:text-[#1A1A18] transition-colors">About</a>
               <a href="/privacy" className="hover:text-[#1A1A18] transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-[#1A1A18] transition-colors">Terms</a>
