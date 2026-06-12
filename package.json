@@ -13,6 +13,7 @@
     "@libsql/client": "^0.17.2",
     "@types/dotenv": "^8.2.3",
     "@types/ws": "^8.18.1",
+    "@vercel/edge-config": "^1.4.3",
     "better-sqlite3": "^12.8.0",
     "dejavu-fonts-ttf": "^2.37.3",
     "dotenv": "^17.3.1",
