@@ -5,6 +5,7 @@ import "./globals.css";
 import CookieConsent from "../components/CookieConsent";
 import Footer from "../components/Footer";
 import FloatingChatWrapper from "@/components/FloatingChatWrapper";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -203,6 +204,7 @@ export default function RootLayout({
       <body className="antialiased" style={{ backgroundColor: "#0b0b12", color: "#f0f0f5", fontFamily: "var(--font-inter, system-ui)" }}>
         {children}
         <FloatingChatWrapper />
+        <FeedbackWidget siteName="QuizBytesDaily" />
         {/* AdSense auto-ads — activates once approved */}
         <Script
           async
