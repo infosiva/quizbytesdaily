@@ -172,6 +172,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <meta name="google-adsense-account" content="ca-pub-4237294630161176" />
         <meta name="theme-color" content="#0b0b12" />
         <meta name="color-scheme" content="dark" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
