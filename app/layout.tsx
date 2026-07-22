@@ -213,10 +213,8 @@ export default function RootLayout({
           crossOrigin="anonymous"
           strategy="lazyOnload"
         />
-        <Script src="http://31.97.56.148:3098/t.js" data-site="quizbytes.dev" strategy="lazyOnload" />
         <Footer siteName="QuizBytesDaily" />
       <CookieConsent />
-            <Script async src="http://31.97.56.148:3100/script.js" data-website-id="cd172af6-136f-4b9f-ae09-26051589a730" strategy="afterInteractive" />
       </body>
     </html>
   );
