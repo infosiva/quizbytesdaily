@@ -1171,7 +1171,7 @@ export default function Home() {
 
           <div className="flex-1" />
 
-          <a href="https://quizbytes.dev" className="flex items-center gap-2 shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-85"
+          <a href="https://quizbytes.dev" className="hidden sm:flex items-center gap-2 shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-85"
             style={{ background: "#22d3ee15", border: "1px solid #22d3ee40", color: "#22d3ee" }}>
             Daily Quizzes
           </a>
