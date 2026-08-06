@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
+import { AI_LIMITER } from '@/lib/rateLimit'
 
 let _groq: Groq | null = null
 function groq() { if (!_groq) _groq = new Groq({ apiKey: process.env.GROQ_API_KEY! }); return _groq }
 
 export async function POST(req: NextRequest) {
+  const limited = AI_LIMITER.check(req); if (limited) return limited
+
   try {
     const { messages, system } = await req.json()
     const sysPrompt = system ?? 'You are QuizBytes AI — a trivia and quiz expert. Help users learn facts, understand quiz topics, discover interesting trivia, and improve their general knowledge. Be engaging and educational.'

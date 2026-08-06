@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { AI_LIMITER } from '@/lib/rateLimit'
 
 export const runtime    = "nodejs";
 export const maxDuration = 15;
 
 export async function POST(req: NextRequest) {
+  const limited = AI_LIMITER.check(req); if (limited) return limited
+
   try {
     const { topic } = (await req.json()) as { topic?: string };
     if (!topic?.trim() || topic.trim().length < 3) {
