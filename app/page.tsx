@@ -1558,32 +1558,23 @@ export default function Home() {
         )}
       </main>
 
-      {/* ── Leaderboard + Email Subscribe ── */}
+      {/* ── About + Email Subscribe ── */}
       <section style={{ maxWidth: 1440, margin: '0 auto', padding: '48px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
-        {/* Leaderboard */}
+        {/* How it works */}
         <div style={{ background: BG, border: `1px solid ${BORD}`, borderRadius: 20, padding: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-            <span style={{ fontSize: 20 }}>🏆</span>
-            <h2 style={{ color: accent, fontWeight: 900, fontSize: 16, margin: 0 }}>This Week&apos;s Top Scorers</h2>
+            <span style={{ fontSize: 20 }}>💡</span>
+            <h2 style={{ color: accent, fontWeight: 900, fontSize: 16, margin: 0 }}>How QuizBytes Daily works</h2>
           </div>
-          {[
-            { rank: 1, name: 'AlgoAce', score: 980, streak: 14, badge: '🥇' },
-            { rank: 2, name: 'PyWizard', score: 950, streak: 11, badge: '🥈' },
-            { rank: 3, name: 'DevNinja', score: 920, streak: 9,  badge: '🥉' },
-            { rank: 4, name: 'CodeBot', score: 880, streak: 7,  badge: '' },
-            { rank: 5, name: 'MLHacker', score: 840, streak: 6,  badge: '' },
-          ].map(p => (
-            <div key={p.rank} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: `1px solid ${BORD}` }}>
-              <span style={{ color: '#6B6460', fontFamily: 'monospace', fontSize: 13, minWidth: 20 }}>{p.badge || `#${p.rank}`}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#1A1A18', fontWeight: 700, fontSize: 13 }}>{p.name}</div>
-                <div style={{ color: '#9B9490', fontSize: 11 }}>🔥 {p.streak} day streak</div>
-              </div>
-              <div style={{ color: accent, fontWeight: 900, fontFamily: 'monospace', fontSize: 14 }}>{p.score}</div>
-            </div>
-          ))}
-          <p style={{ color: '#9B9490', fontSize: 11, marginTop: 12, textAlign: 'center' }}>
-            Play daily to climb the ranks ↑
+          <p style={{ color: '#444', fontSize: 13, lineHeight: 1.75, marginBottom: 12 }}>
+            Every quiz series here starts as a 60-second YouTube Short covering one focused
+            concept in Python, AI/ML, algorithms, system design, JavaScript, or TypeScript.
+            The web version turns that same script into an interactive multiple-choice format
+            with a worked explanation for every answer.
+          </p>
+          <p style={{ color: '#444', fontSize: 13, lineHeight: 1.75 }}>
+            No accounts, no paywalls, no dark patterns — pick a category above and start
+            answering. New series are added as new videos publish.
           </p>
         </div>
 
@@ -1602,7 +1593,7 @@ export default function Home() {
               Subscribe Free →
             </button>
           </form>
-          <p style={{ color: '#9B9490', fontSize: 11, marginTop: 10 }}>No spam · Unsubscribe anytime · 2,000+ subscribers</p>
+          <p style={{ color: '#9B9490', fontSize: 11, marginTop: 10 }}>No spam · Unsubscribe anytime</p>
         </div>
       </section>
 
