@@ -1597,6 +1597,40 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── FAQ ── */}
+      <section style={{ maxWidth: 1440, margin: '0 auto', padding: '48px 24px 0' }}>
+        <h2 style={{ color: accent, fontWeight: 900, fontSize: 20, marginBottom: 20 }}>Frequently asked questions</h2>
+        <div style={{ display: 'grid', gap: 20 }}>
+          {[
+            {
+              q: 'Is QuizBytes Daily actually free?',
+              a: 'Yes. Every quiz on the site is free, with no account required and no paywall. There are no locked questions or "premium" categories — everything you see is playable right now.',
+            },
+            {
+              q: 'Where do the questions come from?',
+              a: 'Each quiz series is written to accompany a daily 60-second YouTube Short on @QuizBytesDaily. The video introduces one focused concept — a Python gotcha, an algorithm trick, a JavaScript quirk — and the web quiz turns that same script into interactive multiple-choice questions with a worked explanation for every answer, whether you got it right or wrong.',
+            },
+            {
+              q: 'How often are new quizzes added?',
+              a: 'New series are added as new videos publish on the YouTube channel — most days, at least one new topic goes up covering Python, AI/ML, algorithms, system design, JavaScript, or TypeScript.',
+            },
+            {
+              q: 'Do I need to watch the video to do the quiz?',
+              a: 'No — the quiz stands on its own and explains every answer inline. The video is there if you prefer a quick visual walkthrough of the same concept, but it is optional.',
+            },
+            {
+              q: 'What is the daily email digest?',
+              a: 'One question a day, delivered by email, no account needed beyond your address. It takes about a minute and is meant to build a small daily habit rather than replace the full quiz site.',
+            },
+          ].map((item) => (
+            <div key={item.q}>
+              <h3 style={{ color: '#1A1A18', fontWeight: 800, fontSize: 15, marginBottom: 6 }}>{item.q}</h3>
+              <p style={{ color: '#444', fontSize: 13, lineHeight: 1.75 }}>{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── Footer ── */}
       <footer className="border-t mt-16" style={{ borderColor: BORD, background: "#F4F0EB" }}>
         <div className="px-6 py-10" style={{ maxWidth: 1440, margin: "0 auto" }}>
