@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const { messages, system } = await req.json()
     const sysPrompt = system ?? 'You are QuizBytes AI — a trivia and quiz expert. Help users learn facts, understand quiz topics, discover interesting trivia, and improve their general knowledge. Be engaging and educational.'
     const res = await groq().chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.8-27b',
       messages: [{ role: 'system', content: sysPrompt }, ...messages],
       max_tokens: 400,
     })

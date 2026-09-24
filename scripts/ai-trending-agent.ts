@@ -99,6 +99,7 @@ function saveState(state: AgentState): void {
 // ── Telegram ──────────────────────────────────────────────────────────────────
 
 async function sendTelegram(msg: string): Promise<void> {
+  if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId   = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return;
@@ -460,7 +461,7 @@ Return ONLY JSON:
   try {
     const groq = new Groq({ apiKey });
     const chat = await groq.chat.completions.create({
-      model:       "llama-3.3-70b-versatile",
+      model:       "openai/gpt-oss-20b",
       max_tokens:  300,
       temperature: 0.2,
       messages: [

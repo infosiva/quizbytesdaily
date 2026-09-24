@@ -139,7 +139,7 @@ Respond in valid JSON only (no markdown):
 
   try {
     const res = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-20b",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
       max_tokens: 400,
@@ -213,6 +213,7 @@ async function triggerGenerate(review: ReviewResult | null): Promise<boolean> {
 // ── Telegram notification ─────────────────────────────────────────────────────
 
 async function notify(msg: string): Promise<void> {
+  if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
   if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT) return;
   try {
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {

@@ -997,7 +997,7 @@ const SYSTEM_MSG =
 async function tryGroq(prompt: string): Promise<string> {
   const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const chat = await client.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
     max_tokens: 6144,
     temperature: 0.7,
     messages: [
