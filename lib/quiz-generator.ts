@@ -1008,11 +1008,11 @@ async function tryGroq(prompt: string): Promise<string> {
   return chat.choices[0]?.message?.content ?? "";
 }
 
-// ── Provider 2: Google Gemini (gemini-2.0-flash) — 1500 req/day free ─────────
+// ── Provider 2: Google Gemini (gemini-2.5-flash-lite) — 1500 req/day free ─────────
 
 async function tryGemini(prompt: string): Promise<string> {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
