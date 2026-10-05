@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { channelConfig, CAT_EMOJI } from "@/lib/config";
+import { MagneticButton } from "@infosiva/shared-ui/modern";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface SeriesItem {
@@ -1329,11 +1330,11 @@ export default function Home() {
               </div>
 
               {/* Mobile quiz CTA — only below md (quiz is hidden on mobile in right col) */}
-              <button onClick={() => { document.getElementById("mobile-quiz")?.scrollIntoView({ behavior: "smooth" }); }}
-                className="lg:hidden mt-4 w-full py-2.5 rounded-xl text-sm font-black border transition-all hover:scale-105"
+              <MagneticButton onClick={() => { document.getElementById("mobile-quiz")?.scrollIntoView({ behavior: "smooth" }); }}
+                className="lg:hidden mt-4 w-full py-2.5 rounded-xl text-sm font-black border"
                 style={{ borderColor: `${CYN}40`, color: CYN, background: `${CYN}10` }}>
                 🧩 Play Quiz Now ↓
-              </button>
+              </MagneticButton>
             </div>
 
             {/* Right: interactive quiz widget (visible on lg+, pickers are above the card) */}

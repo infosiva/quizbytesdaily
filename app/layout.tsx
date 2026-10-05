@@ -7,6 +7,7 @@ import Footer from "../components/Footer";
 import FloatingChatWrapper from "@/components/FloatingChatWrapper";
 import FeedbackWidget from "@/components/FeedbackWidget";
 
+import { MotionProvider } from "@infosiva/shared-ui/modern";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -203,7 +204,7 @@ export default function RootLayout({
         `}} />
       </head>
       <body className="antialiased" style={{ backgroundColor: "#0b0b12", color: "#f0f0f5", fontFamily: "var(--font-inter, system-ui)" }}>
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <FloatingChatWrapper />
         <FeedbackWidget siteName="QuizBytesDaily" />
         {/* AdSense auto-ads — activates once approved */}
