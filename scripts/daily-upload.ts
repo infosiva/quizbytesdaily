@@ -88,6 +88,7 @@ function pickByDay<T>(pool: T[], offset = 0): T {
 // ── YouTube helpers ────────────────────────────────────────────────────────────
 
 async function sendTelegramAlert(msg: string): Promise<void> {
+  if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return;
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId   = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) return;

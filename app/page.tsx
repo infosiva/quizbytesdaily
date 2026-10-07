@@ -1,7 +1,7 @@
 "use client";
+import Logo from "@/components/Logo";
 
 import { motion } from 'framer-motion';
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { channelConfig, CAT_EMOJI } from "@/lib/config";
@@ -40,31 +40,31 @@ interface SiteSettings {
 type SortBy = "newest" | "oldest" | "az" | "za" | "category";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
-const BG   = "#FAF9F6";
-const CARD = "#FFFFFF";
-const BORD = "#E8E0D5";
-const CYN  = "#D97757"; // primary accent (orange-coral)
+const BG   = "var(--bg)";
+const CARD = "var(--surface)";
+const BORD = "var(--line)";
+const CYN  = "var(--accent)"; // primary accent (orange-coral)
 
 // ── Category colours — light-mode badges (dark text on light badge) ─────────────
 const KNOWN_CAT: Record<string, { text: string; badge: string }> = {
   "Python":           { text: "#1d4ed8", badge: "#dbeafe" },
   "Algorithms":       { text: "#6d28d9", badge: "#ede9fe" },
-  "JavaScript":       { text: "#92400e", badge: "#fef3c7" },
+  "JavaScript":       { text: "#92400e", badge: "var(--accent-soft)" },
   "TypeScript":       { text: "#0369a1", badge: "#e0f2fe" },
   "AI/ML":            { text: "#0e7490", badge: "#cffafe" },
   "AI":               { text: "#0e7490", badge: "#cffafe" },
-  "System Design":    { text: "#166534", badge: "#dcfce7" },
+  "System Design":    { text: "#166534", badge: "color-mix(in oklab, #059669 22%, transparent)" },
   "React":            { text: "#164e63", badge: "#cffafe" },
   "Docker":           { text: "#1e3a8a", badge: "#dbeafe" },
-  "Database":         { text: "#7c2d12", badge: "#ffedd5" },
-  "Machine Learning": { text: "#4c1d95", badge: "#f5f3ff" },
+  "Database":         { text: "#7c2d12", badge: "var(--accent-soft)" },
+  "Machine Learning": { text: "#4c1d95", badge: "var(--accent-soft)" },
   "DevOps":           { text: "#064e3b", badge: "#d1fae5" },
-  "Data Structures":  { text: "#831843", badge: "#fce7f3" },
+  "Data Structures":  { text: "#831843", badge: "var(--accent-soft)" },
 };
 const _FALLBACK = [
-  { text: "#831843", badge: "#fce7f3" }, { text: "#7c2d12", badge: "#ffedd5" },
-  { text: "#4c1d95", badge: "#f5f3ff" }, { text: "#064e3b", badge: "#d1fae5" },
-  { text: "#0c4a6e", badge: "#e0f2fe" }, { text: "#713f12", badge: "#fef9c3" },
+  { text: "#831843", badge: "var(--accent-soft)" }, { text: "#7c2d12", badge: "var(--accent-soft)" },
+  { text: "#4c1d95", badge: "var(--accent-soft)" }, { text: "#064e3b", badge: "#d1fae5" },
+  { text: "#0c4a6e", badge: "#e0f2fe" }, { text: "#713f12", badge: "var(--accent-soft)" },
 ];
 function getCatColor(name: string) {
   if (name in KNOWN_CAT) return KNOWN_CAT[name];
@@ -176,7 +176,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
 
       {/* Thumbnail */}
       <a href={url} target="_blank" rel="noopener noreferrer"
-        className="block relative overflow-hidden bg-[#F4F0EB]" style={{ aspectRatio: "16/9" }}>
+        className="block relative overflow-hidden bg-[var(--accent-soft)]" style={{ aspectRatio: "16/9" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={seriesThumbnail(series)} alt={series.title}
           className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
@@ -197,7 +197,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
           </span>
           {isNew && (
             <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded-md uppercase animate-pulse"
-              style={{ background: "#dcfce7", color: "#059669", border: "1px solid #bbf7d0" }}>
+              style={{ background: "color-mix(in oklab, #059669 22%, transparent)", color: "#059669", border: "1px solid #bbf7d0" }}>
               NEW
             </span>
           )}
@@ -227,7 +227,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
 
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl"
-            style={{ background: isLive ? `${CYN}cc` : `${col.badge}cc`, boxShadow: `0 0 24px ${isLive ? CYN : col.badge}66` }}>
+            style={{ background: isLive ? `color-mix(in oklab, ${CYN} 80%, transparent)` : `${col.badge}cc`, boxShadow: `0 0 24px ${isLive ? CYN : col.badge}66` }}>
             {isLive
               ? <svg className="w-6 h-6 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
               : <span className="text-lg">🔔</span>
@@ -239,24 +239,24 @@ function SeriesCard({ series }: { series: SeriesItem }) {
       {/* Card body */}
       <div className="flex flex-col flex-1 p-4">
         <a href={url} target="_blank" rel="noopener noreferrer" className="group/title">
-          <h3 className="text-[17px] font-extrabold text-[#1A1A18] leading-snug line-clamp-2 mb-2 transition-colors group-hover/title:text-[#D97757]">
+          <h3 className="text-[17px] font-extrabold text-[var(--fg)] leading-snug line-clamp-2 mb-2 transition-colors group-hover/title:text-[var(--accent)]">
             {series.title}
           </h3>
         </a>
 
         {series.topic && (
-          <p className="text-[12px] text-[#6B6460] leading-relaxed line-clamp-2 mb-3 flex-1">
+          <p className="text-[12px] text-[var(--fg-dim)] leading-relaxed line-clamp-2 mb-3 flex-1">
             {series.topic}
           </p>
         )}
 
-        <div className="flex items-center gap-3 text-[11px] text-[#9B9490] mb-3">
+        <div className="flex items-center gap-3 text-[11px] text-[var(--fg-dim)] mb-3">
           <span className="flex items-center gap-1">
             <Ico.Cal />{fmtDate(series.created_at)}
           </span>
           {slides > 0 && (
             <>
-              <span className="text-[#C8C2BB]">·</span>
+              <span className="text-[var(--fg-dim)]">·</span>
               <span className="flex items-center gap-1">
                 <Ico.Slides />{slides} slides
               </span>
@@ -276,7 +276,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
               Watch Short
             </a>
           ) : (
-            <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-[#6B6460]">
+            <span className="flex items-center gap-2 text-[12px] font-black tracking-widest uppercase text-[var(--fg-dim)]">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
               Coming Soon
             </span>
@@ -284,7 +284,7 @@ function SeriesCard({ series }: { series: SeriesItem }) {
           {/* Share button */}
           <button onClick={handleShare} title="Copy link"
             className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all hover:scale-110 shrink-0"
-            style={{ background: "#F4F0EB", color: "#9B9490", border: "1px solid #E8E0D5" }}>
+            style={{ background: "var(--accent-soft)", color: "var(--fg-dim)", border: "1px solid var(--line)" }}>
             ↗
           </button>
         </div>
@@ -302,19 +302,19 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
   const slides  = series.slide_count ?? 0;
 
   return (
-    <tr style={{ background: even ? "#F8F7F5" : "#FFFFFF" }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "#F4F0EB"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = even ? "#F8F7F5" : "#FFFFFF"; }}>
+    <tr style={{ background: even ? "var(--surface)" : "var(--surface)" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--accent-soft)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = even ? "var(--surface)" : "var(--surface)"; }}>
 
       {/* Rank */}
-      <td className="text-center font-mono text-[12px] font-bold text-[#9B9490] py-3 pl-4 pr-2" style={{ width: 36 }}>
+      <td className="text-center font-mono text-[12px] font-bold text-[var(--fg-dim)] py-3 pl-4 pr-2" style={{ width: 36 }}>
         {rank}
       </td>
 
       {/* Thumbnail */}
       <td className="py-3 pr-3" style={{ width: 110 }}>
         <a href={url} target="_blank" rel="noopener noreferrer"
-          className="group/thumb relative block overflow-hidden rounded-lg bg-[#F4F0EB]"
+          className="group/thumb relative block overflow-hidden rounded-lg bg-[var(--accent-soft)]"
           style={{ width: 104, aspectRatio: "16/9" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={seriesThumbnail(series)} alt={series.title}
@@ -335,12 +335,12 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
       {/* Title + topic */}
       <td className="py-3 pr-4">
         <a href={url} target="_blank" rel="noopener noreferrer" className="group/title">
-          <div className="text-[14px] font-bold text-[#1A1A18] group-hover/title:text-[#D97757] transition-colors leading-snug line-clamp-1">
+          <div className="text-[14px] font-bold text-[var(--fg)] group-hover/title:text-[var(--accent)] transition-colors leading-snug line-clamp-1">
             {series.title}
           </div>
         </a>
         {series.topic && (
-          <div className="text-[11px] text-[#9B9490] mt-0.5 line-clamp-1">{series.topic}</div>
+          <div className="text-[11px] text-[var(--fg-dim)] mt-0.5 line-clamp-1">{series.topic}</div>
         )}
       </td>
 
@@ -363,15 +363,15 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
       {/* Slides */}
       <td className="py-3 pr-4 hidden lg:table-cell text-center" style={{ width: 70 }}>
         {slides > 0 ? (
-          <span className="text-[12px] font-mono font-bold text-[#6B6460]">{slides}</span>
+          <span className="text-[12px] font-mono font-bold text-[var(--fg-dim)]">{slides}</span>
         ) : (
-          <span className="text-[12px] text-[#C8C2BB]">—</span>
+          <span className="text-[12px] text-[var(--fg-dim)]">—</span>
         )}
       </td>
 
       {/* Date */}
       <td className="py-3 pr-4 hidden sm:table-cell whitespace-nowrap" style={{ width: 90 }}>
-        <span className="text-[11px] font-mono text-[#9B9490]">{fmtDateShort(series.created_at)}</span>
+        <span className="text-[11px] font-mono text-[var(--fg-dim)]">{fmtDateShort(series.created_at)}</span>
       </td>
 
       {/* Watch + Play Quiz */}
@@ -380,18 +380,18 @@ function TableRow({ series, rank, even }: { series: SeriesItem; rank: number; ev
           {isLive && (
             <a href={url} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-[10px] font-black tracking-wider uppercase px-2.5 py-1.5 rounded-lg transition-all hover:opacity-85"
-              style={{ background: `${CYN}15`, color: CYN, border: `1px solid ${CYN}35` }}>
+              style={{ background: `color-mix(in oklab, ${CYN} 8%, transparent)`, color: CYN, border: `1px solid color-mix(in oklab, ${CYN} 21%, transparent)` }}>
               <Ico.Play />Watch
             </a>
           )}
           <a href={`/quiz/${encodeURIComponent(series.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}`}
             className="inline-flex items-center gap-1 text-[10px] font-black tracking-wider uppercase px-2.5 py-1.5 rounded-lg transition-all hover:opacity-85"
-            style={{ background: '#D97757', color: '#fff', border: `1px solid #D9775790` }}>
+            style={{ background: 'var(--accent)', color: '#fff', border: `1px solid var(--accent)90` }}>
             🎯 Quiz
           </a>
           {!isLive && (
             <span className="text-[9px] font-semibold px-2 py-1 rounded-lg text-amber-600"
-              style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
+              style={{ background: "var(--accent-soft)", border: "1px solid #fde68a" }}>
               Soon
             </span>
           )}
@@ -422,7 +422,7 @@ const LABEL_COLORS = ["#2563EB", "#7C3AED", "#059669", "#DB2777"];
 // CAT_EMOJI is imported from @/lib/config — shared source of truth across all pages
 
 const QUIZ_DIFFS = [
-  { id: "All",          label: "All",       dot: "#9B9490" },
+  { id: "All",          label: "All",       dot: "var(--fg-dim)" },
   { id: "Beginner",     label: "Beginner",  dot: "#059669" },
   { id: "Intermediate", label: "Mid",       dot: "#B45309" },
   { id: "Advanced",     label: "Adv",       dot: "#DC2626" },
@@ -629,16 +629,16 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
           {availCats.map((c) => {
             const cnt      = cCount(c.id);
             const isActive = activeCat === c.id;
-            const col      = c.id === "All" ? { text: "#1A1A18", badge: "#E8E0D5" } : getCatColor(c.id);
+            const col      = c.id === "All" ? { text: "var(--fg)", badge: "var(--line)" } : getCatColor(c.id);
             if (cnt === 0 && c.id !== "All") return null;
             return (
               <button key={c.id} onClick={() => setActiveCat(c.id)}
                 className="inline-flex items-center gap-1 rounded-lg text-[11px] font-bold transition-all duration-150 shrink-0"
                 style={{
                   padding: "5px 11px",
-                  background: isActive ? col.badge : "#F4F0EB",
-                  color: isActive ? col.text : "#6B6460",
-                  border: `1.5px solid ${isActive ? col.badge : "#E8E0D5"}`,
+                  background: isActive ? col.badge : "var(--accent-soft)",
+                  color: isActive ? col.text : "var(--fg-dim)",
+                  border: `1.5px solid ${isActive ? col.badge : "var(--line)"}`,
                   boxShadow: "none",
                 }}>
                 <span className="text-xs leading-none">{c.emoji}</span>
@@ -666,9 +666,9 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                 className="inline-flex items-center gap-1.5 rounded-lg text-[11px] font-bold transition-all duration-150"
                 style={{
                   padding: "5px 11px",
-                  background: isActive ? `${d.dot}18` : "#F4F0EB",
-                  color: isActive ? d.dot : "#6B6460",
-                  border: `1.5px solid ${isActive ? d.dot : "#E8E0D5"}`,
+                  background: isActive ? `${d.dot}18` : "var(--accent-soft)",
+                  color: isActive ? d.dot : "var(--fg-dim)",
+                  border: `1.5px solid ${isActive ? d.dot : "var(--line)"}`,
                   boxShadow: "none",
                 }}>
                 {d.id !== "All" && (
@@ -689,35 +689,35 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16">
-            <div className="w-6 h-6 border-2 border-[#D97757]/30 border-t-[#D97757] rounded-full animate-spin"/>
-            <p className="text-xs text-[#9B9490]">Loading questions…</p>
+            <div className="w-6 h-6 border-2 border-[var(--accent)]/30 border-t-[var(--accent)] rounded-full animate-spin"/>
+            <p className="text-xs text-[var(--fg-dim)]">Loading questions…</p>
           </div>
         ) : allQs.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
             <p className="text-2xl">🧩</p>
-            <p className="text-sm font-bold text-[#6B6460]">Questions loading…</p>
-            <p className="text-xs text-[#9B9490]">Check back in a moment.</p>
+            <p className="text-sm font-bold text-[var(--fg-dim)]">Questions loading…</p>
+            <p className="text-xs text-[var(--fg-dim)]">Check back in a moment.</p>
           </div>
         ) : roundDone ? (
           <div className="flex flex-col items-center justify-center py-10 px-6 text-center gap-2">
             <div className="text-5xl mb-2">{score === total ? "🏆" : score >= Math.ceil(total * 0.7) ? "🎉" : "💪"}</div>
-            <p className="text-lg font-black text-[#1A1A18]">Round Complete!</p>
-            <p className="text-sm text-[#1A1A18] font-bold">{score}/{total} correct
-              <span className="ml-2 font-mono text-xs px-2 py-0.5 rounded" style={{ background: "#dcfce7", color: "#059669" }}>
+            <p className="text-lg font-black text-[var(--fg)]">Round Complete!</p>
+            <p className="text-sm text-[var(--fg)] font-bold">{score}/{total} correct
+              <span className="ml-2 font-mono text-xs px-2 py-0.5 rounded" style={{ background: "color-mix(in oklab, #059669 22%, transparent)", color: "#059669" }}>
                 {Math.round((score / total) * 100)}%
               </span>
             </p>
-            <p className="text-xs text-[#9B9490] mb-4">
+            <p className="text-xs text-[var(--fg-dim)] mb-4">
               {activeCat === "All" ? "All topics" : activeCat}{activeDiff !== "All" ? ` · ${activeDiff}` : ""}
             </p>
             <button onClick={startNewRound}
               className="px-7 py-2.5 rounded-xl text-sm font-black transition-all hover:opacity-85 hover:scale-105"
-              style={{ background: "linear-gradient(135deg,#D97757,#C5653F)", color: "#fff",
+              style={{ background: "linear-gradient(135deg,var(--accent),#C5653F)", color: "#fff",
                 boxShadow: "0 4px 20px rgba(217,119,87,0.30)" }}>
               Play Again →
             </button>
             <button onClick={() => document.getElementById("question-bank")?.scrollIntoView({ behavior: "smooth" })}
-              className="text-[11px] font-bold transition-colors hover:text-[#1A1A18] mt-1"
+              className="text-[11px] font-bold transition-colors hover:text-[var(--fg)] mt-1"
               style={{ color: CYN }}>
               Browse all Q&amp;A ↓
             </button>
@@ -726,7 +726,7 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
           <>
             {/* Header bar */}
             <div className="flex items-center justify-between px-4 py-3 border-b"
-              style={{ borderColor: BORD, background: "#F8F7F5" }}>
+              style={{ borderColor: BORD, background: "var(--surface)" }}>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-black tracking-wider uppercase px-2.5 py-1 rounded-lg"
                   style={{ background: `${catCol.badge}35`, color: catCol.text, border: `1px solid ${catCol.badge}55` }}>
@@ -739,40 +739,40 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
               <div className="flex items-center gap-2.5">
                 {score > 0 && (
                   <span className="text-xs font-black font-mono px-2 py-0.5 rounded-lg"
-                    style={{ background: "#dcfce7", color: "#059669", border: "1px solid #bbf7d0" }}>
+                    style={{ background: "color-mix(in oklab, #059669 22%, transparent)", color: "#059669", border: "1px solid #bbf7d0" }}>
                     {score} ✓
                   </span>
                 )}
-                <span className="text-xs font-black font-mono" style={{ color: "#9B9490" }}>
+                <span className="text-xs font-black font-mono" style={{ color: "var(--fg-dim)" }}>
                   Q {qNum}/{total}
                 </span>
                 <button onClick={startNewRound} title="Restart" aria-label="Restart round"
-                  className="text-[#9B9490] hover:text-[#6B6460] transition-colors text-sm px-1">↺</button>
+                  className="text-[var(--fg-dim)] hover:text-[var(--fg-dim)] transition-colors text-sm px-1">↺</button>
               </div>
             </div>
 
             {/* Code block */}
             {q.type === "code" && q.code && (
-              <div className="mx-4 mt-3 rounded-xl overflow-hidden border" style={{ borderColor: "#E8E0D5", background: "#F4F0EB" }}>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 border-b" style={{ borderColor: "#E8E0D5", background: "#EEEBE6" }}>
+              <div className="mx-4 mt-3 rounded-xl overflow-hidden border" style={{ borderColor: "var(--line)", background: "var(--accent-soft)" }}>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 border-b" style={{ borderColor: "var(--line)", background: "#EEEBE6" }}>
                   <span className="w-2.5 h-2.5 rounded-full bg-red-400"/>
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-400"/>
                   <span className="w-2.5 h-2.5 rounded-full bg-green-500"/>
-                  <span className="text-[10px] font-mono text-[#9B9490] ml-1.5">{q.language ?? "code"}</span>
+                  <span className="text-[10px] font-mono text-[var(--fg-dim)] ml-1.5">{q.language ?? "code"}</span>
                   {chosen === null && codeCountdown !== null && (
-                    <span className="ml-auto text-[10px] font-mono" style={{ color: codeCountdown <= 3 ? "#DC2626" : "#9B9490" }}>
+                    <span className="ml-auto text-[10px] font-mono" style={{ color: codeCountdown <= 3 ? "#DC2626" : "var(--fg-dim)" }}>
                       answer reveals in {codeCountdown}s
                     </span>
                   )}
                 </div>
-                <pre className="text-xs leading-5 p-3.5 overflow-x-auto text-[#1A1A18] font-mono whitespace-pre">{q.code}</pre>
+                <pre className="text-xs leading-5 p-3.5 overflow-x-auto text-[var(--fg)] font-mono whitespace-pre">{q.code}</pre>
                 {/* Countdown bar — depletes as timer ticks down */}
                 {chosen === null && codeCountdown !== null && (
-                  <div style={{ height: 3, background: "#E8E0D5" }}>
+                  <div style={{ height: 3, background: "var(--line)" }}>
                     <div style={{
                       height: "100%",
                       width: `${(codeCountdown / 10) * 100}%`,
-                      background: codeCountdown <= 3 ? "#DC2626" : "#D97757",
+                      background: codeCountdown <= 3 ? "#DC2626" : "var(--accent)",
                       transition: "width 1s linear, background 0.3s",
                     }}/>
                   </div>
@@ -782,9 +782,9 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
 
             {/* Question */}
             <div className="px-4 pt-4 pb-3">
-              <p className="text-base font-black text-[#1A1A18] leading-snug">{q.q}</p>
+              <p className="text-base font-black text-[var(--fg)] leading-snug">{q.q}</p>
               {chosen === null && (
-                <p className="text-[11px] text-[#9B9490] mt-1.5">Pick the best answer</p>
+                <p className="text-[11px] text-[var(--fg-dim)] mt-1.5">Pick the best answer</p>
               )}
             </div>
 
@@ -795,15 +795,15 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                 const isChosen  = i === chosen;
                 const revealed  = chosen !== null;
                 const lColor    = LABEL_COLORS[i];
-                let bg = "#FAFAF8", bord = "#E8E0D5", txt = "#1A1A18";
+                let bg = "var(--surface)", bord = "var(--line)", txt = "var(--fg)";
                 if (!revealed) {
                   // nothing extra
                 } else if (isCorrect) {
-                  bg = "#dcfce7"; bord = "#86efac"; txt = "#059669";
+                  bg = "color-mix(in oklab, #059669 22%, transparent)"; bord = "#059669"; txt = "#059669";
                 } else if (isChosen) {
-                  bg = "#fee2e2"; bord = "#fca5a5"; txt = "#DC2626";
+                  bg = "color-mix(in oklab, #DC2626 22%, transparent)"; bord = "#DC2626"; txt = "#DC2626";
                 } else {
-                  bg = "#F8F7F5"; bord = "#E8E0D5"; txt = "#9B9490";
+                  bg = "var(--surface)"; bord = "var(--line)"; txt = "var(--fg-dim)";
                 }
                 return (
                   <button key={i} onClick={() => pick(i)} disabled={revealed}
@@ -814,8 +814,8 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
                     <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black"
                       style={{
                         background: revealed ? "transparent" : `${lColor}12`,
-                        border: `2px solid ${revealed ? (isCorrect ? "#059669" : isChosen ? "#DC2626" : "#E8E0D5") : lColor}`,
-                        color:   revealed ? (isCorrect ? "#059669" : isChosen ? "#DC2626" : "#9B9490") : lColor,
+                        border: `2px solid ${revealed ? (isCorrect ? "#059669" : isChosen ? "#DC2626" : "var(--line)") : lColor}`,
+                        color:   revealed ? (isCorrect ? "#059669" : isChosen ? "#DC2626" : "var(--fg-dim)") : lColor,
                       }}>
                       {LABELS[i]}
                     </span>
@@ -831,12 +831,12 @@ function QuizWidget({ onStreak }: { onStreak: (n: number) => void }) {
             {chosen !== null && (
               <div className="px-4 pb-4 pt-1 space-y-2.5">
                 <div className="rounded-xl px-4 py-3 text-xs leading-relaxed"
-                  style={{ background: "#F0FDF4", border: "1px solid #bbf7d0", color: "#6B6460" }}>
+                  style={{ background: "color-mix(in oklab, #059669 14%, transparent)", border: "1px solid #bbf7d0", color: "var(--fg-dim)" }}>
                   <span className="font-black text-[#059669]">Why: </span>{q.exp}
                 </div>
                 <button onClick={next}
                   className="w-full py-2.5 rounded-xl text-sm font-black tracking-wide transition-all hover:opacity-85 relative overflow-hidden"
-                  style={{ background: "linear-gradient(135deg,#D97757,#C5653F)", color: "#fff",
+                  style={{ background: "linear-gradient(135deg,var(--accent),#C5653F)", color: "#fff",
                     boxShadow: "0 4px 16px rgba(217,119,87,0.25)" }}>
                   {advanceIn !== null ? `Next in ${advanceIn}s →` : "Next Question →"}
                   {/* Auto-advance progress bar */}
@@ -859,9 +859,9 @@ function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center px-6">
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4"
-        style={{ background: `${CYN}12`, border: `1px solid ${CYN}30` }}>🎬</div>
-      <p className="text-base font-bold text-[#1A1A18] mb-1">No quizzes found</p>
-      <p className="text-sm text-[#6B6460] max-w-xs">{message}</p>
+        style={{ background: `color-mix(in oklab, ${CYN} 7%, transparent)`, border: `1px solid color-mix(in oklab, ${CYN} 19%, transparent)` }}>🎬</div>
+      <p className="text-base font-bold text-[var(--fg)] mb-1">No quizzes found</p>
+      <p className="text-sm text-[var(--fg-dim)] max-w-xs">{message}</p>
     </div>
   );
 }
@@ -896,8 +896,8 @@ function QuestionBrowser() {
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-10">
-        <div className="w-4 h-4 border-2 border-[#D97757]/30 border-t-[#D97757] rounded-full animate-spin"/>
-        <span className="text-xs text-[#9B9490]">Loading questions…</span>
+        <div className="w-4 h-4 border-2 border-[var(--accent)]/30 border-t-[var(--accent)] rounded-full animate-spin"/>
+        <span className="text-xs text-[var(--fg-dim)]">Loading questions…</span>
       </div>
     );
   }
@@ -909,7 +909,7 @@ function QuestionBrowser() {
         style={{ scrollbarWidth: "none" } as React.CSSProperties}>
         {cats.map((cat) => {
           const isActive = activeCat === cat;
-          const col      = cat === "All" ? { text: "#1A1A18", badge: "#E8E0D5" } : getCatColor(cat);
+          const col      = cat === "All" ? { text: "var(--fg)", badge: "var(--line)" } : getCatColor(cat);
           const count    = cat === "All" ? allQs.length : allQs.filter((q) => q.cat === cat).length;
           return (
             <button key={cat}
@@ -917,9 +917,9 @@ function QuestionBrowser() {
               className="inline-flex items-center gap-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 shrink-0"
               style={{
                 padding: "5px 12px",
-                background: isActive ? col.badge : "#F4F0EB",
-                color: isActive ? col.text : "#6B6460",
-                border: `1.5px solid ${isActive ? col.badge : "#E8E0D5"}`,
+                background: isActive ? col.badge : "var(--accent-soft)",
+                color: isActive ? col.text : "var(--fg-dim)",
+                border: `1.5px solid ${isActive ? col.badge : "var(--line)"}`,
                 boxShadow: "none",
               }}>
               <span>{cat === "All" ? "🌐" : (CAT_EMOJI[cat] ?? "💡")}</span>
@@ -962,10 +962,10 @@ function QuestionBrowser() {
                         style={{ background: "#dbeafe", color: "#1d4ed8" }}>LIVE</span>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-[#1A1A18] leading-snug">{q.q}</p>
+                  <p className="text-sm font-semibold text-[var(--fg)] leading-snug">{q.q}</p>
                 </div>
                 <span className="shrink-0 text-xs mt-1 transition-colors"
-                  style={{ color: isOpen ? col.text : "#9B9490" }}>
+                  style={{ color: isOpen ? col.text : "var(--fg-dim)" }}>
                   {isOpen ? "▲" : "▼"}
                 </span>
               </button>
@@ -974,8 +974,8 @@ function QuestionBrowser() {
               {isOpen && (
                 <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: BORD }}>
                   {q.type === "code" && q.code && (
-                    <pre className="text-xs leading-5 px-3 py-2.5 mb-3 rounded-lg overflow-x-auto text-[#1A1A18] font-mono whitespace-pre"
-                      style={{ background: "#F4F0EB", border: "1px solid #E8E0D5" }}>
+                    <pre className="text-xs leading-5 px-3 py-2.5 mb-3 rounded-lg overflow-x-auto text-[var(--fg)] font-mono whitespace-pre"
+                      style={{ background: "var(--accent-soft)", border: "1px solid var(--line)" }}>
                       {q.code}
                     </pre>
                   )}
@@ -985,14 +985,14 @@ function QuestionBrowser() {
                       return (
                         <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm"
                           style={{
-                            background: isCorrect ? "#dcfce7" : "#F8F7F5",
-                            border: `1px solid ${isCorrect ? "#86efac" : "#E8E0D5"}`,
-                            color: isCorrect ? "#059669" : "#6B6460",
+                            background: isCorrect ? "color-mix(in oklab, #059669 22%, transparent)" : "var(--surface)",
+                            border: `1px solid ${isCorrect ? "#059669" : "var(--line)"}`,
+                            color: isCorrect ? "#059669" : "var(--fg-dim)",
                           }}>
                           <span className="w-5 h-5 flex items-center justify-center rounded-full shrink-0 text-[10px] font-black"
                             style={{
-                              border: `2px solid ${isCorrect ? "#059669" : "#E8E0D5"}`,
-                              color: isCorrect ? "#059669" : "#9B9490",
+                              border: `2px solid ${isCorrect ? "#059669" : "var(--line)"}`,
+                              color: isCorrect ? "#059669" : "var(--fg-dim)",
                             }}>
                             {LABELS[i]}
                           </span>
@@ -1004,7 +1004,7 @@ function QuestionBrowser() {
                   </div>
                   {q.exp && (
                     <div className="rounded-lg px-3 py-2.5 text-xs leading-relaxed"
-                      style={{ background: "#F0FDF4", border: "1px solid #bbf7d0", color: "#6B6460" }}>
+                      style={{ background: "color-mix(in oklab, #059669 14%, transparent)", border: "1px solid #bbf7d0", color: "var(--fg-dim)" }}>
                       <span className="font-black text-[#059669]">Why: </span>{q.exp}
                     </div>
                   )}
@@ -1016,7 +1016,7 @@ function QuestionBrowser() {
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center py-10 text-xs text-[#9B9490]">No questions in this category yet — check back soon!</p>
+        <p className="text-center py-10 text-xs text-[var(--fg-dim)]">No questions in this category yet — check back soon!</p>
       )}
     </div>
   );
@@ -1143,7 +1143,7 @@ export default function Home() {
   const published = apiStats?.published ?? 0;
 
   return (
-    <div className="min-h-screen" style={{ background: BG, color: "#1A1A18", position: 'relative' }}>
+    <div className="min-h-screen" style={{ background: BG, color: "var(--fg)", position: 'relative' }}>
       {/* Animated blob bg */}
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }} aria-hidden>
         <motion.div
@@ -1162,12 +1162,12 @@ export default function Home() {
 
       {/* ── Sticky header ── */}
       <header className="sticky top-0 z-50 border-b"
-        style={{ borderColor: BORD, background: `${BG}f5`, backdropFilter: "blur(16px)" }}>
+        style={{ borderColor: BORD, background: `color-mix(in oklab, ${BG} 96%, transparent)`, backdropFilter: "blur(16px)" }}>
         <div className="flex items-center gap-5 px-6" style={{ height: 68, maxWidth: 1440, margin: "0 auto" }}>
 
           {/* Logo — full native SVG size */}
           <Link href="/" className="shrink-0">
-            <Image src="/logo.svg" alt="QuizBytesDaily" width={200} height={44} priority />
+            <Logo />
           </Link>
 
           <div className="flex-1" />
@@ -1215,7 +1215,7 @@ export default function Home() {
               {/* Daily focus chip + live badge */}
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black tracking-widest uppercase"
-                  style={{ borderColor: `${CYN}40`, background: `${CYN}10`, color: CYN }}>
+                  style={{ borderColor: `color-mix(in oklab, ${CYN} 25%, transparent)`, background: `color-mix(in oklab, ${CYN} 6%, transparent)`, color: CYN }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>
                   New quiz every day
                 </div>
@@ -1235,11 +1235,11 @@ export default function Home() {
                   Test Your Tech
                 </span>
                 {" "}
-                <span className="text-[#1A1A18]">Knowledge Daily</span>
+                <span className="text-[var(--fg)]">Knowledge Daily</span>
               </h1>
 
               {/* Tagline — category-aware */}
-              <p className="text-sm text-[#6B6460] mb-3 leading-relaxed max-w-sm">
+              <p className="text-sm text-[var(--fg-dim)] mb-3 leading-relaxed max-w-sm">
                 {tagline}
                 <br />60 seconds to sharpen your edge.
               </p>
@@ -1250,29 +1250,29 @@ export default function Home() {
                   <>
                     <span className="flex items-center gap-1">
                       <span className="font-black" style={{ color: CYN }}>{published}</span>
-                      <span className="text-[#9B9490]">Quizzes</span>
+                      <span className="text-[var(--fg-dim)]">Quizzes</span>
                     </span>
-                    <span className="text-[#C8C2BB]">·</span>
+                    <span className="text-[var(--fg-dim)]">·</span>
                   </>
                 )}
                 {dynCategories.length > 1 && (
                   <>
                     <span className="flex items-center gap-1">
-                      <span className="font-black text-[#1A1A18]">{dynCategories.length - 1}</span>
-                      <span className="text-[#9B9490]">Topic{dynCategories.length - 1 !== 1 ? "s" : ""}</span>
+                      <span className="font-black text-[var(--fg)]">{dynCategories.length - 1}</span>
+                      <span className="text-[var(--fg-dim)]">Topic{dynCategories.length - 1 !== 1 ? "s" : ""}</span>
                     </span>
-                    <span className="text-[#C8C2BB]">·</span>
+                    <span className="text-[var(--fg-dim)]">·</span>
                   </>
                 )}
-                <span className="flex items-center gap-1.5 text-[#9B9490]">
+                <span className="flex items-center gap-1.5 text-[var(--fg-dim)]">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
                   Daily uploads
                 </span>
-                <span className="text-[#C8C2BB]">·</span>
-                <span className="text-[#9B9490]">Free</span>
+                <span className="text-[var(--fg-dim)]">·</span>
+                <span className="text-[var(--fg-dim)]">Free</span>
                 {streak > 0 && (
                   <>
-                    <span className="text-[#C8C2BB]">·</span>
+                    <span className="text-[var(--fg-dim)]">·</span>
                     <span className="flex items-center gap-1 font-bold" style={{ color: "#f97316" }}>
                       🔥 {streak} day{streak !== 1 ? "s" : ""} streak
                     </span>
@@ -1284,12 +1284,12 @@ export default function Home() {
               <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                 <button onClick={() => { document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all hover:scale-105"
-                  style={{ background: `linear-gradient(135deg, ${CYN}, #6366f1)`, color: "#000", boxShadow: `0 4px 16px ${CYN}30` }}>
+                  style={{ background: `linear-gradient(135deg, ${CYN}, #6366f1)`, color: "#000", boxShadow: `0 4px 16px color-mix(in oklab, ${CYN} 19%, transparent)` }}>
                   Browse Quizzes ↓
                 </button>
                 <button onClick={() => { document.getElementById("video-grid")?.scrollIntoView({ behavior: "smooth" }); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105"
-                  style={{ borderColor: `${CYN}50`, color: CYN, background: `${CYN}10` }}>
+                  style={{ borderColor: `color-mix(in oklab, ${CYN} 31%, transparent)`, color: CYN, background: `color-mix(in oklab, ${CYN} 6%, transparent)` }}>
                   Play Today&#39;s Quiz
                 </button>
               </div>
@@ -1321,10 +1321,10 @@ export default function Home() {
                   { icon: "📊", title: "Track Progress", desc: "See which topics you've mastered over time", color: "#10b981" },
                 ] as const).map(({ icon, title, desc, color }) => (
                   <div key={title} className="rounded-xl p-3 border transition-all hover:border-opacity-60"
-                    style={{ background: "#FAFAF8", borderColor: `${color}30` }}>
+                    style={{ background: "var(--surface)", borderColor: `${color}30` }}>
                     <div className="text-lg mb-1.5 leading-none">{icon}</div>
                     <div className="text-[11px] font-black leading-none mb-1" style={{ color }}>{title}</div>
-                    <div className="text-[10px] leading-snug" style={{ color: "#6B6460" }}>{desc}</div>
+                    <div className="text-[10px] leading-snug" style={{ color: "var(--fg-dim)" }}>{desc}</div>
                   </div>
                 ))}
               </div>
@@ -1332,7 +1332,7 @@ export default function Home() {
               {/* Mobile quiz CTA — only below md (quiz is hidden on mobile in right col) */}
               <MagneticButton onClick={() => { document.getElementById("mobile-quiz")?.scrollIntoView({ behavior: "smooth" }); }}
                 className="lg:hidden mt-4 w-full py-2.5 rounded-xl text-sm font-black border"
-                style={{ borderColor: `${CYN}40`, color: CYN, background: `${CYN}10` }}>
+                style={{ borderColor: `color-mix(in oklab, ${CYN} 25%, transparent)`, color: CYN, background: `color-mix(in oklab, ${CYN} 6%, transparent)` }}>
                 🧩 Play Quiz Now ↓
               </MagneticButton>
             </div>
@@ -1350,7 +1350,7 @@ export default function Home() {
       {/* ── Mobile quiz (replaces right-column widget on small screens) ── */}
       <div id="mobile-quiz" className="lg:hidden border-b px-6 py-6"
         style={{ borderColor: BORD, background: CARD }}>
-        <p className="text-sm font-black text-[#1A1A18] mb-3">🧩 Play the Quiz</p>
+        <p className="text-sm font-black text-[var(--fg)] mb-3">🧩 Play the Quiz</p>
         <QuizWidget onStreak={setStreak} />
       </div>
 
@@ -1360,8 +1360,8 @@ export default function Home() {
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="flex items-baseline justify-between mb-5">
             <div>
-              <h2 className="text-lg font-black text-[#1A1A18]">🧩 Question Bank</h2>
-              <p className="text-xs mt-0.5" style={{ color: "#6B6460" }}>
+              <h2 className="text-lg font-black text-[var(--fg)]">🧩 Question Bank</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--fg-dim)" }}>
                 Browse all questions — click any card to reveal the answer &amp; explanation
               </p>
             </div>
@@ -1378,7 +1378,7 @@ export default function Home() {
       </div>
 
       {/* ── Stats + Search strip ── */}
-      <div className="border-b" style={{ borderColor: BORD, background: "#F4F0EB" }}>
+      <div className="border-b" style={{ borderColor: BORD, background: "var(--accent-soft)" }}>
         <div className="flex items-center gap-3 px-6 py-2.5 overflow-x-auto"
           style={{ maxWidth: 1440, margin: "0 auto" }}>
           {showStats && published > 0 && (
@@ -1386,24 +1386,24 @@ export default function Home() {
               <span className="flex items-center gap-1 text-xs font-semibold whitespace-nowrap shrink-0" style={{ color: accent }}>
                 <span className="font-black">{published}</span> Videos
               </span>
-              <span className="text-[#C8C2BB] shrink-0">·</span>
-              <span className="text-xs text-[#9B9490] whitespace-nowrap shrink-0">Daily quiz Shorts</span>
-              <span className="text-[#C8C2BB] shrink-0">·</span>
+              <span className="text-[var(--fg-dim)] shrink-0">·</span>
+              <span className="text-xs text-[var(--fg-dim)] whitespace-nowrap shrink-0">Daily quiz Shorts</span>
+              <span className="text-[var(--fg-dim)] shrink-0">·</span>
             </>
           )}
           {/* Inline search */}
           <div className="flex items-center gap-2 rounded-lg px-3 py-0 border flex-1 min-w-0 transition-colors"
             style={{ background: CARD, borderColor: searchQuery ? `${accent}60` : BORD,
               boxShadow: searchQuery ? `0 0 0 2px ${accent}10` : "none", height: 36 }}>
-            <span style={{ color: searchQuery ? accent : "#9B9490", transition: "color 0.15s", flexShrink: 0 }}>
+            <span style={{ color: searchQuery ? accent : "var(--fg-dim)", transition: "color 0.15s", flexShrink: 0 }}>
               <Ico.Search />
             </span>
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search — Python, RAG, binary search…"
-              className="bg-transparent text-sm text-[#1A1A18] placeholder-[#C8C2BB] outline-none flex-1 min-w-0" />
+              className="bg-transparent text-sm text-[var(--fg)] placeholder-[var(--fg-dim)] outline-none flex-1 min-w-0" />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")}
-                className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-black/5 text-[#9B9490] hover:text-[#1A1A18] text-xs">✕</button>
+                className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-black/5 text-[var(--fg-dim)] hover:text-[var(--fg)] text-xs">✕</button>
             )}
           </div>
           <a href="/about"
@@ -1433,7 +1433,7 @@ export default function Home() {
                     ? cat === "All"
                       ? { background: accent, borderColor: accent, color: "#000" }
                       : { background: col.badge, borderColor: col.badge, color: col.text, boxShadow: `0 0 12px ${col.badge}40` }
-                    : { background: "transparent", borderColor: BORD, color: "#9B9490" }}>
+                    : { background: "transparent", borderColor: BORD, color: "var(--fg-dim)" }}>
                   {cat !== "All" && <span>{CAT_EMOJI[cat] ?? "💡"}</span>}
                   {cat === "All" ? "All" : cat}
                   <span className="font-mono text-[10px] opacity-60">{cnt}</span>
@@ -1446,13 +1446,13 @@ export default function Home() {
           <div className="flex items-center gap-2 shrink-0">
 
             {/* Sort dropdown */}
-            <div className="flex items-center gap-1.5 text-[#9B9490]">
+            <div className="flex items-center gap-1.5 text-[var(--fg-dim)]">
               <Ico.Sort />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortBy)}
                 className="text-[12px] font-semibold outline-none rounded-xl border px-2.5 py-1.5 appearance-none cursor-pointer transition-colors"
-                style={{ background: CARD, borderColor: BORD, color: "#9B9490", minWidth: 130 }}>
+                style={{ background: CARD, borderColor: BORD, color: "var(--fg-dim)", minWidth: 130 }}>
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="az">A → Z</option>
@@ -1463,15 +1463,15 @@ export default function Home() {
 
             {/* View toggle */}
             <div className="flex items-center gap-1 rounded-xl border p-1"
-              style={{ borderColor: BORD, background: "#F4F0EB" }}>
+              style={{ borderColor: BORD, background: "var(--accent-soft)" }}>
               <button onClick={() => setViewMode("table")} className="p-2 rounded-lg transition-all"
                 title="Table view"
-                style={viewMode === "table" ? { background: `${accent}20`, color: accent } : { color: "#9B9490" }}>
+                style={viewMode === "table" ? { background: `${accent}20`, color: accent } : { color: "var(--fg-dim)" }}>
                 <Ico.Table />
               </button>
               <button onClick={() => setViewMode("grid")} className="p-2 rounded-lg transition-all"
                 title="Grid view"
-                style={viewMode === "grid" ? { background: `${accent}20`, color: accent } : { color: "#9B9490" }}>
+                style={viewMode === "grid" ? { background: `${accent}20`, color: accent } : { color: "var(--fg-dim)" }}>
                 <Ico.Grid />
               </button>
             </div>
@@ -1483,7 +1483,7 @@ export default function Home() {
 
         {/* Results count */}
         {(searchQuery || activeCategory !== "All") && filtered.length > 0 && (
-          <p className="text-sm text-[#6B6460] mb-4">
+          <p className="text-sm text-[var(--fg-dim)] mb-4">
             {filtered.length} quiz{filtered.length !== 1 ? "zes" : ""}
             {searchQuery && ` matching "${searchQuery}"`}
             {activeCategory !== "All" && ` in ${activeCategory}`}
@@ -1509,15 +1509,15 @@ export default function Home() {
           <div className="rounded-2xl border overflow-hidden" style={{ borderColor: BORD }}>
             <table className="w-full border-collapse">
               <thead>
-                <tr style={{ background: "#F4F0EB", borderBottom: `1px solid ${BORD}` }}>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pl-4 pr-2" style={{ width: 36 }}>#</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-3" style={{ width: 110 }}>Thumb</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4">Title</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden sm:table-cell" style={{ width: 130 }}>Category</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden md:table-cell" style={{ width: 110 }}>Difficulty</th>
-                  <th className="text-center text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden lg:table-cell" style={{ width: 70 }}>Slides</th>
-                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4 hidden sm:table-cell" style={{ width: 90 }}>Date</th>
-                  <th className="text-right text-[10px] font-black uppercase tracking-widest text-[#6B6460] py-2.5 pr-4" style={{ width: 120 }}>Watch</th>
+                <tr style={{ background: "var(--accent-soft)", borderBottom: `1px solid ${BORD}` }}>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pl-4 pr-2" style={{ width: 36 }}>#</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-3" style={{ width: 110 }}>Thumb</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-4">Title</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-4 hidden sm:table-cell" style={{ width: 130 }}>Category</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-4 hidden md:table-cell" style={{ width: 110 }}>Difficulty</th>
+                  <th className="text-center text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-4 hidden lg:table-cell" style={{ width: 70 }}>Slides</th>
+                  <th className="text-left text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-4 hidden sm:table-cell" style={{ width: 90 }}>Date</th>
+                  <th className="text-right text-[10px] font-black uppercase tracking-widest text-[var(--fg-dim)] py-2.5 pr-4" style={{ width: 120 }}>Watch</th>
                 </tr>
               </thead>
               <tbody style={{ borderTop: `1px solid ${BORD}` }}>
@@ -1533,7 +1533,7 @@ export default function Home() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-[#9B9490] hover:text-[#1A1A18] transition-colors disabled:opacity-30"
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[var(--fg-dim)] hover:text-[var(--fg)] transition-colors disabled:opacity-30"
               style={{ background: CARD, border: `1px solid ${BORD}` }}>←</button>
             {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
               // Show pages around current page
@@ -1548,12 +1548,12 @@ export default function Home() {
                 className="w-9 h-9 rounded-xl text-sm font-bold font-mono transition-all"
                 style={page === n
                   ? { background: accent, color: "#000" }
-                  : { background: CARD, color: "#9B9490", border: `1px solid ${BORD}` }}>
+                  : { background: CARD, color: "var(--fg-dim)", border: `1px solid ${BORD}` }}>
                 {n}
               </button>
             ))}
             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-[#9B9490] hover:text-[#1A1A18] transition-colors disabled:opacity-30"
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[var(--fg-dim)] hover:text-[var(--fg)] transition-colors disabled:opacity-30"
               style={{ background: CARD, border: `1px solid ${BORD}` }}>→</button>
           </div>
         )}
@@ -1582,19 +1582,19 @@ export default function Home() {
         {/* Email Subscribe */}
         <div style={{ background: BG, border: `1px solid ${accent}40`, borderRadius: 20, padding: 28 }}>
           <span style={{ color: accent, fontWeight: 900, fontSize: 11, letterSpacing: 3, textTransform: 'uppercase' }}>📬 Daily Quiz Digest</span>
-          <h2 style={{ color: '#1A1A18', fontWeight: 900, fontSize: 20, margin: '10px 0 8px' }}>Get today&apos;s quiz in your inbox</h2>
-          <p style={{ color: '#6B6460', fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+          <h2 style={{ color: 'var(--fg)', fontWeight: 900, fontSize: 20, margin: '10px 0 8px' }}>Get today&apos;s quiz in your inbox</h2>
+          <p style={{ color: 'var(--fg-dim)', fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
             One question every morning. Takes 60 seconds. Builds your edge over time.
           </p>
           <form action="/api/subscribe" method="POST" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <input name="email" type="email" required placeholder="your@email.com"
-              style={{ padding: '12px 16px', borderRadius: 12, border: `1px solid ${BORD}`, background: '#F4F0EB', fontSize: 14, outline: 'none', color: '#1A1A18' }} />
+              style={{ padding: '12px 16px', borderRadius: 12, border: `1px solid ${BORD}`, background: 'var(--accent-soft)', fontSize: 14, outline: 'none', color: 'var(--fg)' }} />
             <button type="submit"
               style={{ padding: '12px 20px', borderRadius: 12, background: accent, color: '#000', fontWeight: 900, fontSize: 14, border: 'none', cursor: 'pointer' }}>
               Subscribe Free →
             </button>
           </form>
-          <p style={{ color: '#9B9490', fontSize: 11, marginTop: 10 }}>No spam · Unsubscribe anytime</p>
+          <p style={{ color: 'var(--fg-dim)', fontSize: 11, marginTop: 10 }}>No spam · Unsubscribe anytime</p>
         </div>
       </section>
 
@@ -1625,7 +1625,7 @@ export default function Home() {
             },
           ].map((item) => (
             <div key={item.q}>
-              <h3 style={{ color: '#1A1A18', fontWeight: 800, fontSize: 15, marginBottom: 6 }}>{item.q}</h3>
+              <h3 style={{ color: 'var(--fg)', fontWeight: 800, fontSize: 15, marginBottom: 6 }}>{item.q}</h3>
               <p style={{ color: '#444', fontSize: 13, lineHeight: 1.75 }}>{item.a}</p>
             </div>
           ))}
@@ -1633,7 +1633,7 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t mt-16" style={{ borderColor: BORD, background: "#F4F0EB" }}>
+      <footer className="border-t mt-16" style={{ borderColor: BORD, background: "var(--accent-soft)" }}>
         <div className="px-6 py-10" style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
 
@@ -1642,19 +1642,19 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-lg font-black" style={{ color: accent }}>QuizBytes Daily</span>
               </div>
-              <p className="text-xs leading-relaxed mb-4" style={{ color: "#6B6460" }}>
+              <p className="text-xs leading-relaxed mb-4" style={{ color: "var(--fg-dim)" }}>
                 Bite-sized tech quiz Shorts every day. Python, AI/ML, Algorithms, System Design — sharpen your edge in 60 seconds.
               </p>
               <a href="/about"
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-opacity hover:opacity-85"
-                style={{ background: `${CYN}15`, border: `1px solid ${CYN}40`, color: CYN }}>
+                style={{ background: `color-mix(in oklab, ${CYN} 8%, transparent)`, border: `1px solid color-mix(in oklab, ${CYN} 25%, transparent)`, color: CYN }}>
                 About QuizBytes →
               </a>
             </div>
 
             {/* Topics column */}
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#9B9490" }}>Topics</p>
+              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "var(--fg-dim)" }}>Topics</p>
               <div className="flex flex-wrap gap-1.5">
                 {(apiStats?.categories ?? []).slice(0, 10).map((c) => {
                   const col = getCatColor(c.name);
@@ -1672,27 +1672,27 @@ export default function Home() {
 
             {/* Stats column */}
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "#9B9490" }}>Stats</p>
+              <p className="text-[11px] font-black uppercase tracking-widest mb-3" style={{ color: "var(--fg-dim)" }}>Stats</p>
               <div className="space-y-1.5">
                 {published > 0 && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-black text-[#1A1A18]">{published}</span>
-                    <span style={{ color: "#6B6460" }}>quizzes published</span>
+                    <span className="font-black text-[var(--fg)]">{published}</span>
+                    <span style={{ color: "var(--fg-dim)" }}>quizzes published</span>
                   </div>
                 )}
                 {(dynCategories.length - 1) > 0 && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-black text-[#1A1A18]">{dynCategories.length - 1}</span>
-                    <span style={{ color: "#6B6460" }}>topic categories</span>
+                    <span className="font-black text-[var(--fg)]">{dynCategories.length - 1}</span>
+                    <span style={{ color: "var(--fg-dim)" }}>topic categories</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block shrink-0" />
-                  <span style={{ color: "#6B6460" }}>New quiz every day</span>
+                  <span style={{ color: "var(--fg-dim)" }}>New quiz every day</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-black text-[#1A1A18]">Free</span>
-                  <span style={{ color: "#6B6460" }}>forever — no signup needed</span>
+                  <span className="font-black text-[var(--fg)]">Free</span>
+                  <span style={{ color: "var(--fg-dim)" }}>forever — no signup needed</span>
                 </div>
               </div>
             </div>
@@ -1701,15 +1701,15 @@ export default function Home() {
           {/* Bottom bar */}
           <div className="flex items-center justify-between flex-wrap gap-3 pt-6"
             style={{ borderTop: `1px solid ${BORD}` }}>
-            <p className="text-[11px]" style={{ color: "#9B9490" }}>
+            <p className="text-[11px]" style={{ color: "var(--fg-dim)" }}>
               © {new Date().getFullYear()} QuizBytes Daily · quizbytes.dev
             </p>
-            <div className="flex items-center gap-4 text-[11px]" style={{ color: "#9B9490" }}>
-              <a href="/about" className="hover:text-[#1A1A18] transition-colors">About</a>
-              <a href="/about" className="hover:text-[#1A1A18] transition-colors">About</a>
-              <a href="/privacy" className="hover:text-[#1A1A18] transition-colors">Privacy</a>
-              <a href="/terms" className="hover:text-[#1A1A18] transition-colors">Terms</a>
-              <a href="https://quizbytes.dev" className="hover:text-[#1A1A18] transition-colors">quizbytes.dev</a>
+            <div className="flex items-center gap-4 text-[11px]" style={{ color: "var(--fg-dim)" }}>
+              <a href="/about" className="hover:text-[var(--fg)] transition-colors">About</a>
+              <a href="/about" className="hover:text-[var(--fg)] transition-colors">About</a>
+              <a href="/privacy" className="hover:text-[var(--fg)] transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-[var(--fg)] transition-colors">Terms</a>
+              <a href="https://quizbytes.dev" className="hover:text-[var(--fg)] transition-colors">quizbytes.dev</a>
             </div>
           </div>
         </div>

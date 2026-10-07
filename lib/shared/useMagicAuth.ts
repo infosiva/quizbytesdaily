@@ -13,7 +13,7 @@ export interface AuthUser {
 
 function getApiUrl(): string {
   if (typeof window !== 'undefined' && (window as { __AUTH_API__?: string }).__AUTH_API__) return (window as { __AUTH_API__?: string }).__AUTH_API__!
-  return (process.env.NEXT_PUBLIC_AUTH_API_URL as string) || 'http://31.97.56.148:3110'
+  return (process.env.NEXT_PUBLIC_AUTH_API_URL as string) || ''
 }
 
 export function saveAuth(token: string, user: AuthUser) {

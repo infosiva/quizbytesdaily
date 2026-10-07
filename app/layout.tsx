@@ -2,6 +2,10 @@ import Script from 'next/script'
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import "./theme-vars.css";
+import { loadSiteTheme, buildThemeStyleTag, buildGa4Snippet, isValidGa4Id } from "@/lib/theme-loader";
+import { AnimatedBg } from "@/components/AnimatedBg";
+import { Telemetry } from "@/components/Telemetry";
 import CookieConsent from "../components/CookieConsent";
 import Footer from "../components/Footer";
 import FloatingChatWrapper from "@/components/FloatingChatWrapper";
@@ -84,10 +88,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    // Add your Google Search Console verification token here when ready:
-    google: "YOUR_VERIFICATION_TOKEN", // Replace with actual token
-  },
 };
 
 // JSON-LD structured data
@@ -165,30 +165,35 @@ const jsonLd = {
   ]
 };
 
-export default function RootLayout({
+const DEFAULT_ACCENT = "#d946ef";
+const DEFAULT_BG = "#14091c";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const theme = await loadSiteTheme("quizbytesdaily");
+  const archetype = theme?.layout?.archetype ?? "travel-magazine";
+  const ga4Id = theme?.analytics?.ga4Id;
+  const ga4 = buildGa4Snippet(theme);
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" data-layout={archetype} className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="google-adsense-account" content="ca-pub-4237294630161176" />
-        <meta name="theme-color" content="#0b0b12" />
+        <meta name="theme-color" content={theme?.background ?? DEFAULT_BG} />
         <meta name="color-scheme" content="dark" />
+        <style dangerouslySetInnerHTML={{ __html: buildThemeStyleTag(theme, { background: DEFAULT_BG, primary: DEFAULT_ACCENT }) }} />
+        {ga4 && <script dangerouslySetInnerHTML={{ __html: ga4 }} />}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <style dangerouslySetInnerHTML={{ __html: `
           :root {
-            --qb-bg: #0b0b12;
-            --qb-surface: #111118;
-            --qb-surface-2: #18181f;
-            --qb-border: #1c1c2e;
-            --qb-cyan: #22d3ee;
+            --qb-bg: var(--bg); --qb-surface: var(--surface); --qb-surface-2: color-mix(in oklab, var(--surface) 70%, var(--accent) 8%); --qb-border: var(--line); --qb-cyan: var(--accent);
             --qb-yellow: #fbbf24;
             --qb-green: #4ade80;
             --qb-red: #f87171;
-            --qb-text: #f0f0f5;
-            --qb-text-2: rgba(200,200,220,0.6);
+            --qb-text: var(--fg);
+            --qb-text-2: var(--fg-dim);
           }
           /* Wordle-style correct/wrong colours */
           .cell-correct { background: #4ade80 !important; color: #0b1a0b !important; }
@@ -199,14 +204,17 @@ export default function RootLayout({
           /* Category badges sharper */
           .cat-badge { border-radius: 6px !important; font-weight: 700 !important; font-size: 10px !important; letter-spacing: 0.04em !important; }
           /* NYT-style card border */
-          .quiz-card { border: 2px solid #1c1c2e !important; }
-          .quiz-card:hover { border-color: #22d3ee !important; }
+          .quiz-card { border: 2px solid var(--line) !important; }
+          .quiz-card:hover { border-color: var(--accent) !important; }
         `}} />
       </head>
-      <body className="antialiased" style={{ backgroundColor: "#0b0b12", color: "#f0f0f5", fontFamily: "var(--font-inter, system-ui)" }}>
+      <body className="antialiased" style={{ color: "var(--fg)", fontFamily: "var(--font-inter, system-ui)" }}>
+        <AnimatedBg theme={theme} fallback="aurora" />
         <MotionProvider>{children}</MotionProvider>
         <FloatingChatWrapper />
         <FeedbackWidget siteName="QuizBytesDaily" />
+        {isValidGa4Id(ga4Id) && <Script src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`} strategy="afterInteractive" />}
+        <Telemetry archetype={archetype} />
         {/* AdSense auto-ads — activates once approved */}
         <Script
           async

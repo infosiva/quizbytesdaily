@@ -1,0 +1,25 @@
+/* Hub-switchable theme tokens. Palette: --theme-primary/--theme-secondary/--background come from the
+   theme_<siteId> Edge Config style tag (buildThemeStyleTag). Layout: <html data-layout="<archetype id>">. */
+:root{
+  --accent:var(--theme-primary,#818cf8);
+  --accent-2:var(--theme-secondary,color-mix(in oklab,var(--accent) 60%,#fff));
+  --bg:var(--background,#0c0a1f);
+  --accent-soft:color-mix(in oklab,var(--accent) 16%,transparent);
+  --accent-line:color-mix(in oklab,var(--accent) 40%,transparent);
+  --accent-glow:color-mix(in oklab,var(--accent) 35%,transparent);
+  --accent-strong:color-mix(in oklab,var(--accent) 80%,#000);
+  --on-accent:#0b0b12;
+  --surface:color-mix(in oklab,var(--bg) 82%,#fff);
+  --line:color-mix(in oklab,var(--bg) 80%,#fff);
+  --fg:#e8eaf0;
+  --fg-dim:color-mix(in oklab,var(--fg) 62%,transparent);
+  --layout-max:72rem;--layout-gap:1.5rem;--layout-radius:14px;--hero-align:center;
+}
+[data-layout="magazine-editorial"],[data-layout="travel-magazine"],[data-layout="story-scroll"]{--layout-max:80rem;--layout-gap:2.5rem;--layout-radius:4px;--hero-align:left}
+[data-layout="finance-terminal"],[data-layout="kanban-board"],[data-layout="saas-dashboard-landing"],[data-layout="tool-first-workbench"]{--layout-max:96rem;--layout-gap:.75rem;--layout-radius:6px;--hero-align:left}
+[data-layout="bento-showcase"],[data-layout="gamified-learning"],[data-layout="weekend-lifestyle"],[data-layout="hero-chat"]{--layout-max:68rem;--layout-gap:1.25rem;--layout-radius:24px;--hero-align:center}
+[data-layout="directory-marketplace"],[data-layout="compare-pricing"],[data-layout="docs-knowledge"],[data-layout="compliance-authority"],[data-layout="career-portfolio"],[data-layout="map-first"],[data-layout="media-gallery"],[data-layout="marketing-calendar"]{--layout-max:76rem;--layout-gap:1rem;--layout-radius:10px;--hero-align:left}
+.layout-shell{max-width:var(--layout-max);margin-inline:auto;padding-inline:16px}
+.layout-grid{display:grid;gap:var(--layout-gap)}
+.layout-card{border-radius:var(--layout-radius)}
+.layout-hero{text-align:var(--hero-align)}

@@ -1,23 +1,22 @@
+@import "tailwindcss";
+@import "./theme-vars.css";
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
-
-@import "tailwindcss";
 
 /* ──────────────────────────────────────────
    CSS Custom Properties (design tokens)
 ────────────────────────────────────────── */
 :root {
-  --bg:        #FAF9F6;
-  --card:      #FFFFFF;
-  --border:    #E8E0D5;
-  --primary:   #D97757;
-  --accent:    #C5653F;
+  --card:      var(--surface);
+  --border:    var(--line);
+  --primary:   var(--accent);
   --highlight: #B45309;
   --danger:    #DC2626;
   --success:   #059669;
-  --text:      #1A1A18;
-  --muted:     #9B9490;
+  --text:      var(--fg);
+  --muted:     var(--fg-dim);
 }
 
 /* ──────────────────────────────────────────
@@ -67,8 +66,8 @@ body {
    Pulse glow for primary CTA
 ────────────────────────────────────────── */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 87, 0.35); }
-  50%       { box-shadow: 0 0 0 12px rgba(217, 119, 87, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 35%, transparent); }
+  50%       { box-shadow: 0 0 0 12px color-mix(in oklab, var(--accent) 0%, transparent); }
 }
 
 .animate-glow {
@@ -87,7 +86,7 @@ body {
 
 .quiz-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(217, 119, 87, 0.18);
+  box-shadow: 0 8px 32px color-mix(in oklab, var(--accent) 18%, transparent);
   border-color: var(--primary);
 }
 
@@ -100,7 +99,7 @@ body {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #F4F0EB 25%, #EDE5DC 50%, #F4F0EB 75%);
+  background: linear-gradient(90deg, var(--accent-soft) 25%, #EDE5DC 50%, var(--accent-soft) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 6px;
@@ -110,20 +109,20 @@ body {
    Filter tab active state
 ────────────────────────────────────────── */
 .filter-tab {
-  border: 1px solid #E8E0D5;
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 5px 14px;
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, color 0.18s;
-  color: #9B9490;
-  background: #F4F0EB;
+  color: var(--fg-dim);
+  background: var(--accent-soft);
 }
 
 .filter-tab:hover {
-  border-color: rgba(217, 119, 87, 0.5);
-  color: #C5653F;
+  border-color: color-mix(in oklab, var(--accent) 50%, transparent);
+  color: var(--accent-strong);
   background: #FBEEE8;
 }
 
@@ -137,7 +136,7 @@ body {
    Gradient hero text
 ────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #D97757 0%, #C5653F 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -149,7 +148,7 @@ body {
 .stat-divider {
   width: 1px;
   height: 32px;
-  background: #E8E0D5;
+  background: var(--line);
 }
 
 /* ──────────────────────────────────────────
@@ -157,7 +156,7 @@ body {
 ────────────────────────────────────────── */
 .section-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #E8E0D5, transparent);
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
   margin: 0 auto;
   max-width: 640px;
 }

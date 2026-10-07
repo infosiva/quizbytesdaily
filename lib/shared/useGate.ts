@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { isLoggedIn } from './useMagicAuth'
 
 function getApiUrl(): string {
-  return (process.env.NEXT_PUBLIC_AUTH_API_URL as string) || 'http://31.97.56.148:3110'
+  return (process.env.NEXT_PUBLIC_AUTH_API_URL as string) || ''
 }
 
 function getFingerprint(product: string): string {

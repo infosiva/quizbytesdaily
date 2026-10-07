@@ -1,64 +1,33 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
-const COOKIE_KEY = "cookie_consent_v1";
+const KEY = "cookie_consent_v1";
+type G = { gtag?: (...a: unknown[]) => void };
+
+function setConsent(v: "accepted" | "declined") {
+  try { localStorage.setItem(KEY, v); } catch {}
+  (window as G).gtag?.("consent", "update", { analytics_storage: v === "accepted" ? "granted" : "denied" });
+}
 
 export default function CookieConsent() {
-  const [visible, setVisible] = useState(false);
-
+  const [show, setShow] = useState(false);
   useEffect(() => {
-    const consent = localStorage.getItem(COOKIE_KEY);
-    if (!consent) setVisible(true);
+    try {
+      const c = localStorage.getItem(KEY);
+      if (!c) setShow(true);
+      else if (c === "accepted") (window as G).gtag?.("consent", "update", { analytics_storage: "granted" });
+    } catch {}
   }, []);
-
-  function accept() {
-    localStorage.setItem(COOKIE_KEY, "accepted");
-    setVisible(false);
-  }
-
-  function decline() {
-    localStorage.setItem(COOKIE_KEY, "declined");
-    setVisible(false);
-  }
-
-  if (!visible) return null;
-
+  if (!show) return null;
+  const done = (v: "accepted" | "declined") => { setConsent(v); setShow(false); };
   return (
-    <div
-      role="dialog"
-      aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6 bg-zinc-950/95 border-t border-white/10 backdrop-blur-sm"
-    >
-      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <div className="flex-1 text-sm text-white/70">
-          <p>
-            We use cookies to improve your experience and show relevant ads via{" "}
-            <strong className="text-white">Google AdSense</strong>. By clicking
-            &ldquo;Accept&rdquo; you consent to our use of cookies.{" "}
-            <Link href="/privacy" className="underline text-white/90">
-              Privacy Policy
-            </Link>
-            {" · "}
-            <Link href="/terms" className="underline text-white/90">
-              Terms
-            </Link>
-          </p>
-        </div>
-        <div className="flex gap-3 shrink-0">
-          <button
-            onClick={decline}
-            className="px-4 py-2 text-xs rounded-lg border border-white/20 text-white/60 hover:border-white/40 hover:text-white/80 transition-colors"
-          >
-            Decline
-          </button>
-          <button
-            onClick={accept}
-            className="px-4 py-2 text-xs rounded-lg bg-white text-black font-medium hover:bg-white/90 transition-colors"
-          >
-            Accept all cookies
-          </button>
-        </div>
+    <div role="dialog" aria-label="Cookie consent" style={{ position: "fixed", left: 16, right: 16, bottom: 16, zIndex: 60, maxWidth: 560, marginInline: "auto", background: "var(--surface)", color: "var(--fg)", border: "1px solid var(--line)", borderRadius: "var(--layout-radius)", padding: 16, boxShadow: "0 12px 40px rgba(0,0,0,.45)" }}>
+      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--fg-dim)" }}>
+        We use anonymous analytics (only if you accept) to see which layouts and pages work. No personal data.
+      </p>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button onClick={() => done("accepted")} style={{ minHeight: 44, padding: "0 18px", borderRadius: 10, border: 0, background: "var(--accent)", color: "var(--on-accent)", fontWeight: 700, cursor: "pointer" }}>Accept</button>
+        <button onClick={() => done("declined")} style={{ minHeight: 44, padding: "0 18px", borderRadius: 10, border: "1px solid var(--line)", background: "transparent", color: "var(--fg)", cursor: "pointer" }}>Decline</button>
       </div>
     </div>
   );

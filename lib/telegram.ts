@@ -13,6 +13,7 @@ function chatId() {
 }
 
 async function apiCall(method: string, body: object): Promise<TelegramApiResult> {
+  if (process.env.TELEGRAM_NOTIFICATIONS_DISABLED === "true") return { ok: true };
   const res = await fetch(`${base()}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
